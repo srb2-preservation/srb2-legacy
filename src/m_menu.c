@@ -151,6 +151,7 @@ static saveinfo_t savegameinfo[MAXSAVEGAMES]; // Extra info about the save games
 INT16 startmap; // Mario, NiGHTS, or just a plain old normal game?
 
 static INT16 itemOn = 1; // menu item skull is on, Hack by Tails 09-18-2002
+static boolean lastdirection = true; // toaster - Only You Can Prevent Hacks - true is for forward, false is for backwards
 static INT16 skullAnimCounter = 10; // skull animation counter
 
 static  boolean setupcontrols_secondaryplayer;
@@ -2506,6 +2507,7 @@ static void M_ResetCvars(INT32 choice)
 static void M_NextOpt(void)
 {
 	INT16 oldItemOn = itemOn; // prevent infinite loop
+	lastdirection = true;
 
 	do
 	{
@@ -2520,6 +2522,7 @@ static void M_NextOpt(void)
 static void M_PrevOpt(void)
 {
 	INT16 oldItemOn = itemOn; // prevent infinite loop
+	lastdirection = false;
 
 	do
 	{
@@ -6715,7 +6718,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 {
 	const INT32 my = 24;
 	patch_t *patch;
-	INT32 i, o, j;
+	INT32 i, o, j, prev, next;
 	char *picname;
 
 	// Black BG
@@ -6725,29 +6728,55 @@ static void M_DrawSetupChoosePlayerMenu(void)
 	// Character select profile images!1
 	M_DrawTextBox(0, my, 16, 20);
 
-	if (abs(itemOn*128*FRACUNIT - char_scroll) > 256*FRACUNIT)
-		char_scroll = itemOn*128*FRACUNIT;
-	else if (itemOn*128*FRACUNIT - char_scroll > 128*FRACUNIT)
-		char_scroll += FixedMul(48*FRACUNIT, renderdeltatics);
-	else if (itemOn*128*FRACUNIT - char_scroll < -128*FRACUNIT)
-		char_scroll -= FixedMul(48*FRACUNIT, renderdeltatics);
-	else if (itemOn*128*FRACUNIT > char_scroll+FixedMul(16*FRACUNIT, renderdeltatics))
-		char_scroll += FixedMul(16*FRACUNIT, renderdeltatics);
-	else if (itemOn*128*FRACUNIT < char_scroll-FixedMul(16*FRACUNIT, renderdeltatics))
-		char_scroll -= FixedMul(16*FRACUNIT, renderdeltatics);
+	i = (itemOn*128 - char_scroll/FRACUNIT);
+
+	if (abs(i) > 128)
+	{
+		o = (lastdirection) ? -1 : 1;
+		char_scroll = (itemOn+o)*128*FRACUNIT;
+	}
+
+	i = (itemOn*128) - char_scroll/FRACUNIT;
+
+	if (abs(i) > 1)
+		char_scroll += i*FRACUNIT>>2;
 	else // close enough.
 		char_scroll = itemOn*128*FRACUNIT; // just be exact now.
-	i = (char_scroll+16*FRACUNIT)/(128*FRACUNIT);
-	o = ((char_scroll/FRACUNIT)+16)%128;
+
+	o = ((char_scroll / FRACUNIT) + 16);
+	if (lastdirection)
+		o += 128; // This one-directional hack is to prevent visual glitches when going from the (currentMenu->numitems)nd character to the 1st character.
+	i = (o / 128);
+	o = (o % 128);
+
+	// subtract 1 from i to counteract the +128 from the prior hack, if we made it happen
+	if (lastdirection)
+	{
+		j = i;
+		do
+		{
+			i--;
+			if (i < 0)
+				i = (currentMenu->numitems - 1);
+		} while (i != j && PlayerMenu[i].status == IT_DISABLED); // Skip over all disabled characters.
+	}
 
 	// prev character
-	if (i-1 >= 0 && PlayerMenu[i-1].status != IT_DISABLED
+	prev = i;
+	do
+	{
+		prev--;
+		if (prev < 0)
+			prev = (currentMenu->numitems - 1);
+	} while (prev != i && PlayerMenu[prev].status == IT_DISABLED); // Skip over all disabled characters.
+
+	if (prev >= 0 && PlayerMenu[prev].status != IT_DISABLED
 	&& o < 32)
 	{
-		picname = description[i-1].picname;
+		picname = description[prev].picname;
 		if (picname[0] == '\0')
 		{
-			picname = strtok(Z_StrDup(description[i-1].skinname), "&");
+			picname = strtok(Z_StrDup(description[prev].skinname), "&");
 			for (j = 0; j < numskins; j++)
 				if (stricmp(skins[j].name, picname) == 0)
 				{
@@ -6767,13 +6796,21 @@ static void M_DrawSetupChoosePlayerMenu(void)
 	}
 
 	// next character
-	if (i+1 < currentMenu->numitems && PlayerMenu[i+1].status != IT_DISABLED
+	next = i;
+	do
+	{
+		next++;
+		if (next >= currentMenu->numitems)
+			next = 0;
+	} while (next != i && PlayerMenu[next].status == IT_DISABLED); // Skip over all disabled characters.
+
+	if (next < currentMenu->numitems && PlayerMenu[next].status != IT_DISABLED
 	&& o < 128)
 	{
-		picname = description[i+1].picname;
+		picname = description[next].picname;
 		if (picname[0] == '\0')
 		{
-			picname = strtok(Z_StrDup(description[i+1].skinname), "&");
+			picname = strtok(Z_StrDup(description[next].skinname), "&");
 			for (j = 0; j < numskins; j++)
 				if (stricmp(skins[j].name, picname) == 0)
 				{
@@ -6793,6 +6830,9 @@ static void M_DrawSetupChoosePlayerMenu(void)
 	}
 
 	// current character
+	if (PlayerMenu[i].status == IT_DISABLED) // Prevent flickering.
+		i = (lastdirection) ? prev : next;
+
 	if (i < currentMenu->numitems && PlayerMenu[i].status != IT_DISABLED)
 	{
 		picname = description[i].picname;
