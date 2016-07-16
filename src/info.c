@@ -52,7 +52,7 @@ char sprnames[NUMSPRITES + 1][5] =
 	"ROIJ","ROIK","ROIL","ROIM","ROIN","ROIO","ROIP","BBAL","GWLG","GWLR",
 	"SRBA","SRBB","SRBC","SRBD","SRBE","SRBF","SRBG","SRBH","SRBI","SRBJ",
 	"SRBK","SRBL","SRBM","SRBN","SRBO","TRE1","TRE2","TRE3","TRE4","TRE5",
-	"GFZD","BRIC","WDDB",
+	"GFZD","BRIC","WDDB","SSWY","SSWR","SSWB",
 };
 
 skincolor_t skincolors[MAXSKINCOLORS] = {
@@ -1861,6 +1861,36 @@ state_t states[NUMSTATES] =
 	{SPR_RSPR, 3, 1, NULL, 0, 0, S_RDIAG7},   // S_RDIAG6
 	{SPR_RSPR, 2, 1, NULL, 0, 0, S_RDIAG8},   // S_RDIAG7
 	{SPR_RSPR, 1, 1, NULL, 0, 0, S_RDIAG1},   // S_RDIAG8
+
+	// Yellow Side Spring
+	{SPR_SSWY, 0, -1, NULL, 0, 0, S_NULL},    // S_YHORIZ1
+	{SPR_SSWY, 1, 1, A_Pain, 0, 0, S_YHORIZ3}, // S_YHORIZ2
+	{SPR_SSWY, 2, 1, NULL, 0, 0, S_YHORIZ4},   // S_YHORIZ3
+	{SPR_SSWY, 3, 1, NULL, 0, 0, S_YHORIZ5},   // S_YHORIZ4
+	{SPR_SSWY, 4, 1, NULL, 0, 0, S_YHORIZ6},   // S_YHORIZ5
+	{SPR_SSWY, 3, 1, NULL, 0, 0, S_YHORIZ7},   // S_YHORIZ6
+	{SPR_SSWY, 2, 1, NULL, 0, 0, S_YHORIZ8},   // S_YHORIZ7
+	{SPR_SSWY, 1, 1, NULL, 0, 0, S_YHORIZ1},   // S_YHORIZ8
+
+	// Red Side Spring
+	{SPR_SSWR, 0, -1, NULL, 0, 0, S_NULL},    // S_RHORIZ1
+	{SPR_SSWR, 1, 1, A_Pain, 0, 0, S_RHORIZ3}, // S_RHORIZ2
+	{SPR_SSWR, 2, 1, NULL, 0, 0, S_RHORIZ4},   // S_RHORIZ3
+	{SPR_SSWR, 3, 1, NULL, 0, 0, S_RHORIZ5},   // S_RHORIZ4
+	{SPR_SSWR, 4, 1, NULL, 0, 0, S_RHORIZ6},   // S_RHORIZ5
+	{SPR_SSWR, 3, 1, NULL, 0, 0, S_RHORIZ7},   // S_RHORIZ6
+	{SPR_SSWR, 2, 1, NULL, 0, 0, S_RHORIZ8},   // S_RHORIZ7
+	{SPR_SSWR, 1, 1, NULL, 0, 0, S_RHORIZ1},   // S_RHORIZ8
+
+	// Blue Side Spring
+	{SPR_SSWB, 0, -1, NULL, 0, 0, S_NULL},    // S_BHORIZ1
+	{SPR_SSWB, 1, 1, A_Pain, 0, 0, S_BHORIZ3}, // S_BHORIZ2
+	{SPR_SSWB, 2, 1, NULL, 0, 0, S_BHORIZ4},   // S_BHORIZ3
+	{SPR_SSWB, 3, 1, NULL, 0, 0, S_BHORIZ5},   // S_BHORIZ4
+	{SPR_SSWB, 4, 1, NULL, 0, 0, S_BHORIZ6},   // S_BHORIZ5
+	{SPR_SSWB, 3, 1, NULL, 0, 0, S_BHORIZ7},   // S_BHORIZ6
+	{SPR_SSWB, 2, 1, NULL, 0, 0, S_BHORIZ8},   // S_BHORIZ7
+	{SPR_SSWB, 1, 1, NULL, 0, 0, S_BHORIZ1},   // S_BHORIZ8
 
 	// Rain
 	{SPR_RAIN, FF_TRANS50, -1, NULL, 0, 0, S_NULL}, // S_RAIN1
@@ -5268,6 +5298,87 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // activesound
 		MF_SOLID|MF_SPRING, // flags
 		S_RDIAG2        // raisestate
+	},
+
+	{           // MT_YELLOWHORIZ
+		558,            // doomednum
+		S_YHORIZ1,      // spawnstate
+		1,              // spawnhealth
+		S_YHORIZ2,      // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_spring,     // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		16*FRACUNIT,    // radius
+		32*FRACUNIT,    // height
+		0,              // display offset
+		0,              // mass
+		16*FRACUNIT,    // damage
+		sfx_None,       // activesound
+		MF_SOLID|MF_SPRING|MF_NOGRAVITY, // flags
+		S_YHORIZ2       // raisestate
+	},
+
+	{           // MT_REDHORIZ
+		559,            // doomednum
+		S_RHORIZ1,      // spawnstate
+		1,              // spawnhealth
+		S_RHORIZ2,      // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_spring,     // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		16*FRACUNIT,    // radius
+		32*FRACUNIT,    // height
+		0,              // display offset
+		0,              // mass
+		64*FRACUNIT,    // damage
+		sfx_None,       // activesound
+		MF_SOLID|MF_SPRING|MF_NOGRAVITY, // flags
+		S_RHORIZ2       // raisestate
+	},
+
+	{           // MT_BLUEHORIZ
+		560,            // doomednum
+		S_BHORIZ1,      // spawnstate
+		1,              // spawnhealth
+		S_BHORIZ2,      // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_spring,     // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		16*FRACUNIT,    // radius
+		32*FRACUNIT,    // height
+		0,              // display offset
+		0,              // mass
+		4*FRACUNIT,    // damage
+		sfx_None,       // activesound
+		MF_SOLID|MF_SPRING|MF_NOGRAVITY, // flags
+		S_BHORIZ2       // raisestate
 	},
 
 	{           // MT_BUBBLES
