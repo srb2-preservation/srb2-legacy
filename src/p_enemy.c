@@ -1897,12 +1897,13 @@ void A_Boss1Laser(void *thing)
 		if (!(actor->spawnpoint && actor->spawnpoint->options & MTF_AMBUSH))
 		{
 			point = P_SpawnMobj(x + P_ReturnThrustX(actor, actor->angle, actor->radius), y + P_ReturnThrustY(actor, actor->angle, actor->radius), actor->z - actor->height / 2, MT_EGGMOBILE_TARGET);
+			point->angle = actor->angle;
 			point->fuse = actor->tics+1;
 			P_SetTarget(&point->target, actor->target);
 			P_SetTarget(&actor->target, point);
 		}
 	}
-	else if (actor->target && !(actor->spawnpoint && actor->spawnpoint->options & MTF_AMBUSH))
+	else if (actor->target && actor->target->type != MT_EGGMOBILE_TARGET && !(actor->spawnpoint && actor->spawnpoint->options & MTF_AMBUSH))
 		actor->angle = R_PointToAngle2(x, y, actor->target->x, actor->target->y);
 
 	if (actor->spawnpoint && actor->spawnpoint->options & MTF_AMBUSH)
@@ -1953,21 +1954,26 @@ void A_Boss1Laser(void *thing)
 // var1:
 //		0 - accelerative focus with friction
 //		1 - steady focus with fixed movement speed
-// var2 = unused
+//      anything else - don't move
+// var2:
+//		0 - don't trace target, just move forwards
+//      & 1 - change horizontal angle
+//      & 2 - change vertical angle
 //
 void A_FocusTarget(void *thing)
 {
 	mobj_t *actor = thing;
 	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
 	if (LUA_CallAction("A_FocusTarget", actor))
 		return;
 
 	if (actor->target)
 	{
 		fixed_t speed = FixedMul(actor->info->speed, actor->scale);
-		fixed_t dist = R_PointToDist2(actor->x, actor->y, actor->target->x, actor->target->y);
-		angle_t vangle = R_PointToAngle2(actor->z , 0, actor->target->z + (actor->target->height>>1), dist);
-		angle_t hangle = R_PointToAngle2(actor->x, actor->y, actor->target->x, actor->target->y);
+		fixed_t dist = (locvar2 ? R_PointToDist2(actor->x, actor->y, actor->target->x, actor->target->y) : speed+1);
+		angle_t hangle = ((locvar2 & 1) ? R_PointToAngle2(actor->x, actor->y, actor->target->x, actor->target->y) : actor->angle);
+		angle_t vangle = ((locvar2 & 2) ? R_PointToAngle2(actor->z , 0, actor->target->z + (actor->target->height>>1), dist) : ANGLE_90);
 		switch(locvar1)
 		{
 		case 0:
