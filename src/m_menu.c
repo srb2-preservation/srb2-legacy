@@ -384,7 +384,6 @@ static void M_HandleVideoMode(INT32 choice);
 static void M_ResetCvars(INT32 choice);
 
 // Consvar onchange functions
-static void Nextmap_OnChange(void);
 static void Newgametype_OnChange(void);
 static void Dummymares_OnChange(void);
 
@@ -2173,8 +2172,8 @@ menu_t OP_LegacyCreditsDef = DEFAULTMENUSTYLE(NULL, OP_LegacyCreditsMenu, &OP_Le
 static INT32 M_GetFirstLevelInList(INT32 gt);
 
 
-// Nextmap.  Used for Time Attack.
-static void Nextmap_OnChange(void)
+// Nextmap.  Used for Level select.
+void Nextmap_OnChange(void)
 {
 	char *leveltitle;
 	char *tabase = Z_Malloc(512, PU_STATIC, NULL);
@@ -7508,8 +7507,7 @@ static void M_EraseGuest(INT32 choice)
 		M_SetupNextMenu(&SP_NightsAttackDef);
 	else
 		M_SetupNextMenu(&SP_TimeAttackDef);
-	CV_AddValue(&cv_nextmap, -1);
-	CV_AddValue(&cv_nextmap, 1);
+	Nextmap_OnChange();
 	M_StartMessage(M_GetText("Guest replay data erased.\n"),NULL,MM_NOTHING);
 }
 
@@ -7535,8 +7533,7 @@ static void M_OverwriteGuest(const char *which, boolean nights)
 		M_SetupNextMenu(&SP_NightsAttackDef);
 	else
 		M_SetupNextMenu(&SP_TimeAttackDef);
-	CV_AddValue(&cv_nextmap, -1);
-	CV_AddValue(&cv_nextmap, 1);
+	Nextmap_OnChange();
 	M_StartMessage(M_GetText("Guest replay data saved.\n"),NULL,MM_NOTHING);
 }
 
@@ -7628,9 +7625,7 @@ static void M_ModeAttackEndGame(INT32 choice)
 	G_SetGamestate(GS_TIMEATTACK);
 	modeattacking = ATTACKING_NONE;
 	S_ChangeMusicInternal("racent", true);
-	// Update replay availability.
-	CV_AddValue(&cv_nextmap, 1);
-	CV_AddValue(&cv_nextmap, -1);
+	Nextmap_OnChange();
 }
 
 // Going to Marathon menu...
@@ -8343,6 +8338,9 @@ static void M_MapChange(INT32 choice)
 	levellistmode = LLM_CREATESERVER;
 
 	CV_SetValue(&cv_newgametype, choice);
+
+	if (Playing() && !(M_CanShowLevelOnPlatter(cv_nextmap.value-1, choice)) && (M_CanShowLevelOnPlatter(gamemap-1, choice)))
+		CV_SetValue(&cv_nextmap, gamemap);
 
 	if (!M_PrepareLevelPlatter(choice))
 	{
