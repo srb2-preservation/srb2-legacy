@@ -128,6 +128,8 @@ INT16 spstage_start, spmarathon_start;
 INT16 sstage_start;
 INT16 sstage_end;
 
+boolean hidetitlepics = false;
+
 boolean looptitle = false;
 boolean useNightsSS = false;
 

@@ -33,6 +33,8 @@
 #include "y_inter.h"
 #include "m_cond.h"
 
+#include "lua_hud.h"
+
 // Stage of animation:
 // 0 = text, 1 = art screen
 static INT32 finalecount;
@@ -1509,6 +1511,10 @@ void F_TitleScreenDrawer(void)
 	if (!ttwing || (gamestate != GS_TITLESCREEN && gamestate != GS_WAITINGPLAYERS))
 		return;
 
+	// rei|miru: use title pics?
+	if (hidetitlepics)
+		goto luahook;
+
 	V_DrawScaledPatch(30, 14, 0, ttwing);
 
 	if (finalecount < 57)
@@ -1545,6 +1551,9 @@ void F_TitleScreenDrawer(void)
 	}
 
 	V_DrawScaledPatch(48, 142, 0,ttbanner);
+
+luahook:
+	LUAh_TitleHUD();
 }
 
 // (no longer) De-Demo'd Title Screen
