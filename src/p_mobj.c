@@ -7779,6 +7779,11 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 		case MT_SPIKE:
 			mobj->flags2 |= MF2_STANDONME;
 			break;
+		case MT_GFZTREE:
+		case MT_GFZBERRYTREE:
+		case MT_GFZCHERRYTREE:
+			mobj->flags2 |= MF2_STANDONME;
+			break;
 		case MT_DETON:
 			mobj->movedir = 0;
 			break;

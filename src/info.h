@@ -571,6 +571,13 @@ typedef enum sprite
 	SPR_SRBN,
 	SPR_SRBO,
 
+	// Trees (both GFZ and misc)
+	SPR_TRE1, // GFZ
+	SPR_TRE2, // Checker
+	SPR_TRE3, // Frozen Hillside
+	SPR_TRE4, // Polygon
+	SPR_TRE5, // Bush tree
+
 	SPR_FIRSTFREESLOT,
 	SPR_LASTFREESLOT = SPR_FIRSTFREESLOT + NUMSPRITEFREESLOTS - 1,
 	NUMSPRITES
@@ -1827,6 +1834,7 @@ typedef enum state
 	S_DEMONFIRE5,
 	S_DEMONFIRE6,
 
+	// GFZ flowers
 	S_GFZFLOWERA,
 	S_GFZFLOWERA2,
 
@@ -1837,6 +1845,18 @@ typedef enum state
 
 	S_BERRYBUSH,
 	S_BUSH,
+
+	// Trees (both GFZ and misc)
+	S_GFZTREE,
+	S_GFZBERRYTREE,
+	S_GFZCHERRYTREE,
+	S_CHECKERTREE,
+	S_CHECKERSUNSETTREE,
+	S_FHZTREE, // Frozen Hillside
+	S_FHZPINKTREE,
+	S_POLYGONTREE,
+	S_BUSHTREE,
+	S_BUSHREDTREE,
 
 	// THZ Plant
 	S_THZPLANT1,
@@ -3147,6 +3167,17 @@ typedef enum mobj_type
 	MT_GFZFLOWER3,
 	MT_BERRYBUSH,
 	MT_BUSH,
+	// Trees (both GFZ and misc)
+	MT_GFZTREE,
+	MT_GFZBERRYTREE,
+	MT_GFZCHERRYTREE,
+	MT_CHECKERTREE,
+	MT_CHECKERSUNSETTREE,
+	MT_FHZTREE, // Frozen Hillside
+	MT_FHZPINKTREE,
+	MT_POLYGONTREE,
+	MT_BUSHTREE,
+	MT_BUSHREDTREE,
 
 	// Techno Hill Scenery
 	MT_THZPLANT, // THZ Plant

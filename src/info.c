@@ -51,7 +51,7 @@ char sprnames[NUMSPRITES + 1][5] =
 	"BOM4","ROIA","ROIB","ROIC","ROID","ROIE","ROIF","ROIG","ROIH","ROII",
 	"ROIJ","ROIK","ROIL","ROIM","ROIN","ROIO","ROIP","BBAL","GWLG","GWLR",
 	"SRBA","SRBB","SRBC","SRBD","SRBE","SRBF","SRBG","SRBH","SRBI","SRBJ",
-	"SRBK","SRBL","SRBM","SRBN","SRBO",
+	"SRBK","SRBL","SRBM","SRBN","SRBO","TRE1","TRE2","TRE3","TRE4","TRE5",
 };
 
 skincolor_t skincolors[MAXSKINCOLORS] = {
@@ -990,7 +990,7 @@ state_t states[NUMSTATES] =
 	{SPR_TRNG, FF_ANIMATE, -1, NULL, 23, 1, S_TEAMRING},  // S_TEAMRING1
 
 	// Special Stage Token
-	{SPR_TOKE, FF_ANIMATE|FF_FULLBRIGHT, -1, {NULL}, 19, 1, S_TOKEN}, // S_TOKEN
+	{SPR_TOKE, FF_ANIMATE|FF_FULLBRIGHT, -1, NULL, 19, 1, S_TOKEN}, // S_TOKEN
 
 	// CTF Flags
 	{SPR_RFLG, 0, -1, NULL, 0, 0, S_NULL}, // S_REDFLAG
@@ -1375,6 +1375,18 @@ state_t states[NUMSTATES] =
 
 	{SPR_BUS1, 0, -1, NULL, 0, 0, S_NULL},       // S_BERRYBUSH
 	{SPR_BUS2, 0, -1, NULL, 0, 0, S_NULL},       // S_BUSH
+
+	// Trees
+	{SPR_TRE1, 0, -1, NULL, 0, 0, S_NULL}, // S_GFZTREE
+	{SPR_TRE1, 1, -1, NULL, 0, 0, S_NULL}, // S_GFZBERRYTREE
+	{SPR_TRE1, 2, -1, NULL, 0, 0, S_NULL}, // S_GFZCHERRYTREE
+	{SPR_TRE2, 0, -1, NULL, 0, 0, S_NULL}, // S_CHECKERTREE
+	{SPR_TRE2, 1, -1, NULL, 0, 0, S_NULL}, // S_CHECKERSUNSETTREE
+	{SPR_TRE3, 0, -1, NULL, 0, 0, S_NULL}, // S_FHZTREE
+	{SPR_TRE3, 1, -1, NULL, 0, 0, S_NULL}, // S_FHZPINKTREE
+	{SPR_TRE4, 0, -1, NULL, 0, 0, S_NULL}, // S_POLYGONTREE
+	{SPR_TRE5, 0, -1, NULL, 0, 0, S_NULL}, // S_BUSHTREE
+	{SPR_TRE5, 1, -1, NULL, 0, 0, S_NULL}, // S_BUSHREDTREE
 
 	{SPR_THZP, 0, 4, NULL, 0, 0, S_THZPLANT2}, // S_THZPLANT1
 	{SPR_THZP, 1, 4, NULL, 0, 0, S_THZPLANT3}, // S_THZPLANT1
@@ -7004,6 +7016,276 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		0,              // speed
 		16*FRACUNIT,    // radius
 		32*FRACUNIT,    // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOTHINK|MF_NOBLOCKMAP|MF_NOCLIP|MF_SCENERY, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_GFZTREE
+		806,            // doomednum
+		S_GFZTREE,         // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		20*FRACUNIT,    // radius
+		128*FRACUNIT,    // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_SOLID|MF_SCENERY, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_GFZBERRYTREE
+		807,            // doomednum
+		S_GFZBERRYTREE,         // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		20*FRACUNIT,    // radius
+		128*FRACUNIT,    // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_SOLID|MF_SCENERY, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_GFZCHERRYTREE
+		808,            // doomednum
+		S_GFZCHERRYTREE,         // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		20*FRACUNIT,    // radius
+		128*FRACUNIT,    // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_SOLID|MF_SCENERY, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_CHECKERTREE
+		810,            // doomednum
+		S_CHECKERTREE,         // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		20*FRACUNIT,    // radius
+		200*FRACUNIT,    // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOTHINK|MF_NOBLOCKMAP|MF_NOCLIP|MF_SCENERY, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_CHECKERSUNSETTREE
+		811,            // doomednum
+		S_CHECKERSUNSETTREE,         // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		20*FRACUNIT,    // radius
+		200*FRACUNIT,    // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOTHINK|MF_NOBLOCKMAP|MF_NOCLIP|MF_SCENERY, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_FHZTREE
+		812,            // doomednum
+		S_FHZTREE,         // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		20*FRACUNIT,    // radius
+		200*FRACUNIT,    // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOTHINK|MF_NOBLOCKMAP|MF_NOCLIP|MF_SCENERY, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_FHZPINKTREE
+		813,            // doomednum
+		S_FHZPINKTREE,         // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		20*FRACUNIT,    // radius
+		200*FRACUNIT,    // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOTHINK|MF_NOBLOCKMAP|MF_NOCLIP|MF_SCENERY, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_POLYGONTREE
+		814,            // doomednum
+		S_POLYGONTREE,         // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		20*FRACUNIT,    // radius
+		200*FRACUNIT,    // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOTHINK|MF_NOBLOCKMAP|MF_NOCLIP|MF_SCENERY, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_BUSHTREE
+		815,            // doomednum
+		S_BUSHTREE,         // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		20*FRACUNIT,    // radius
+		200*FRACUNIT,    // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOTHINK|MF_NOBLOCKMAP|MF_NOCLIP|MF_SCENERY, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_BUSHREDTREE
+		816,            // doomednum
+		S_BUSHREDTREE,         // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		20*FRACUNIT,    // radius
+		200*FRACUNIT,    // height
 		0,              // display offset
 		100,            // mass
 		0,              // damage
