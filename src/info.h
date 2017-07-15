@@ -305,7 +305,6 @@ typedef enum sprite
 	// Collectible Items
 	SPR_RING,
 	SPR_TRNG, // Team Rings
-	SPR_EMMY, // emerald test
 	SPR_TOKE, // Special Stage Token
 	SPR_RFLG, // Red CTF Flag
 	SPR_BFLG, // Blue CTF Flag
@@ -1454,11 +1453,7 @@ typedef enum state
 	S_TEAMRING,
 
 	// Special Stage Token
-	S_EMMY,
-
-	// Special Stage Token
 	S_TOKEN,
-	S_MOVINGTOKEN,
 
 	// CTF Flags
 	S_REDFLAG,
@@ -3054,8 +3049,7 @@ typedef enum mobj_type
 	MT_BLUEBALL,  // Blue sphere replacement for special stages
 	MT_REDTEAMRING,  //Rings collectable by red team.
 	MT_BLUETEAMRING, //Rings collectable by blue team.
-	MT_EMMY, // emerald token for special stage
-	MT_TOKEN, // Special Stage Token (uncollectible part)
+	MT_TOKEN, // Special Stage token for special stage
 	MT_REDFLAG, // Red CTF Flag
 	MT_BLUEFLAG, // Blue CTF Flag
 	MT_EMBLEM,

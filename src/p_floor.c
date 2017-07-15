@@ -3259,14 +3259,6 @@ INT32 EV_MarioBlock(sector_t *sec, sector_t *roversector, fixed_t topheight, mob
 		}
 		else
 		{
-			if (thing->type == MT_EMMY && thing->spawnpoint && (thing->spawnpoint->options & MTF_OBJECTSPECIAL))
-			{
-				mobj_t *tokenobj = P_SpawnMobj(roversector->soundorg.x, roversector->soundorg.y, topheight, MT_TOKEN);
-				P_SetTarget(&thing->tracer, tokenobj);
-				P_SetTarget(&tokenobj->target, thing);
-				P_SetMobjState(tokenobj, mobjinfo[MT_TOKEN].seestate);
-			}
-
 			// "Powerup rise" sound
 			S_StartSound(puncher, sfx_mario9); // Puncher is "close enough"
 		}

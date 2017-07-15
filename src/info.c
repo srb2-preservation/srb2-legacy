@@ -30,28 +30,28 @@ char sprnames[NUMSPRITES + 1][5] =
 	"VLTR","PNTY","ARCH","CBFS","SPSH","ESHI","GSNP","MNUS","SSHL","UNID",
 	"BBUZ","JETF","EGGM","EGGN","TNKA","TNKB","SPNK","GOOP","EGGO","PRPL",
 	"FAKE","EGGP","EFIR","EGGQ","EGGR","BRAK","BGOO","BMSL","EGGT","RCKT",
-	"ELEC","TARG","NPLM","MNPL","METL","MSCF","MSCB","RING","TRNG","EMMY",
-	"TOKE","RFLG","BFLG","NWNG","EMBM","CEMG","EMER","FANS","BUBL","SIGN",
-	"STEM","SPIK","SFLM","USPK","STPT","BMNE","SRBX","RRBX","BRBX","SHTV",
-	"PINV","YLTV","BLTV","BKTV","WHTV","GRTV","ELTV","EGGB","MIXU","RECY",
-	"QUES","GBTV","PRUP","PTTV","MTEX","MISL","TORP","ENRG","MINE","JBUL",
-	"TRLS","CBLL","AROW","CFIR","FWR1","FWR2","FWR3","FWR4","BUS1","BUS2",
-	"THZP","ALRM","GARG","SEWE","DRIP","CRL1","CRL2","CRL3","BCRY","CHAN",
-	"FLAM","ESTA","SMCH","BMCH","SMCE","BMCE","BTBL","STBL","CACT","FLME",
-	"DFLM","XMS1","XMS2","XMS3","BSZ1","BSZ2","BSZ3","BSZ4","BSZ5","BSZ6",
-	"BSZ7","BSZ8","STLG","DBAL","RCRY","ARMA","ARMF","ARMB","WIND","MAGN",
-	"ELEM","FORC","PITY","IVSP","SSPK","GOAL","BIRD","BUNY","MOUS","CHIC",
-	"COWZ","RBRD","SPRY","SPRR","SPRB","YSPR","RSPR","RAIN","SNO1","SPLH",
-	"SPLA","SMOK","BUBP","BUBO","BUBN","BUBM","POPP","TFOG","SEED","PRTL",
-	"SCOR","DRWN","TTAG","GFLG","RRNG","RNGB","RNGR","RNGI","RNGA","RNGE",
-	"RNGS","RNGG","PIKB","PIKR","PIKA","PIKE","PIKS","PIKG","TAUT","TGRE",
-	"TSCR","COIN","CPRK","GOOM","BGOM","FFWR","FBLL","SHLL","PUMA","HAMM",
-	"KOOP","BFLM","MAXE","MUS1","MUS2","TOAD","NDRN","SUPE","SUPZ","NDRL",
-	"NSPK","NBMP","HOOP","NSCR","NPRU","CAPS","SUPT","SPRK","BOM1","BOM2",
-	"BOM3","BOM4","ROIA","ROIB","ROIC","ROID","ROIE","ROIF","ROIG","ROIH",
-	"ROII","ROIJ","ROIK","ROIL","ROIM","ROIN","ROIO","ROIP","BBAL","GWLG",
-	"GWLR","SRBA","SRBB","SRBC","SRBD","SRBE","SRBF","SRBG","SRBH","SRBI",
-	"SRBJ","SRBK","SRBL","SRBM","SRBN","SRBO",
+	"ELEC","TARG","NPLM","MNPL","METL","MSCF","MSCB","RING","TRNG","TOKE",
+	"RFLG","BFLG","NWNG","EMBM","CEMG","EMER","FANS","BUBL","SIGN","STEM",
+	"SPIK","SFLM","USPK","STPT","BMNE","SRBX","RRBX","BRBX","SHTV","PINV",
+	"YLTV","BLTV","BKTV","WHTV","GRTV","ELTV","EGGB","MIXU","RECY","QUES",
+	"GBTV","PRUP","PTTV","MTEX","MISL","TORP","ENRG","MINE","JBUL","TRLS",
+	"CBLL","AROW","CFIR","FWR1","FWR2","FWR3","FWR4","BUS1","BUS2","THZP",
+	"ALRM","GARG","SEWE","DRIP","CRL1","CRL2","CRL3","BCRY","CHAN","FLAM",
+	"ESTA","SMCH","BMCH","SMCE","BMCE","BTBL","STBL","CACT","FLME","DFLM",
+	"XMS1","XMS2","XMS3","BSZ1","BSZ2","BSZ3","BSZ4","BSZ5","BSZ6","BSZ7",
+	"BSZ8","STLG","DBAL","RCRY","ARMA","ARMF","ARMB","WIND","MAGN","ELEM",
+	"FORC","PITY","IVSP","SSPK","GOAL","BIRD","BUNY","MOUS","CHIC","COWZ",
+	"RBRD","SPRY","SPRR","SPRB","YSPR","RSPR","RAIN","SNO1","SPLH","SPLA",
+	"SMOK","BUBP","BUBO","BUBN","BUBM","POPP","TFOG","SEED","PRTL","SCOR",
+	"DRWN","TTAG","GFLG","RRNG","RNGB","RNGR","RNGI","RNGA","RNGE","RNGS",
+	"RNGG","PIKB","PIKR","PIKA","PIKE","PIKS","PIKG","TAUT","TGRE","TSCR",
+	"COIN","CPRK","GOOM","BGOM","FFWR","FBLL","SHLL","PUMA","HAMM","KOOP",
+	"BFLM","MAXE","MUS1","MUS2","TOAD","NDRN","SUPE","SUPZ","NDRL","NSPK",
+	"NBMP","HOOP","NSCR","NPRU","CAPS","SUPT","SPRK","BOM1","BOM2","BOM3",
+	"BOM4","ROIA","ROIB","ROIC","ROID","ROIE","ROIF","ROIG","ROIH","ROII",
+	"ROIJ","ROIK","ROIL","ROIM","ROIN","ROIO","ROIP","BBAL","GWLG","GWLR",
+	"SRBA","SRBB","SRBC","SRBD","SRBE","SRBF","SRBG","SRBH","SRBI","SRBJ",
+	"SRBK","SRBL","SRBM","SRBN","SRBO",
 };
 
 skincolor_t skincolors[MAXSKINCOLORS] = {
@@ -990,11 +990,7 @@ state_t states[NUMSTATES] =
 	{SPR_TRNG, FF_ANIMATE, -1, NULL, 23, 1, S_TEAMRING},  // S_TEAMRING1
 
 	// Special Stage Token
-	{SPR_EMMY, FF_ANIMATE|FF_FULLBRIGHT, -1, NULL, 6, 2, S_EMMY}, // S_EMMY
-
-	// Special Stage Token
-	{SPR_TOKE, FF_TRANS50|FF_FULLBRIGHT, -1, NULL, 0, 0, S_NULL}, // S_TOKEN
-	{SPR_TOKE, FF_TRANS50|FF_FULLBRIGHT,  1, A_CapeChase, 0, 0, S_MOVINGTOKEN}, // S_MOVINGTOKEN
+	{SPR_TOKE, FF_ANIMATE|FF_FULLBRIGHT, -1, {NULL}, 19, 1, S_TOKEN}, // S_TOKEN
 
 	// CTF Flags
 	{SPR_RFLG, 0, -1, NULL, 0, 0, S_NULL}, // S_REDFLAG
@@ -4696,9 +4692,9 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL          // raisestate
 	},
 
-	{           // MT_EMMY
+	{           // MT_TOKEN
 		312,            // doomednum
-		S_EMMY,         // spawnstate
+		S_TOKEN,         // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
@@ -4720,33 +4716,6 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		1,              // damage
 		sfx_None,       // activesound
 		MF_SPECIAL|MF_NOGRAVITY|MF_NOCLIPHEIGHT, // flags
-		S_NULL          // raisestate
-	},
-
-	{           // MT_TOKEN
-		-1,             // doomednum
-		S_TOKEN,        // spawnstate
-		1000,           // spawnhealth
-		S_MOVINGTOKEN,  // seestate
-		sfx_None,       // seesound
-		8,              // reactiontime
-		sfx_None,       // attacksound
-		S_NULL,         // painstate
-		0,              // painchance
-		sfx_None,       // painsound
-		S_NULL,         // meleestate
-		S_NULL,         // missilestate
-		S_NULL,         // deathstate
-		S_NULL,         // xdeathstate
-		sfx_None,       // deathsound
-		8,              // speed
-		8*FRACUNIT,     // radius
-		16*FRACUNIT,    // height
-		0,              // display offset
-		100,            // mass
-		0,              // damage
-		sfx_None,       // activesound
-		MF_NOGRAVITY|MF_NOBLOCKMAP|MF_NOCLIP, // flags
 		S_NULL          // raisestate
 	},
 
