@@ -373,7 +373,7 @@ extern INT16 startmap;
 extern INT32 ultimate_selectable;
 
 #define MAXSAVEGAMES 31 //note: last save game is "no save"
-#define NOSAVESLOT MAXSAVEGAMES-1 //slot where Play Without Saving appears
+#define NOSAVESLOT 0 //slot where Play Without Saving appears
 
 void M_ForceSaveSlotSelected(INT32 sslot);
 

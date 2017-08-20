@@ -1562,7 +1562,7 @@ void V_DrawString(INT32 x, INT32 y, INT32 option, const char *string)
 
 		if (cx > scrwidth)
 			break;
-		if (cx+left + w < 0) //left boundary check
+		if (cx + w < 0) //left boundary check
 		{
 			cx += w;
 			continue;
@@ -1787,7 +1787,7 @@ void V_DrawThinString(INT32 x, INT32 y, INT32 option, const char *string)
 
 		if (cx > scrwidth)
 			break;
-		if (cx+left + w < 0) //left boundary check
+		if (cx + w < 0) //left boundary check
 		{
 			cx += w;
 			continue;

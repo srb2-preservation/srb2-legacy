@@ -82,7 +82,7 @@ INT16 gamemap = 1;
 INT16 maptol;
 UINT8 globalweather = 0;
 INT32 curWeather = PRECIP_NONE;
-INT32 cursaveslot = -1; // Auto-save 1p savegame slot
+INT32 cursaveslot = 0; // Auto-save 1p savegame slot
 INT16 lastmapsaved = 0; // Last map we auto-saved at
 UINT8 gamecomplete = 0;
 
@@ -3399,59 +3399,6 @@ void G_SaveGameData(void)
 }
 
 #define VERSIONSIZE 16
-
-#ifdef SAVEGAMES_OTHERVERSIONS
-static INT16 startonmapnum = 0;
-
-//
-// User wants to load a savegame from a different version?
-//
-static void M_ForceLoadGameResponse(INT32 ch)
-{
-	if (ch != 'y' && ch != KEY_ENTER)
-	{
-		//refused
-		Z_Free(savebuffer);
-		save_p = savebuffer = NULL;
-		startonmapnum = 0;
-		M_SetupNextMenu(&SP_LoadDef);
-		return;
-	}
-
-	// pick up where we left off.
-	save_p += VERSIONSIZE;
-	if (!P_LoadGame(startonmapnum))
-	{
-		M_ClearMenus(true); // so ESC backs out to title
-		M_StartMessage(M_GetText("Savegame file corrupted\n\nPress ESC\n"), NULL, MM_NOTHING);
-		Command_ExitGame_f();
-		Z_Free(savebuffer);
-		save_p = savebuffer = NULL;
-		startonmapnum = 0;
-
-		// no cheating!
-		memset(&savedata, 0, sizeof(savedata));
-		return;
-	}
-
-	// done
-	Z_Free(savebuffer);
-	save_p = savebuffer = NULL;
-	startonmapnum = 0;
-
-	//set cursaveslot to -1 so nothing gets saved.
-	cursaveslot = -1;
-
-	displayplayer = consoleplayer;
-	multiplayer = splitscreen = false;
-
-	if (setsizeneeded)
-		R_ExecuteSetViewSize();
-
-	M_ClearMenus(true);
-	CON_ToggleOff();
-}
-#endif
 
 //
 // G_InitFromSavegame

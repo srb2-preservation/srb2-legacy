@@ -222,6 +222,9 @@ FUNCMATH INT32 G_TicsToSeconds(tic_t tics);
 FUNCMATH INT32 G_TicsToCentiseconds(tic_t tics);
 FUNCMATH INT32 G_TicsToMilliseconds(tic_t tics);
 
+// :grin:
+void G_SaveGameOver(UINT32 slot, boolean modifylives);
+
 // Don't split up TOL handling
 INT16 G_TOLFlag(INT32 pgametype);
 
