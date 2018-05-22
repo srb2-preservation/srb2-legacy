@@ -6770,6 +6770,29 @@ void P_MobjThinker(mobj_t *mobj)
 				}
 			}
 			break;
+			case MT_WAVINGFLAG:
+				{
+					fixed_t base = (leveltime<<(FRACBITS+1));
+					mobj_t *seg = mobj->tracer, *prev = mobj;
+					mobj->movedir = mobj->angle
+						+ ((((FINESINE((FixedAngle(base<<1)>>ANGLETOFINESHIFT) & FINEMASK)
+							+ FINESINE((FixedAngle(base<<4)>>ANGLETOFINESHIFT) & FINEMASK))>>1)
+						+ FINESINE((FixedAngle(base*9)>>ANGLETOFINESHIFT) & FINEMASK)
+						+ FINECOSINE(((FixedAngle(base*9))>>ANGLETOFINESHIFT) & FINEMASK))<<12); //*2^12
+					while (seg)
+					{
+						seg->movedir = seg->angle;
+						seg->angle = prev->movedir;
+						P_UnsetThingPosition(seg);
+						seg->x = prev->x + P_ReturnThrustX(prev, prev->angle, prev->radius);
+						seg->y = prev->y + P_ReturnThrustY(prev, prev->angle, prev->radius);
+						seg->z = prev->z + prev->height - (seg->scale>>1);
+						P_SetThingPosition(seg);
+						prev = seg;
+						seg = seg->tracer;
+					}
+				}
+				break;
 		case MT_SPINMACEPOINT:
 			if (leveltime & 1)
 			{
@@ -7850,6 +7873,36 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			}
 			break;
 		}
+		case MT_THZTREE:
+			{ // Spawn the branches
+				angle_t mobjangle = FixedAngle(tmthing->angle*FRACUNIT);
+				P_SpawnMobj(mobj->x+1*FRACUNIT,  mobj->y,          mobj->z, MT_THZTREEBRANCH)->angle = mobjangle + ANGLE_22h;
+				P_SpawnMobj(mobj->x+0,           mobj->y+1*FRACUNIT, mobj->z, MT_THZTREEBRANCH)->angle = mobjangle + ANGLE_157h;
+				P_SpawnMobj(mobj->x-1*FRACUNIT, mobj->y,          mobj->z, MT_THZTREEBRANCH)->angle = mobjangle + ANGLE_270;
+			}
+			break;
+		case MT_CEZPOLE:
+			// Spawn the banner
+			P_SpawnMobj(
+				mobj->x+P_ReturnThrustX(mobj, mobj->angle, 4<<FRACBITS),
+				mobj->y+P_ReturnThrustY(mobj, mobj->angle, 4<<FRACBITS),
+				mobj->z, MT_CEZBANNER)->angle = mobj->angle + ANGLE_90;
+			break;
+		case MT_WAVINGFLAG:
+			{
+				mobj_t *prev = mobj, *cur;
+				UINT8 i;
+				mobj->destscale <<= 2;
+				P_SetScale(mobj, mobj->destscale);
+				for (i = 0; i <= 16; i++) // probably should be < but staying authentic to the Lua version
+				{
+					cur = P_SpawnMobj(mobj->x, mobj->y, mobj->z, MT_WAVINGFLAGSEG);
+					P_SetTarget(&prev->tracer, cur);
+					cur->extravalue1 = i;
+					prev = cur;
+				}
+			}
+			break;
 		case MT_EGGMOBILE2:
 			// Special condition for the 2nd boss.
 			mobj->watertop = mobj->info->speed;
@@ -9284,13 +9337,9 @@ ML_NOCLIMB : Direction not controllable
 	case MT_TRAPGOYLELONG:
 		if (mthing->angle >= 360)
 			mobj->tics += 7*(mthing->angle / 360) + 1; // starting delay
-	case MT_THZTREE:
-		{ // Spawn the branches
-			angle_t mobjangle = FixedAngle(mthing->angle*FRACUNIT);
-			P_SpawnMobj(mobj->x+1*FRACUNIT,  mobj->y,          mobj->z, MT_THZTREEBRANCH)->angle = mobjangle + ANGLE_22h;
-			P_SpawnMobj(mobj->x+0,           mobj->y+1*FRACUNIT, mobj->z, MT_THZTREEBRANCH)->angle = mobjangle + ANGLE_157h;
-			P_SpawnMobj(mobj->x-1*FRACUNIT, mobj->y,          mobj->z, MT_THZTREEBRANCH)->angle = mobjangle + ANGLE_270;
-		}
+	case MT_FLAMEHOLDER:
+		if (!(mthing->options & MTF_OBJECTSPECIAL)) // Spawn the fire
+			P_SpawnMobj(mobj->x, mobj->y, mobj->z+mobj->height, MT_FLAME);
 		break;
 	default:
 		break;

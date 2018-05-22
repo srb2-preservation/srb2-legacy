@@ -5388,7 +5388,20 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	// CEZ Big Mace
 	"S_BIGMACE",
 
-	"S_CEZFLOWER1",
+	"S_CEZFLOWER",
+	"S_CEZPOLE",
+	"S_CEZBANNER",
+	"S_PINETREE",
+	"S_CEZBUSH1",
+	"S_CEZBUSH2",
+	"S_CANDLE",
+	"S_CANDLEPRICKET",
+	"S_FLAMEHOLDER",
+	"S_FIRETORCH",
+	"S_WAVINGFLAG",
+	"S_WAVINGFLAGSEG",
+	"S_CRAWLASTATUE",
+	"S_BRAMBLES",
 
 	// Big Tumbleweed
 	"S_BIGTUMBLEWEED",
@@ -6707,7 +6720,20 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_BIGMACECHAIN", // Big Mace Chain
 	"MT_SMALLMACE", // Small Mace
 	"MT_BIGMACE", // Big Mace
-	"MT_CEZFLOWER",
+	"MT_CEZFLOWER", // Flower
+	"MT_CEZPOLE", // Pole
+	"MT_CEZBANNER", // Banner
+	"MT_PINETREE", // Pine Tree
+	"MT_CEZBUSH1", // Bush 1
+	"MT_CEZBUSH2", // Bush 2
+	"MT_CANDLE", // Candle
+	"MT_CANDLEPRICKET", // Candle pricket
+	"MT_FLAMEHOLDER", // Flame holder
+	"MT_FIRETORCH", // Fire torch
+	"MT_WAVINGFLAG", // Waving flag
+	"MT_WAVINGFLAGSEG", // Waving flag segment
+	"MT_CRAWLASTATUE", // Crawla statue
+	"MT_BRAMBLES", // Brambles
 
 	// Arid Canyon Scenery
 	"MT_BIGTUMBLEWEED",
