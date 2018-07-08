@@ -8635,7 +8635,7 @@ void P_SpawnMapThing(mapthing_t *mthing)
 	if (objectplacing)
 	{
 		i = P_GetMobjtype(mthing);
-		goto noreturns;
+			goto noreturns;
 	}
 
 	/// Player spawns aren't "spawned", but instead added to global player start arrays; player spawning is handled separately.
@@ -8728,6 +8728,7 @@ void P_SpawnMapThing(mapthing_t *mthing)
 
 	/// Weapons/panels are shooter gametype-only.
 	if (!G_RingSlingerGametype() || !cv_specialrings.value)
+	{
 		if (P_WeaponOrPanel(i))
 			return;
 
