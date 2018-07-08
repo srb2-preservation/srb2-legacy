@@ -120,6 +120,33 @@ static void TextmapSector(UINT32 i, char *param)
 	// TODO: Separate the 4 fields.
 	else if (fastcmp(param, "special"))
 		sectors[i].special = atol(M_GetToken(NULL));
+	else if (fastcmp(param, "damagetype"))
+	{
+		if (fastcmp(M_GetToken(NULL), "DeathPitTilt"))
+			sectors[i].special = 6;
+		else if (fastcmp(M_GetToken(NULL), "DeathPitNoTilt"))
+			sectors[i].special = 7;
+		else if (fastcmp(M_GetToken(NULL), "Electric"))
+			sectors[i].special = 4;
+		else if (fastcmp(M_GetToken(NULL), "Fire"))
+			sectors[i].special = 3;
+		else if (fastcmp(M_GetToken(NULL), "Generic"))
+			sectors[i].special = 1;
+		else if (fastcmp(M_GetToken(NULL), "InstaKill"))
+			sectors[i].special = 8;
+		else if (fastcmp(M_GetToken(NULL), "Lava")) // lava uses fire?
+			sectors[i].special = 3;
+		else if (fastcmp(M_GetToken(NULL), "SpecialStage"))
+			sectors[i].special = 11;
+		else if (fastcmp(M_GetToken(NULL), "Spike"))
+			sectors[i].special = 5;
+		else if (fastcmp(M_GetToken(NULL), "Water"))
+			sectors[i].special = 2;
+	}
+	else if (fastcmp(param, "outerspace"))
+		sectors[i].special = 12;
+	else if (fastcmp(param, "exit"))
+		sectors[i].special = 8192;
 	else if (fastcmp(param, "id"))
 		sectors[i].tag = atol(M_GetToken(NULL));
 	else if (fastcmp(param, "xpanningfloor"))
@@ -208,43 +235,20 @@ static void TextmapLine(UINT32 i, char *param)
 		lines[i].v1 = (vertex_t*) (size_t) atol(M_GetToken(NULL));
 	else if (fastcmp(param, "v2"))
 		lines[i].v2 = (vertex_t*) (size_t) atol(M_GetToken(NULL));
-//	else if (fastcmp(param, "v1"))
-//		lines[i].v1 = &vertexes[atol(M_GetToken(NULL))];
-//	else if (fastcmp(param, "v2"))
-//		lines[i].v2 = &vertexes[atol(M_GetToken(NULL))];
+	else if (fastcmp(param, "v1"))
+		lines[i].v1 = &vertexes[atol(M_GetToken(NULL))];
+	else if (fastcmp(param, "v2"))
+		lines[i].v2 = &vertexes[atol(M_GetToken(NULL))];
 	else if (fastcmp(param, "sidefront"))
 		lines[i].sidenum[0] = atol(M_GetToken(NULL));
 	else if (fastcmp(param, "sideback"))
 		lines[i].sidenum[1] = atol(M_GetToken(NULL));
-/*	else if (fastncmp(param, "arg", 3) && strlen(param) > 3)
-	{
-		if (fastcmp(param + 4, "str"))
-		{
-			size_t argnum = param[3] - '0';
-			if (argnum < 0 || argnum >= NUMLINESTRINGARGS)
-			{
-				CONS_Debug(DBG_SETUP, "Invalid linedef string argument number: %d\n", argnum);
-				return;
-			}
-			char* token = M_GetToken(NULL);
-			lines[i].stringargs[argnum] = Z_Malloc(strlen(token)+1, PU_LEVEL, NULL);
-			M_Memcpy(lines[i].stringargs[argnum], token, strlen(token) + 1);
-		}
-		else
-		{
-			size_t argnum = atol(param + 3);
-			if (argnum < 0 || argnum >= NUMLINEARGS)
-			{
-				CONS_Debug(DBG_SETUP, "Invalid linedef argument number: %d\n", argnum);
-				return;
-			}
-			lines[i].args[argnum] = atol(M_GetToken(NULL));
-		}
-	}*/
-//	else if (fastcmp(param, "alpha"))
-//		lines[i].alpha = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));
-//	else if (fastcmp(param, "executordelay"))
-//		lines[i].executordelay = atol(M_GetToken(NULL));
+	else if (fastcmp(param, "arg0")) // not the best way to do this, but we cant do how 2.2 does it
+		lines[i].tag = atol(M_GetToken(NULL));
+	/*else if (fastcmp(param, "alpha"))
+		lines[i].alpha = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));
+	else if (fastcmp(param, "executordelay"))
+		lines[i].executordelay = atol(M_GetToken(NULL));*/
 	// Flags
 	else if (fastcmp(param, "blocking") && fastcmp("true", M_GetToken(NULL)))
 		lines[i].flags |= ML_IMPASSIBLE;
