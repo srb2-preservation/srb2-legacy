@@ -169,6 +169,30 @@ boolean S_SetMusicPosition(UINT32 position);
 UINT32 S_GetMusicPosition(void);
 
 //
+// Music Stacking (Jingles)
+//
+
+typedef struct {
+	char musname[7];
+	UINT16 musflags;
+	boolean looping;
+	UINT32 position;
+	tic_t tic;
+	UINT16 status;
+} musicstack_t;
+
+extern char music_stack_nextmusname[7];
+extern boolean music_stack_noposition;
+extern UINT32 music_stack_fadeout;
+extern UINT32 music_stack_fadein;
+#define NUMMUSICSTACKS 10 // hahaha wait until someone needs > 10 resumes
+
+void S_SetStackAdjustmentStart(void);
+void S_AdjustMusicStackTics(void);
+void S_RetainMusic(const char *mname, UINT16 mflags, boolean looping, UINT32 position, UINT16 status);
+boolean S_RecallMusic(UINT16 status, boolean fromfirst);
+
+//
 // Music Playback
 //
 
