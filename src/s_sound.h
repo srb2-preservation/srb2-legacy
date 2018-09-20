@@ -172,20 +172,23 @@ UINT32 S_GetMusicPosition(void);
 // Music Stacking (Jingles)
 //
 
-typedef struct {
+typedef struct musicstack_s
+{
 	char musname[7];
 	UINT16 musflags;
 	boolean looping;
 	UINT32 position;
 	tic_t tic;
 	UINT16 status;
+
+    struct musicstack_s *prev;
+    struct musicstack_s *next;
 } musicstack_t;
 
 extern char music_stack_nextmusname[7];
 extern boolean music_stack_noposition;
 extern UINT32 music_stack_fadeout;
 extern UINT32 music_stack_fadein;
-#define NUMMUSICSTACKS 10 // hahaha wait until someone needs > 10 resumes
 
 void S_SetStackAdjustmentStart(void);
 void S_AdjustMusicStackTics(void);
