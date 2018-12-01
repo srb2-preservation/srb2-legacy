@@ -18,6 +18,21 @@
 #include "doomstat.h"
 #include "r_defs.h"
 
+typedef struct {
+	char name[9];
+	UINT8* data;
+	size_t size;
+} virtlump_t;
+
+typedef struct {
+	size_t numlumps;
+	virtlump_t* vlumps;
+} virtres_t;
+
+
+
+
+
 // map md5, sent to players via PT_SERVERINFO
 extern unsigned char mapmd5[16];
 
@@ -78,3 +93,9 @@ UINT8 P_HasGrades(INT16 map, UINT8 mare);
 UINT32 P_GetScoreForGrade(INT16 map, UINT8 mare, UINT8 grade);
 
 #endif
+
+virtres_t*	vres_GetMap	(lumpnum_t);
+
+void			vres_Free	(virtres_t*);
+virtlump_t*	vres_Find	(const virtres_t*, const char*);
+
