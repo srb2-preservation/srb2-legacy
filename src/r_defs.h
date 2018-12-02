@@ -561,6 +561,7 @@ typedef struct seg_s
 	r_lightlist_t *rlights;
 	polyobj_t *polyseg;
 	boolean dontrenderme;
+	boolean glseg;
 } seg_t;
 
 //

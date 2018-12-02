@@ -79,18 +79,6 @@
 
 boolean g_reloadinggamestate = false;
 
-
-
-
-
-
-
-
-
-
-
-
-
 #include "fastcmp.h"
 
 virtres_t* vres_GetMap (lumpnum_t lumpnum)
@@ -127,11 +115,8 @@ virtres_t* vres_GetMap (lumpnum_t lumpnum)
 		lumpnum_t lumppos = lumpnum + 1;
 		for (i = LUMPNUM(lumppos); i < wadfiles[WADFILENUM(lumpnum)]->numlumps; i++, lumppos++, numlumps++)
 			if (memcmp(W_CheckNameForNum(lumppos), "MAP", 3) == 0)
-			{
-				i++;
-				numlumps++;
 				break;
-			}
+		numlumps++;
 
 		vlumps = Z_Malloc(sizeof(virtlump_t)*numlumps, PU_CACHE, NULL);
 		for (i = 0; i < numlumps; i++, lumpnum++)
@@ -171,52 +156,6 @@ virtlump_t* vres_Find(const virtres_t* vres, const char* name)
 			return &vres->vlumps[i];
 	return NULL;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 //
 // Map MD5, calculated on level load.
@@ -1208,7 +1147,7 @@ void P_WriteThings(lumpnum_t lumpnum)
 	CONS_Printf(M_GetText("newthings%d.lmp saved.\n"), gamemap);
 }
 
-static void P_LoadLineDefs(UINT8 *data)
+static void P_LoadLineDefsVtx(UINT8 *data)
 {
 	maplinedef_t *mld = (maplinedef_t *)data;
 	line_t *ld = lines;
@@ -1217,17 +1156,10 @@ static void P_LoadLineDefs(UINT8 *data)
 
 	for (i = 0; i < numlines; i++, mld++, ld++)
 	{
-		ld->flags = SHORT(mld->flags);
-		ld->special = SHORT(mld->special);
-		ld->tag = SHORT(mld->tag);
 		v1 = ld->v1 = &vertexes[SHORT(mld->v1)];
 		v2 = ld->v2 = &vertexes[SHORT(mld->v2)];
 		ld->dx = v2->x - v1->x;
 		ld->dy = v2->y - v1->y;
-
-#ifdef WALLSPLATS
-		ld->splats = NULL;
-#endif
 
 		if (!ld->dx)
 			ld->slopetype = ST_VERTICAL;
@@ -1259,6 +1191,25 @@ static void P_LoadLineDefs(UINT8 *data)
 			ld->bbox[BOXBOTTOM] = v2->y;
 			ld->bbox[BOXTOP] = v1->y;
 		}
+	}
+}
+
+static void P_LoadLineDefs(UINT8 *data)
+{
+	maplinedef_t *mld = (maplinedef_t *)data;
+	line_t *ld = lines;
+	vertex_t *v1, *v2;
+	size_t i;
+
+	for (i = 0; i < numlines; i++, mld++, ld++)
+	{
+		ld->flags = SHORT(mld->flags);
+		ld->special = SHORT(mld->special);
+		ld->tag = SHORT(mld->tag);
+
+#ifdef WALLSPLATS
+		ld->splats = NULL;
+#endif
 
 		ld->sidenum[0] = SHORT(mld->sidenum[0]);
 		ld->sidenum[1] = SHORT(mld->sidenum[1]);
@@ -1273,7 +1224,7 @@ static void P_LoadLineDefs(UINT8 *data)
 				if (ld->sidenum[j] != 0xffff && ld->sidenum[j] >= (UINT16)numsides)
 				{
 					ld->sidenum[j] = 0xffff;
-					CONS_Debug(DBG_SETUP, "P_LoadRawLineDefs: linedef %s has out-of-range sidedef number\n", sizeu1(numlines-i-1));
+					CONS_Debug(DBG_SETUP, "P_LoadLineDefs: linedef %s has out-of-range sidedef number\n", sizeu1(numlines-i-1));
 				}
 			}
 		}
@@ -1926,8 +1877,6 @@ static boolean P_LoadRawBlockMap(UINT8 *data, size_t count)
 	if (!count || count >= 0x20000)
 		return false;
 
-	//CONS_Printf("Reading blockmap lump for pk3...\n");
-
 	// no need to malloc anything, assume the data is uncompressed for now
 	count /= 2;
 	P_ReadBlockMapLump((INT16 *)data, count);
@@ -2529,6 +2478,12 @@ void P_InitCamera(void)
 	displayplayer = consoleplayer; // Start with your OWN view, please!
 }
 
+// Auxiliary function: Shrink node ID from 32-bit to 16-bit.
+UINT16 ShrinkNodeID(UINT32 x) {
+	UINT16 mask = (x >> 16) & 0xC000;
+	UINT16 result = x;
+	return result | mask;
+}
 
 typedef enum {
 	NT_BINARY,
@@ -2820,12 +2775,9 @@ boolean P_SetupLevel(boolean skipprecip, boolean reloadinggamestate)
 			P_LoadSideDefs	(virtsidedefs->data);
 		}
 
-		if (nodetype == NT_XGLN)
+		switch (nodetype)
 		{
-			CONS_Printf("Extended nodes detected.\n");
-			return false;
-		}
-		else if (nodetype == NT_BINARY)
+		case NT_BINARY:
 		{
 			numsubsectors	= virtssectors->size/ sizeof (mapsubsector_t);
 			numnodes		= virtnodes->size	/ sizeof (mapnode_t);
@@ -2845,6 +2797,130 @@ boolean P_SetupLevel(boolean skipprecip, boolean reloadinggamestate)
 			P_LoadSubsectors(virtssectors->data);
 			P_LoadNodes		(virtnodes->data);
 			P_LoadSegs		(virtsegs->data);
+			P_LoadLineDefsVtx(virtlinedefs->data);
+		}
+			break;
+		case NT_XGLN:
+		{
+			UINT32 i, j, k;
+			UINT8* data = virtnodes->data;
+			data += 4;
+
+			// Extra vertexes
+			UINT32 orivtx = READUINT32(data);
+			UINT32 xtrvtx = READUINT32(data);
+
+			if (numvertexes != orivtx)
+			{
+				CONS_Printf("Vertex count in map data (%d) and nodes' (%d) differ!\n", numvertexes, orivtx);
+				return false;
+			}
+			numvertexes += xtrvtx;
+			vertexes = Z_Realloc(vertexes, numvertexes * sizeof (*vertexes), PU_LEVEL, NULL);
+			for (i = orivtx; i < numvertexes; i++)
+			{
+				vertexes[i].x = READFIXED(data);
+				vertexes[i].y = READFIXED(data);
+			}
+
+			P_LoadLineDefsVtx(virtlinedefs->data);
+
+			// Subsectors
+			numsubsectors = READUINT32(data);
+			subsectors	= Z_Calloc(numsubsectors * sizeof (*subsectors), PU_LEVEL, NULL);
+
+			for (i = 0; i < numsubsectors; i++)
+				subsectors[i].numlines = READUINT32(data);
+
+			// Segs
+			numsegs = READUINT32(data);
+			segs		= Z_Calloc(numsegs * sizeof (*segs), PU_LEVEL, NULL);
+
+			for (i = 0, k = 0; i < numsubsectors; i++)
+			{
+				subsectors[i].firstline = k;
+				for (j = 0; j < subsectors[i].numlines; j++, k++)
+				{
+					UINT16 linenum;
+					UINT32 vert;
+		//			CONS_Printf("Subsector %d seg %d (total %d).\n", i, j, k);
+					vert = READUINT32(data);
+		//			CONS_Printf("v1 = %d\n", vert);
+					segs[k].v1 = &vertexes[vert];
+					if (j == 0)
+						segs[k + subsectors[i].numlines - 1].v2 = &vertexes[vert];
+					else
+						segs[k - 1].v2 = segs[k].v1;
+					data += 4;// partner; can be ignored by software renderer;
+					linenum = READUINT16(data);
+					if (linenum == 0xFFFF)
+					{
+						segs[k].glseg = true;
+						//segs[k].linedef = 0xFFFFFFFF;
+						segs[k].linedef = &lines[0]; /// \todo Not meant to do this.
+					}
+					else
+					{
+						segs[k].glseg = false;
+						segs[k].linedef = &lines[linenum];
+					}
+					segs[k].side = READUINT8(data);
+				}
+			}
+
+			{
+				INT32 side;
+				seg_t *li;
+
+				for (i = 0, li = segs; i < numsegs; i++, li++)
+				{
+					vertex_t *v1 = li->v1;
+					vertex_t *v2 = li->v2;
+					li->angle = R_PointToAngle2(v1->x, v1->y, v2->x, v2->y);
+					//li->angle = 0;
+					li->offset = FixedHypot(v1->x - li->linedef->v1->x, v1->y - li->linedef->v1->y);
+					side = li->side;
+					li->sidedef = &sides[li->linedef->sidenum[side]];
+
+					li->frontsector = sides[li->linedef->sidenum[side]].sector;
+					if (li->linedef->flags & ML_TWOSIDED)
+						li->backsector = sides[li->linedef->sidenum[side^1]].sector;
+					else
+						li->backsector = 0;
+
+					segs[i].numlights = 0;
+					segs[i].rlights = NULL;
+				}
+			}
+
+			// Nodes
+			numnodes = READINT32(data);
+			nodes		= Z_Calloc(numnodes * sizeof (*nodes), PU_LEVEL, NULL);
+			{
+				UINT32 c0, c1;
+				node_t *mn;
+				for (i = 0, mn = nodes; i < numnodes; i++, mn++)
+				{
+					// Splitter.
+					mn->x = READINT16(data)<<FRACBITS;
+					mn->y = READINT16(data)<<FRACBITS;
+					mn->dx = READINT16(data)<<FRACBITS;
+					mn->dy = READINT16(data)<<FRACBITS;
+					// Bounding boxes and children.
+					for (j = 0; j < 2; j++)
+						for (k = 0; k < 4; k++)
+							mn->bbox[j][k] = READINT16(data)<<FRACBITS;
+					c0 = READUINT32(data);
+					c1 = READUINT32(data);
+					mn->children[0] = ShrinkNodeID(c0); /// \todo Use UINT32 for node children in a future, instead?
+					mn->children[1] = ShrinkNodeID(c1);
+				}
+			}
+		}
+			break;
+		default:
+			CONS_Printf("Unsupported node format.\n");
+			return false;
 		}
 
 		if (virtreject)
