@@ -2529,6 +2529,18 @@ void P_InitCamera(void)
 	displayplayer = consoleplayer; // Start with your OWN view, please!
 }
 
+
+typedef enum {
+	NT_BINARY,
+	NT_XNOD,
+	NT_ZNOD,
+	NT_XGLN,
+	NT_ZGLN,
+	NT_XGL2,
+	NT_ZGL2,
+	NT_UNSUPPORTED
+} nodetype_t;
+
 /** Loads a level from a lump or external wad.
   *
   * \param skipprecip If true, don't spawn precipitation.
@@ -2729,7 +2741,7 @@ boolean P_SetupLevel(boolean skipprecip, boolean reloadinggamestate)
 
 	if (true)
 	{
-		boolean xtendednodes = false;
+		nodetype_t nodetype = NT_UNSUPPORTED;
 		boolean udmf = false;
 
 		virtres_t*	virt			= vres_GetMap(lastloadedmaplumpnum);
@@ -2745,10 +2757,36 @@ boolean P_SetupLevel(boolean skipprecip, boolean reloadinggamestate)
 		virtlump_t* virtreject		= vres_Find(virt, "REJECT");
 		vres_Diag(virt);
 
-		// Potentially got extended nodes?
-		if ((!virtsegs || !virtsegs->size) && (!virtssectors || !virtssectors->size))
-			if(!memcmp(virtnodes->data, "XNOD", 4))
-				xtendednodes = true;
+		// Detect nodes.
+		if (!virtsegs || !virtsegs->size)
+		{
+			// Possibly ZDoom extended nodes: SSECTORS is empty, NODES has a signature.
+			if (!virtssectors || !virtssectors->size)
+			{
+				if (!memcmp(virtnodes->data, "XNOD", 4))
+					nodetype = NT_XNOD;
+				else if (!memcmp(virtnodes->data, "ZNOD", 4)) // Compressed variant.
+					nodetype = NT_ZNOD;
+			}
+			// Possibly GL nodes: NODES ignored, SSECTORS takes precedence as nodes lump, (It is confusing yeah) and has a signature.
+			else
+			{
+				if (!memcmp(virtssectors->data, "XGLN", 4))
+				{
+					virtnodes = virtssectors;
+					nodetype = NT_XGLN;
+				}
+
+				else if (!memcmp(virtssectors->data, "ZGLN", 4)) // Compressed variant.
+				{
+					virtnodes = virtssectors;
+					nodetype = NT_ZGLN;
+				}
+
+			}
+		}
+		else // Traditional binary map format.
+			nodetype = NT_BINARY;
 
 		if (udmf)
 		{
@@ -2782,13 +2820,12 @@ boolean P_SetupLevel(boolean skipprecip, boolean reloadinggamestate)
 			P_LoadSideDefs	(virtsidedefs->data);
 		}
 
-
-		if (xtendednodes)
+		if (nodetype == NT_XGLN)
 		{
 			CONS_Printf("Extended nodes detected.\n");
 			return false;
 		}
-		else
+		else if (nodetype == NT_BINARY)
 		{
 			numsubsectors	= virtssectors->size/ sizeof (mapsubsector_t);
 			numnodes		= virtnodes->size	/ sizeof (mapnode_t);
