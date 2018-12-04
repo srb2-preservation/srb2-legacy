@@ -785,14 +785,6 @@ static void P_LoadSectors(UINT8 *data)
 	sector_t *ss = sectors;
 	size_t i;
 
-	// Allocate a big chunk of memory as big as our MAXLEVELFLATS limit.
-	//Fab : FIXME: allocate for whatever number of flats - 512 different flats per level should be plenty
-	foundflats = calloc(MAXLEVELFLATS, sizeof (*foundflats));
-	if (foundflats == NULL)
-		I_Error("Ran out of memory while loading sectors\n");
-
-	numlevelflats = 0;
-
 	// For each counted sector, copy the sector raw data from our cache pointer ms, to the global table pointer ss.
 	for (i = 0; i < numsectors; i++, ss++, ms++)
 	{
@@ -853,16 +845,6 @@ static void P_LoadSectors(UINT8 *data)
 		ss->floorspeed = 0;
 		ss->ceilspeed = 0;
 	}
-
-	// set the sky flat num
-	skyflatnum = P_AddLevelFlat(SKYFLATNAME, foundflats);
-
-	// copy table for global usage
-	levelflats = M_Memcpy(Z_Calloc(numlevelflats * sizeof (*levelflats), PU_LEVEL, NULL), foundflats, numlevelflats * sizeof (levelflat_t));
-	free(foundflats);
-
-	// search for animated flats and set up
-	P_SetupLevelFlatAnims();
 }
 
 /** Loads nodes from binary data.
@@ -972,6 +954,18 @@ void ParseUDMFSide(UINT32 i, char *param)
 		sides[i].sector = &sectors[atol(M_GetToken(NULL))];
 	else if (fastcmp(param, "repeatcnt"))
 		sides[i].repeatcnt = atol(M_GetToken(NULL));
+	else if (fastcmp(param, "scalex_top"))
+		sides[i].scalex_top = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));
+	else if (fastcmp(param, "scaley_top"))
+		sides[i].scaley_top = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));
+	else if (fastcmp(param, "scalex_mid"))
+		sides[i].scalex_mid = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));
+	else if (fastcmp(param, "scaley_mid"))
+		sides[i].scaley_mid = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));
+	else if (fastcmp(param, "scalex_bottom"))
+		sides[i].scalex_bot = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));
+	else if (fastcmp(param, "scaley_bottom"))
+		sides[i].scaley_bot = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));
 }
 
 /** Auxiliary function for ParseUDMFStuff.
@@ -1613,6 +1607,11 @@ static void P_LoadLineDefs(UINT8 *data)
 
 		ld->sidenum[0] = SHORT(mld->sidenum[0]);
 		ld->sidenum[1] = SHORT(mld->sidenum[1]);
+
+		if (ld->sidenum[0] != 0xffff && ld->special)
+			sides[ld->sidenum[0]].special = ld->special;
+		if (ld->sidenum[1] != 0xffff && ld->special)
+			sides[ld->sidenum[1]].special = ld->special;
 	}
 }
 
@@ -1656,11 +1655,6 @@ static void P_SetupLines(void)
 			// cph - print a warning about the bug
 			CONS_Debug(DBG_SETUP, "P_LoadRawLineDefs: linedef %s has two-sided flag set, but no second sidedef\n", sizeu1(numlines-i-1));
 		}
-
-		if (ld->sidenum[0] != 0xffff && ld->special)
-			sides[ld->sidenum[0]].special = ld->special;
-		if (ld->sidenum[1] != 0xffff && ld->special)
-			sides[ld->sidenum[1]].special = ld->special;
 
 		ld->polyobj = NULL;
 
@@ -1770,6 +1764,8 @@ static void P_LoadSideDefs(void *data)
 
 		sd->textureoffset = SHORT(msd->textureoffset)<<FRACBITS;
 		sd->rowoffset = SHORT(msd->rowoffset)<<FRACBITS;
+		// Default binary.
+		sd->scalex_top = sd->scaley_top = sd->scalex_mid = sd->scaley_mid = sd->scalex_bot = sd->scaley_bot = 0;
 
 		{ /* cph 2006/09/30 - catch out-of-range sector numbers; use sector 0 instead */
 			UINT16 sector_num = SHORT(msd->sector);
@@ -1980,7 +1976,6 @@ static void P_LoadSideDefs(void *data)
 				break;
 		}
 	}
-	R_ClearTextureNumCache(true);
 }
 
 static boolean LineInBlock(fixed_t cx1, fixed_t cy1, fixed_t cx2, fixed_t cy2, fixed_t bx1, fixed_t by1)
@@ -2818,6 +2813,8 @@ void P_MapDefaults()
 		sd->bottomtexture = R_TextureNumForName("-");
 		sd->repeatcnt = 0;
 
+		sd->scalex_top = sd->scaley_top = sd->scalex_mid = sd->scaley_mid = sd->scalex_bot = sd->scaley_bot = FRACUNIT;
+
 //		sd->colormap_data = NULL;
 	}
 
@@ -3188,6 +3185,14 @@ boolean P_SetupLevel(boolean skipprecip, boolean reloadinggamestate)
 		virtlump_t* virtreject		= vres_Find(virt, "REJECT");
 		vres_Diag(virt);
 
+		// Allocate a big chunk of memory as big as our MAXLEVELFLATS limit.
+		//Fab : FIXME: allocate for whatever number of flats - 512 different flats per level should be plenty
+		foundflats = calloc(MAXLEVELFLATS, sizeof (*foundflats));
+		if (foundflats == NULL)
+			I_Error("Ran out of memory while loading sectors\n");
+
+		numlevelflats = 0;
+
 		if (virttextmap != NULL)
 		{
 			UDMF = true;
@@ -3260,30 +3265,8 @@ boolean P_SetupLevel(boolean skipprecip, boolean reloadinggamestate)
 
 			// Load data.
 			ParseUDMFStuff(vertexesPos, numvertexes, ParseUDMFVertex);
-
-			// Allocate a big chunk of memory as big as our MAXLEVELFLATS limit.
-			//Fab : FIXME: allocate for whatever number of flats - 512 different flats per level should be plenty
-			foundflats = calloc(MAXLEVELFLATS, sizeof(*foundflats));
-			if (foundflats == NULL)
-				I_Error("Ran out of memory while loading sectors\n");
-
-			numlevelflats = 0;
-
 			ParseUDMFStuff(sectorsPos, numsectors, ParseUDMFSector);
-
-			// set the sky flat num
-			skyflatnum = P_AddLevelFlat(SKYFLATNAME, foundflats);
-
-			// copy table for global usage
-			levelflats = M_Memcpy(Z_Calloc(numlevelflats * sizeof(*levelflats), PU_LEVEL, NULL), foundflats, numlevelflats * sizeof(levelflat_t));
-			free(foundflats);
-
-			// search for animated flats and set up
-			P_SetupLevelFlatAnims();
-
 			ParseUDMFStuff(sidesPos, numsides, ParseUDMFSide);
-			R_ClearTextureNumCache(true);
-
 			ParseUDMFStuff(linesPos, numlines, ParseUDMFLine);
 			/*{
 				line_t *sl;
@@ -3324,6 +3307,18 @@ boolean P_SetupLevel(boolean skipprecip, boolean reloadinggamestate)
 
 			P_LoadLineDefsVtx();
 		}
+
+		// set the sky flat num
+		skyflatnum = P_AddLevelFlat(SKYFLATNAME, foundflats);
+
+		// copy table for global usage
+		levelflats = M_Memcpy(Z_Calloc(numlevelflats * sizeof (*levelflats), PU_LEVEL, NULL), foundflats, numlevelflats * sizeof (levelflat_t));
+		free(foundflats);
+
+		// search for animated flats and set up
+		P_SetupLevelFlatAnims();
+
+		R_ClearTextureNumCache(true);
 
 		switch (nodetype)
 		{

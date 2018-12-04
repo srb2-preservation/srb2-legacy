@@ -68,6 +68,8 @@ static fixed_t pixhigh, pixlow, pixhighstep, pixlowstep;
 static fixed_t topfrac, topstep;
 static fixed_t bottomfrac, bottomstep;
 
+static fixed_t topxscale, topyscale, midxscale, midyscale, botxscale, botyscale;
+
 static lighttable_t **walllights;
 static INT16 *maskedtexturecol;
 static fixed_t *maskedtextureheight = NULL;
@@ -1397,8 +1399,6 @@ static void R_RenderSegLoop (void)
 		}
 		oldtexturecolumn = texturecolumn;
 
-		texturecolumn >>= FRACBITS;
-
 		// texturecolumn and lighting are independent of wall tiers
 		if (segtextured)
 		{
@@ -1463,7 +1463,7 @@ static void R_RenderSegLoop (void)
 				dc_yl = yl;
 				dc_yh = yh;
 				dc_texturemid = rw_midtexturemid;
-				dc_source = R_GetColumn(midtexture,texturecolumn);
+				dc_source = R_GetColumn(midtexture,FixedMul(texturecolumn, midxscale)>>FRACBITS);
 				dc_texheight = textureheight[midtexture]>>FRACBITS;
 
 				//profile stuff ---------------------------------------------------------
@@ -1524,7 +1524,7 @@ static void R_RenderSegLoop (void)
 						dc_yl = yl;
 						dc_yh = mid;
 						dc_texturemid = rw_toptexturemid;
-						dc_source = R_GetColumn(toptexture,texturecolumn);
+						dc_source = R_GetColumn(toptexture,FixedMul(texturecolumn, midxscale)>>FRACBITS);
 						dc_texheight = textureheight[toptexture]>>FRACBITS;
 						colfunc();
 						ceilingclip[rw_x] = (INT16)mid;
@@ -1561,7 +1561,7 @@ static void R_RenderSegLoop (void)
 						dc_yh = yh;
 						dc_texturemid = rw_bottomtexturemid;
 						dc_source = R_GetColumn(bottomtexture,
-							texturecolumn);
+							FixedMul(texturecolumn, botxscale)>>FRACBITS);
 						dc_texheight = textureheight[bottomtexture]>>FRACBITS;
 						colfunc();
 						floorclip[rw_x] = (INT16)mid;
@@ -1580,7 +1580,7 @@ static void R_RenderSegLoop (void)
 		{
 			// save texturecol
 			//  for backdrawing of masked mid texture
-			maskedtexturecol[rw_x] = (INT16)texturecolumn;
+			maskedtexturecol[rw_x] = (INT16)texturecolumn>>FRACBITS;
 
 
 			if (maskedtextureheight != NULL) {
@@ -2446,6 +2446,11 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		rw_offset2 = rw_offset + curline->offset;
 		rw_offset += sidedef->textureoffset + curline->offset;
 		rw_centerangle = ANGLE_90 + viewangle - rw_normalangle;
+
+		// Per-texture scaling.
+		topxscale = sidedef->scalex_top;
+		midxscale = sidedef->scalex_mid;
+		botxscale = sidedef->scalex_bot;
 
 		// calculate light table
 		//  use different light tables

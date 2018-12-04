@@ -442,6 +442,10 @@ typedef struct
 	INT16 special; // the special of the linedef this side belongs to
 	INT16 repeatcnt; // # of times to repeat midtexture
 
+	fixed_t scalex_top, scaley_top;
+	fixed_t scalex_mid, scaley_mid;
+	fixed_t scalex_bot, scaley_bot;
+
 	char *text; // a concatination of all top, bottom, and mid texture names, for linedef specials that require a string.
 } side_t;
 
