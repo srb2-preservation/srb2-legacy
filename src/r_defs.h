@@ -301,6 +301,9 @@ typedef struct sector_s
 	fixed_t floor_xoffs, floor_yoffs;
 	fixed_t ceiling_xoffs, ceiling_yoffs;
 
+	fixed_t floor_scale;
+	fixed_t ceiling_scale;
+
 	// flat angle
 	angle_t floorpic_angle;
 	angle_t ceilingpic_angle;

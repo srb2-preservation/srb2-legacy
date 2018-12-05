@@ -8598,6 +8598,7 @@ void P_SpawnMapThing(mapthing_t *mthing)
 	mobj_t *mobj;
 	fixed_t x, y, z;
 	subsector_t *ss;
+	fixed_t scale;
 
 	if (!mthing->type)
 		return; // Ignore type-0 things as NOPs
@@ -8926,8 +8927,11 @@ void P_SpawnMapThing(mapthing_t *mthing)
 			mthing->z = (INT16)(z>>FRACBITS);
 	}
 
+	scale = mthing->scale > 0 ? mthing->scale : FRACUNIT; // Avoid invalid scales by defaulting to FRACUNIT.
 	mobj = P_SpawnMobj(x, y, z, i);
 	mobj->spawnpoint = mthing;
+	P_SetScale(mobj, scale);
+	mobj->destscale = scale;
 
 	switch(mobj->type)
 	{
