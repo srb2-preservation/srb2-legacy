@@ -429,14 +429,20 @@ typedef struct line_s
 
 typedef struct
 {
-	// add this to the calculated texture column
-	fixed_t textureoffset;
+	fixed_t textureoffset;	/**< Global horizontal offset. */
+	fixed_t rowoffset;		/**< Global vertical offset. */
 
-	// add this to the calculated texture top
-	fixed_t rowoffset;
+	// Individual scaling.
+	fixed_t scalex_top, scaley_top;
+	fixed_t scalex_mid, scaley_mid;
+	fixed_t scalex_bot, scaley_bot;
 
-	// Texture indices.
-	// We do not maintain names here.
+	// Individual offsets.
+	fixed_t offsetx_top, offsety_top;
+	fixed_t offsetx_mid, offsety_mid;
+	fixed_t offsetx_bot, offsety_bot;
+
+	// Texture indices (We do not maintain names here).
 	INT32 toptexture, bottomtexture, midtexture;
 
 	// Sector the SideDef is facing.
@@ -444,10 +450,6 @@ typedef struct
 
 	INT16 special; // the special of the linedef this side belongs to
 	INT16 repeatcnt; // # of times to repeat midtexture
-
-	fixed_t scalex_top, scaley_top;
-	fixed_t scalex_mid, scaley_mid;
-	fixed_t scalex_bot, scaley_bot;
 
 	char *text; // a concatination of all top, bottom, and mid texture names, for linedef specials that require a string.
 } side_t;

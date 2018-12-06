@@ -973,6 +973,18 @@ void ParseUDMFSide(UINT32 i, char *param)
 		sides[i].scalex_bot = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));
 	else if (fastcmp(param, "scaley_bottom"))
 		sides[i].scaley_bot = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));
+	else if (fastcmp(param, "offsetx_top"))
+		sides[i].offsetx_top = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));
+	else if (fastcmp(param, "offsety_top"))
+		sides[i].offsety_top = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));
+	else if (fastcmp(param, "offsetx_mid"))
+		sides[i].offsetx_mid = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));
+	else if (fastcmp(param, "offsety_mid"))
+		sides[i].offsety_mid = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));
+	else if (fastcmp(param, "offsetx_bottom"))
+		sides[i].offsetx_bot = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));
+	else if (fastcmp(param, "offsety_bottom"))
+		sides[i].offsety_bot = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));
 }
 
 /** Auxiliary function for ParseUDMFStuff.
@@ -1775,6 +1787,7 @@ static void P_LoadSideDefs(void *data)
 
 		sd->textureoffset = SHORT(msd->textureoffset)<<FRACBITS;
 		sd->rowoffset = SHORT(msd->rowoffset)<<FRACBITS;
+		sd->offsetx_top = sd->offsety_top = sd->offsetx_mid = sd->offsety_mid = sd->offsetx_bot = sd->offsety_bot = 0;
 
 		{ /* cph 2006/09/30 - catch out-of-range sector numbers; use sector 0 instead */
 			UINT16 sector_num = SHORT(msd->sector);
@@ -1987,6 +2000,7 @@ static void P_LoadSideDefs(void *data)
 
 		// Default binary.
 		sd->scalex_top = sd->scaley_top = sd->scalex_mid = sd->scaley_mid = sd->scalex_bot = sd->scaley_bot = FRACUNIT;
+		CONS_Printf("%d :  %d, %d, %d\n", i, sd->scalex_top, sd->scalex_mid, sd->scalex_bot);
 	}
 }
 
@@ -2826,7 +2840,7 @@ void P_MapDefaults()
 		sd->repeatcnt = 0;
 
 		sd->scalex_top = sd->scaley_top = sd->scalex_mid = sd->scaley_mid = sd->scalex_bot = sd->scaley_bot = FRACUNIT;
-
+		sd->offsetx_top = sd->offsety_top = sd->offsetx_mid = sd->offsety_mid = sd->offsetx_bot = sd->offsety_bot = 0;
 //		sd->colormap_data = NULL;
 	}
 
@@ -3555,6 +3569,8 @@ boolean P_SetupLevel(boolean skipprecip, boolean reloadinggamestate)
 
 		if (virtreject)
 			P_LoadRawReject(virtreject->data,		virtreject->size);
+		else
+			rejectmatrix = NULL;
 
 		if (!(virtblockmap && P_LoadRawBlockMap(virtblockmap->data, virtblockmap->size)))
 			P_CreateBlockMap();

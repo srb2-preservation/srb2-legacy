@@ -42,6 +42,12 @@ angle_t rw_normalangle;
 angle_t rw_angle1;
 fixed_t rw_distance;
 
+// Horizontal scaling hack shenanigans.
+fixed_t rw_distance;
+fixed_t rw_distance_scalex_top;
+fixed_t rw_distance_scalex_mid;
+fixed_t rw_distance_scalex_bot;
+
 //
 // regular wall
 //
@@ -1396,9 +1402,11 @@ static void R_RenderSegLoop (void)
 		// calculate texture offset
 		angle = (rw_centerangle + xtoviewangle[rw_x])>>ANGLETOFINESHIFT;
 		texturecolumn = rw_offset-FixedMul(FINETANGENT(angle),rw_distance);
-		texturecolumn_top = (FixedMul(rw_offset_top - FixedMul(FINETANGENT(angle),rw_distance), topxscale))>>FRACBITS;
-		texturecolumn_mid = (FixedMul(rw_offset_mid - FixedMul(FINETANGENT(angle),rw_distance), midxscale))>>FRACBITS;
-		texturecolumn_bot = (FixedMul(rw_offset_bot - FixedMul(FINETANGENT(angle),rw_distance), botxscale))>>FRACBITS;
+
+		// Texture scaling shenanigans.
+		texturecolumn_top = (rw_offset_top - FixedMul(FINETANGENT(angle),rw_distance_scalex_top))>>FRACBITS;
+		texturecolumn_mid = (rw_offset_mid - FixedMul(FINETANGENT(angle),rw_distance_scalex_mid))>>FRACBITS;
+		texturecolumn_bot = (rw_offset_bot - FixedMul(FINETANGENT(angle),rw_distance_scalex_bot))>>FRACBITS;
 
 		if (oldtexturecolumn != -1) {
 			rw_bottomtexturemid += FixedMul(rw_bottomtextureslide,  oldtexturecolumn-texturecolumn);
@@ -2467,14 +2475,18 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		topxscale = sidedef->scalex_top;
 		midxscale = sidedef->scalex_mid;
 		botxscale = sidedef->scalex_bot;
+
 		topyscale = sidedef->scaley_top;
 		midyscale = sidedef->scaley_mid;
 		botyscale = sidedef->scaley_bot;
 
-		// Per-texture scaling.
-		rw_offset_top = rw_offset + FixedDiv(sidedef->textureoffset , topxscale) + curline->offset;
-		rw_offset_mid = rw_offset + FixedDiv(sidedef->textureoffset , midxscale) + curline->offset;
-		rw_offset_bot = rw_offset + FixedDiv(sidedef->textureoffset , botxscale) + curline->offset;
+		// Per-texture scaling, offsetting.
+		rw_offset_top = FixedMul(rw_offset + curline->offset, topxscale) + sidedef->textureoffset + sidedef->offsetx_top;
+		rw_offset_mid = FixedMul(rw_offset + curline->offset, midxscale) + sidedef->textureoffset + sidedef->offsetx_mid;
+		rw_offset_bot = FixedMul(rw_offset + curline->offset, botxscale) + sidedef->textureoffset + sidedef->offsetx_bot;
+		rw_distance_scalex_top = FixedMul(rw_distance, topxscale);
+		rw_distance_scalex_mid = FixedMul(rw_distance, midxscale);
+		rw_distance_scalex_bot = FixedMul(rw_distance, botxscale);
 
 		rw_offset += sidedef->textureoffset + curline->offset;
 
