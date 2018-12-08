@@ -85,7 +85,7 @@ unsigned char mapmd5[16]; /**< Map MD5, calculated on level load. Sent to client
 
 // MAP related Lookup tables.
 // Store VERTEXES, LINEDEFS, SIDEDEFS, etc.
-size_t numvertexes;		/**< Total vertexes count. */
+size_t numvertexes;
 size_t numsegs;
 size_t numsectors;
 size_t numsubsectors;
@@ -94,6 +94,7 @@ size_t numlines;
 size_t numsides;
 size_t nummapthings;
 vertex_t	*vertexes;
+
 seg_t		*segs;
 sector_t	*sectors;
 subsector_t	*subsectors;
@@ -101,6 +102,11 @@ node_t		*nodes;
 line_t		*lines;
 side_t		*sides;
 mapthing_t	*mapthings;
+
+// Copies used for net archiving.
+sector_t	*sectorscopy;
+line_t		*linescopy;
+side_t		*sidescopy;
 
 INT32 numdmstarts;		/**< DM spawn count. */
 INT32 numcoopstarts;	/**< Coop spawn count. */
@@ -837,7 +843,7 @@ static void P_LoadNodes(UINT8 *data)
   * \param Vertex number.
   * \param Parameter string.
   */
-void ParseUDMFVertex(UINT32 i, char *param)
+static void ParseUDMFVertex(UINT32 i, char *param)
 {
 	if (fastcmp(param, "x"))
 		vertexes[i].x = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));
@@ -850,7 +856,7 @@ void ParseUDMFVertex(UINT32 i, char *param)
   * \param Sector number.
   * \param Parameter string.
   */
-void ParseUDMFSector(UINT32 i, char *param)
+static void ParseUDMFSector(UINT32 i, char *param)
 {
 	if (fastcmp(param, "heightfloor"))
 		sectors[i].floorheight = atol(M_GetToken(NULL)) << FRACBITS;
@@ -889,8 +895,6 @@ void ParseUDMFSector(UINT32 i, char *param)
 		sectors[i].floor_scale = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));
 	else if (fastcmp(param, "xscaleceiling"))
 		sectors[i].ceiling_scale = FLOAT_TO_FIXED(atof(M_GetToken(NULL)));
-
-	InitSector(&(sectors[i]));
 }
 
 /** Auxiliary function for ParseUDMFStuff.
@@ -898,7 +902,7 @@ void ParseUDMFSector(UINT32 i, char *param)
   * \param Side number.
   * \param Parameter string.
   */
-void ParseUDMFSide(UINT32 i, char *param)
+static void ParseUDMFSide(UINT32 i, char *param)
 {
 	if (fastcmp(param, "offsetx"))
 		sides[i].textureoffset = atol(M_GetToken(NULL))<<FRACBITS;
@@ -945,16 +949,20 @@ void ParseUDMFSide(UINT32 i, char *param)
   * \param Line number.
   * \param Parameter string.
   */
-void ParseUDMFLine(UINT32 i, char *param)
+static void ParseUDMFLine(UINT32 i, char *param)
 {
 	if (fastcmp(param, "id"))
 		lines[i].tag = atol(M_GetToken(NULL));
 	else if (fastcmp(param, "special"))
 		lines[i].special = atol(M_GetToken(NULL));
 	else if (fastcmp(param, "v1"))
-		lines[i].v1 = (vertex_t*) atol(M_GetToken(NULL));
+		lines[i].v1 = (vertex_t*) (size_t) atol(M_GetToken(NULL));
 	else if (fastcmp(param, "v2"))
-		lines[i].v2 = (vertex_t*) atol(M_GetToken(NULL));
+		lines[i].v2 = (vertex_t*) (size_t) atol(M_GetToken(NULL));
+//	else if (fastcmp(param, "v1"))
+//		lines[i].v1 = &vertexes[atol(M_GetToken(NULL))];
+//	else if (fastcmp(param, "v2"))
+//		lines[i].v2 = &vertexes[atol(M_GetToken(NULL))];
 	else if (fastcmp(param, "sidefront"))
 		lines[i].sidenum[0] = atol(M_GetToken(NULL));
 	else if (fastcmp(param, "sideback"))
@@ -1034,7 +1042,7 @@ void ParseUDMFLine(UINT32 i, char *param)
   * \param Thing number.
   * \param Parameter string.
   */
-void ParseUDMFThing(UINT32 i, char *param)
+static void ParseUDMFThing(UINT32 i, char *param)
 {
 /*	if (fastcmp(param, "id"))
 		mapthings[i].tag = atol(M_GetToken(NULL));
@@ -1116,7 +1124,7 @@ void ParseUDMFThing(UINT32 i, char *param)
   * \param Structure number (mapthings, sectors, ...).
   * \param Parser function pointer.
   */
-void ParseUDMFStuff(UINT32 dataPos[], size_t num, void (*parser)(UINT32, char *))
+static void ParseUDMFStuff(UINT32 dataPos[], size_t num, void (*parser)(UINT32, char *))
 {
 	UINT32 i;
 	char *token;
@@ -1303,6 +1311,10 @@ void P_ScanThings(INT16 mapnum, INT16 wadnum, INT16 lumpnum)
 }
 #endif
 
+/** Loads mapthings from binary data.
+  *
+  * \param *data Data pointer.
+  */
 static void P_LoadMapthings(UINT8 *data)
 {
 	mapthing_t *mt = mapthings;;
@@ -1321,6 +1333,58 @@ static void P_LoadMapthings(UINT8 *data)
 
 		mt->type &= 4095;
 
+		mt->scale = FRACUNIT;
+
+		// Default, binary has no access to these.
+		/*mt->pitch = mt->roll = 0;
+		mt->scale = FRACUNIT;
+		for (j = 0; j < NUMTHINGPARAMS; j++)
+			mt->params[j] = 0;
+		mt->spawntrigger = 0;
+		mt->seetrigger = 0;
+		mt->paintrigger = 0;
+		mt->meleetrigger = 0;
+		mt->missiletrigger = 0;
+		mt->deathtrigger = 0;
+		mt->xdeathtrigger = 0;
+		mt->raisetrigger = 0;*/
+	}
+}
+
+//Obtain the absolute Z position for slope vertex mapthings
+/*static void P_SetupSlopeVerticesZ()
+{
+	size_t i;
+	mapthing_t *mt;
+	subsector_t *ss;
+	fixed_t x, y;
+
+	for (i = 0, mt = mapthings; i < nummapthings; i++, mt++)
+	{
+		if (mt->type != 750)
+			continue;
+
+		x = mt->x << FRACBITS;
+		y = mt->y << FRACBITS;
+		ss = R_PointInSubsector(x, y);
+
+		if (!mt->params[0])
+			mt->z += (ss->sector->floorheight >> FRACBITS);
+	}
+}*/
+
+/** Object spawning process.
+  *
+  * Some of the spawning process exceptions lie in this function, such as the emerald hunt mode emeralds and the NiGHTs axises.
+  *
+  * \note Requires mapthings to be set up first via P_LoadMapthings().
+  */
+static void P_SpawnMapthings(void)
+{
+	size_t i;
+	mapthing_t *mt;
+
+	for (i = 0, mt = mapthings; i < nummapthings; i++, mt++)
 		switch (mt->type)
 		{
 			case 1700: // MT_AXIS
@@ -1333,18 +1397,8 @@ static void P_LoadMapthings(UINT8 *data)
 				break;
 		}
 
-		mt->scale = FRACUNIT;
-	}
-}
-
-static void P_SpawnThings(void)
-{
-	size_t i;
-	mapthing_t *mt;
-
-	mt = mapthings;
 	numhuntemeralds = 0;
-	for (i = 0; i < nummapthings; i++, mt++)
+	for (i = 0, mt = mapthings; i < nummapthings; i++, mt++)
 	{
 		sector_t *mtsector = R_PointInSubsector(mt->x << FRACBITS, mt->y << FRACBITS)->sector;
 
@@ -1525,8 +1579,8 @@ static void P_LoadLineDefsVtx (void)
 
 	for (i = 0; i < numlines; i++, ld++)
 	{
-		v1 = ld->v1 = &vertexes[(UINT32) ld->v1];
-		v2 = ld->v2 = &vertexes[(UINT32) ld->v2];
+		ld->v1 = v1 = &vertexes[(size_t) ld->v1];
+		ld->v2 = v2 = &vertexes[(size_t) ld->v2];
 		ld->dx = v2->x - v1->x;
 		ld->dy = v2->y - v1->y;
 
@@ -1571,19 +1625,17 @@ static void P_LoadLineDefs(UINT8 *data)
 
 	for (i = 0; i < numlines; i++, mld++, ld++)
 	{
-		ld->v1 = (vertex_t*) SHORT(mld->v1);
-		ld->v2 = (vertex_t*) SHORT(mld->v2);
+		ld->v1 = (vertex_t*) (size_t) SHORT(mld->v1);
+		ld->v2 = (vertex_t*) (size_t) SHORT(mld->v2);
 		ld->flags = SHORT(mld->flags);
 		ld->special = SHORT(mld->special);
 		ld->tag = SHORT(mld->tag);
+		ld->sidenum[0] = SHORT(mld->sidenum[0]);
+		ld->sidenum[1] = SHORT(mld->sidenum[1]);
 
 #ifdef WALLSPLATS
 		ld->splats = NULL;
 #endif
-
-		ld->sidenum[0] = SHORT(mld->sidenum[0]);
-		ld->sidenum[1] = SHORT(mld->sidenum[1]);
-
 		if (ld->sidenum[0] != 0xffff && ld->special)
 			sides[ld->sidenum[0]].special = ld->special;
 		if (ld->sidenum[1] != 0xffff && ld->special)
@@ -2532,7 +2584,7 @@ void P_LoadThingsOnly(void)
 //		virtlump_t* virtthings	=	vres_Find(virt, "THINGS");
 //		P_PrepareRawThings(virtthings->data, virtthings->size);
 //	}
-	P_SpawnThings();
+	P_SpawnMapthings();
 
 	P_SpawnSecretItems(true);
 }
@@ -2563,36 +2615,37 @@ static INT32 P_MakeBufferMD5(const char *buffer, size_t len, void *resblock)
 #endif
 }
 
-static void P_MakeMapMD5(lumpnum_t maplumpnum, void *dest)
+static void P_MakeMapMD5(const virtres_t* virt, void* dest)
 {
-	unsigned char linemd5[16];
-	unsigned char sectormd5[16];
-	unsigned char thingmd5[16];
-	unsigned char sidedefmd5[16];
-	unsigned char resmd5[16];
-	UINT8 i;
+	if (UDMF) // If UDMF, then we can only expect to have one single lump. (I mean, technically SRB2 still needs the ZNODES lump, however using it would be wrong.
+	{
+		unsigned char textmapmd5[16];
+		virtlump_t* mapltextmap	= vres_Find(virt, "TEXTMAP");
+		P_MakeBufferMD5((char*)(mapltextmap->data),	(size_t)(mapltextmap->size),	textmapmd5);
+		M_Memcpy(dest, &textmapmd5, 16);
+	}
+	else
+	{
+		unsigned char linemd5[16];
+		unsigned char sectormd5[16];
+		unsigned char thingmd5[16];
+		unsigned char sidedefmd5[16];
+		unsigned char resmd5[16];
+		UINT8 i;
+		virtlump_t *mapllines	= vres_Find(virt, "LINEDEFS");
+		virtlump_t *maplsectors	= vres_Find(virt, "SECTORS");
+		virtlump_t *maplthings	= vres_Find(virt, "THINGS");
+		virtlump_t *maplsides	= vres_Find(virt, "SIDEDEFS");
 
-	// Create a hash for the current map
-	// get the actual lumps!
-	UINT8 *datalines   = W_CacheLumpNum(maplumpnum + ML_LINEDEFS, PU_CACHE);
-	UINT8 *datasectors = W_CacheLumpNum(maplumpnum + ML_SECTORS, PU_CACHE);
-	UINT8 *datathings  = W_CacheLumpNum(maplumpnum + ML_THINGS, PU_CACHE);
-	UINT8 *datasides   = W_CacheLumpNum(maplumpnum + ML_SIDEDEFS, PU_CACHE);
+		P_MakeBufferMD5((char*)(mapllines->data),	(size_t)(mapllines->size),		linemd5);
+		P_MakeBufferMD5((char*)(maplsectors->data),	(size_t)(maplsectors->size),	sectormd5);
+		P_MakeBufferMD5((char*)(maplthings->data),	(size_t)(maplthings->size),		thingmd5);
+		P_MakeBufferMD5((char*)(maplsides->data),	(size_t)(maplsides->size),		sidedefmd5);
 
-	P_MakeBufferMD5((char*)datalines,   W_LumpLength(maplumpnum + ML_LINEDEFS), linemd5);
-	P_MakeBufferMD5((char*)datasectors, W_LumpLength(maplumpnum + ML_SECTORS),  sectormd5);
-	P_MakeBufferMD5((char*)datathings,  W_LumpLength(maplumpnum + ML_THINGS),   thingmd5);
-	P_MakeBufferMD5((char*)datasides,   W_LumpLength(maplumpnum + ML_SIDEDEFS), sidedefmd5);
-
-	Z_Free(datalines);
-	Z_Free(datasectors);
-	Z_Free(datathings);
-	Z_Free(datasides);
-
-	for (i = 0; i < 16; i++)
-		resmd5[i] = (linemd5[i] + sectormd5[i] + thingmd5[i] + sidedefmd5[i]) & 0xFF;
-
-	M_Memcpy(dest, &resmd5, 16);
+		for (i = 0; i < 16; i++)
+			resmd5[i] = (linemd5[i] + sectormd5[i] + thingmd5[i] + sidedefmd5[i]) & 0xFF;
+		M_Memcpy(dest, &resmd5, 16);
+	}
 }
 
 static void P_RunLevelScript(const char *scriptname)
@@ -2761,7 +2814,7 @@ static void P_LoadNightsGhosts(void)
 /** Sets allocated map data's default values.
  * \note Only useful for UDMF.
  */
-void P_MapDefaults()
+static void P_MapDefaults()
 {
 	UINT32 i/*, j*/;
 
@@ -2932,7 +2985,7 @@ void P_InitCamera(void)
 }
 
 // Auxiliary function: Shrink node ID from 32-bit to 16-bit.
-UINT16 ShrinkNodeID(UINT32 x) {
+static UINT16 ShrinkNodeID(UINT32 x) {
 	UINT16 mask = (x >> 16) & 0xC000;
 	UINT16 result = x;
 	return result | mask;
@@ -2961,7 +3014,8 @@ boolean P_SetupLevel(boolean skipprecip, boolean reloadinggamestate)
 	// use gamemap to get map number.
 	// 99% of the things already did, so.
 	// Map header should always be in place at this point
-	INT32 i, loadprecip = 1, ranspecialwipe = 0;
+	size_t i;
+	INT32 loadprecip = 1, ranspecialwipe = 0;
 	INT32 loademblems = 1;
 	INT32 fromnetsave = 0;
 	sector_t *ss;
@@ -3146,9 +3200,6 @@ boolean P_SetupLevel(boolean skipprecip, boolean reloadinggamestate)
 	// SRB2 determines the sky texture to be used depending on the map header.
 	P_SetupLevelSky(mapheaderinfo[gamemap-1]->skynum, true);
 
-	P_MakeMapMD5(lastloadedmaplumpnum, &mapmd5);
-
-
 	if (true)
 	{
 		nodetype_t nodetype = NT_UNSUPPORTED;
@@ -3255,6 +3306,10 @@ boolean P_SetupLevel(boolean skipprecip, boolean reloadinggamestate)
 
 			// Load data.
 			ParseUDMFStuff(vertexesPos, numvertexes, ParseUDMFVertex);
+
+			for (i = 0; i < numsectors; i++)
+				InitSector(&(sectors[i]));
+
 			ParseUDMFStuff(sectorsPos, numsectors, ParseUDMFSector);
 			ParseUDMFStuff(sidesPos, numsides, ParseUDMFSide);
 			ParseUDMFStuff(linesPos, numlines, ParseUDMFLine);
@@ -3338,7 +3393,7 @@ boolean P_SetupLevel(boolean skipprecip, boolean reloadinggamestate)
 		case NT_XGLN:
 		case NT_XGL3:
 		{
-			UINT32 i, j, k;
+			size_t i, j, k;
 			UINT8* data = virtnodes->data;
 			data += 4;
 
@@ -3352,14 +3407,16 @@ boolean P_SetupLevel(boolean skipprecip, boolean reloadinggamestate)
 				return false;
 			}
 			numvertexes+= xtrvtx;
-			vertexes	= Z_Realloc(vertexes, numvertexes * sizeof (*vertexes), PU_LEVEL, NULL);
+
+			/// I am a villain. -Nev3r
+			vertexes = Z_Realloc(vertexes, numvertexes * sizeof (*vertexes), PU_LEVEL, NULL);
+			P_LoadLineDefsVtx();
+
 			for (i = orivtx; i < numvertexes; i++)
 			{
 				vertexes[i].x = READFIXED(data);
 				vertexes[i].y = READFIXED(data);
 			}
-
-			P_LoadLineDefsVtx();
 
 			// Subsectors
 			numsubsectors	= READUINT32(data);
@@ -3527,7 +3584,14 @@ boolean P_SetupLevel(boolean skipprecip, boolean reloadinggamestate)
 
 		if (!(virtblockmap && P_LoadRawBlockMap(virtblockmap->data, virtblockmap->size)))
 			P_CreateBlockMap();
+
+		P_MakeMapMD5(virt, &mapmd5);
+
 		vres_Free(virt);
+
+		sectorscopy	= Z_Malloc(numsubsectors * sizeof (*subsectors), PU_LEVEL, NULL);
+		linescopy	= Z_Malloc(numlines * sizeof (*lines), PU_LEVEL, NULL);
+		sidescopy	= Z_Malloc(numsides * sizeof (*sides), PU_LEVEL, NULL);
 	}
 	P_SetupLines();
 	P_GroupLines();
@@ -3543,7 +3607,7 @@ boolean P_SetupLevel(boolean skipprecip, boolean reloadinggamestate)
 
 	P_ResetDynamicSlopes();
 
-	P_SpawnThings();
+	P_SpawnMapthings();
 
 	P_SpawnSecretItems(loademblems);
 
