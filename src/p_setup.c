@@ -1373,6 +1373,62 @@ static void P_LoadMapthings(UINT8 *data)
 	}
 }*/
 
+/** Obtain the correct z for all mapthings.
+ *
+ * The z position for things used to be messy and scattered in several functions; not anymore.
+ */
+static void P_SetupMapthingsZ()
+{
+	size_t i;
+	mapthing_t *mt;
+	subsector_t *ss;
+	fixed_t x, y, z;
+
+	for (i = 0, mt = mapthings; i < nummapthings; i++, mt++)
+	{
+		x = mt->x << FRACBITS;
+		y = mt->y << FRACBITS;
+		ss = R_PointInSubsector(x, y);
+
+		/// Some mapthings exceptionally use their flags entirely to define their height.
+		if (mt->type == 1705)
+		{
+			if (!UDMF) mt->z = mt->options;
+
+			z = (
+#ifdef ESLOPE
+				ss->sector->f_slope ? P_GetZAt(ss->sector->f_slope, x, y):
+#endif
+				ss->sector->floorheight);
+				mt->z += (z >> FRACBITS);
+		}
+		/// The rest of mapthings, though, keep a few of their flags for additional purposes, one of them being MTF_OBJECTFLIP, which allows to spawn things flipped upside down.
+		else
+		{
+			if (!UDMF) mt->z = mt->options >> ZSHIFT;
+
+			if (mt->options & MTF_OBJECTFLIP)
+			{
+				z = (
+#ifdef ESLOPE
+				ss->sector->c_slope ? P_GetZAt(ss->sector->c_slope, x, y):
+#endif
+				ss->sector->ceilingheight);
+				mt->z = (z >> FRACBITS) - mt->z;
+			}
+			else
+			{
+				z = (
+#ifdef ESLOPE
+				ss->sector->f_slope ? P_GetZAt(ss->sector->f_slope, x, y):
+#endif
+				ss->sector->floorheight);
+				mt->z += (z >> FRACBITS);
+			}
+		}
+	}
+}
+
 /** Object spawning process.
   *
   * Some of the spawning process exceptions lie in this function, such as the emerald hunt mode emeralds and the NiGHTs axises.
@@ -1400,13 +1456,6 @@ static void P_SpawnMapthings(void)
 	numhuntemeralds = 0;
 	for (i = 0, mt = mapthings; i < nummapthings; i++, mt++)
 	{
-		sector_t *mtsector = R_PointInSubsector(mt->x << FRACBITS, mt->y << FRACBITS)->sector;
-
-		// Z for objects
-		mt->z = (INT16)(
-				mtsector->f_slope ? P_GetZAt(mtsector->f_slope, mt->x << FRACBITS, mt->y << FRACBITS) :
-				mtsector->floorheight)>>FRACBITS;
-
 		if (mt->type == 1700 // MT_AXIS
 			|| mt->type == 1701 // MT_AXISTRANSFER
 			|| mt->type == 1702) // MT_AXISTRANSFERLINE
@@ -1472,10 +1521,6 @@ static void P_SpawnMapthings(void)
 		 || mt->type == 1705 || mt->type == 1713 || mt->type == 1800)
 		{
 			mt->mobj = NULL;
-
-			// Z for objects Tails 05-26-2002
-			mt->z = (INT16)(R_PointInSubsector(mt->x << FRACBITS, mt->y << FRACBITS)
-				->sector->floorheight>>FRACBITS);
 
 			P_SpawnHoopsAndRings (mt);
 		}
@@ -3607,6 +3652,7 @@ boolean P_SetupLevel(boolean skipprecip, boolean reloadinggamestate)
 
 	P_ResetDynamicSlopes();
 
+	P_SetupMapthingsZ();
 	P_SpawnMapthings();
 
 	P_SpawnSecretItems(loademblems);
