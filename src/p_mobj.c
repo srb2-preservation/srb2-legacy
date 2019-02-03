@@ -33,6 +33,7 @@
 #include "b_bot.h"
 #include "p_slopes.h"
 #include "f_finale.h"
+#include "m_cond.h"
 
 // protos.
 static CV_PossibleValue_t viewheight_cons_t[] = {{16, "MIN"}, {56, "MAX"}, {0, NULL}};
@@ -8923,6 +8924,9 @@ void P_SpawnMapThing(mapthing_t *mthing)
 	if (i == MT_TOKEN && (gametype != GT_COOP || ultimatemode || tokenbits == 30 || tokenlist & (1 << tokenbits++)))
 		return; // you already got this token, or there are too many, or the gametype's not right
 
+	if (i == MT_EMBLEM && (netgame || multiplayer || (modifiedgame && !savemoddata))) // No cheating!!
+		return;
+
 	// Objectplace landing point
 	noreturns:
 
@@ -8937,7 +8941,7 @@ void P_SpawnMapThing(mapthing_t *mthing)
 			ss->sector->floorheight) + ((mthing->options >> ZSHIFT) << FRACBITS);
 	else if (i == MT_AXIS || i == MT_AXISTRANSFER || i == MT_AXISTRANSFERLINE)
 		z = ONFLOORZ;
-	else if (i == MT_SPECIALSPIKEBALL || P_WeaponOrPanel(i) || i == MT_EMERALDSPAWN || i == MT_TOKEN)
+	else if (i == MT_SPECIALSPIKEBALL || P_WeaponOrPanel(i) || i == MT_EMERALDSPAWN || i == MT_TOKEN || i == MT_EMBLEM)
 	{
 		if (mthing->options & MTF_OBJECTFLIP)
 		{
@@ -9019,6 +9023,52 @@ void P_SpawnMapThing(mapthing_t *mthing)
 
 	switch(mobj->type)
 	{
+	case MT_EMBLEM:
+	{
+		INT32 i;
+		emblem_t *emblem = M_GetLevelEmblems(gamemap);
+
+		while (emblem)
+		{
+			if ((emblem->type == ET_GLOBAL || emblem->type == ET_SKIN) && emblem->tag == mthing->angle)
+				break;
+
+			emblem = M_GetLevelEmblems(-1);
+		}
+
+		if (!emblem)
+		{
+			CONS_Debug(DBG_GAMELOGIC, "No map emblem for map %d with tag %d found!\n", gamemap, mthing->angle);
+			break;
+		}
+
+		i = emblem - emblemlocations;
+
+		I_Assert(emblemlocations[i].sprite >= 'A' && emblemlocations[i].sprite <= 'Z');
+		P_SetMobjState(mobj, mobj->info->spawnstate + (emblemlocations[i].sprite - 'A'));
+
+		mobj->health = i + 1;
+		mobj->color = (UINT8)M_GetEmblemColor(&emblemlocations[i]);
+
+		if (emblemlocations[i].collected
+			|| (emblemlocations[i].type == ET_SKIN && emblemlocations[i].var != players[0].skin))
+		{
+			P_UnsetThingPosition(mobj);
+			mobj->flags |= MF_NOCLIP;
+			mobj->flags &= ~MF_SPECIAL;
+			mobj->flags |= MF_NOBLOCKMAP;
+			mobj->frame |= (tr_trans50 << FF_TRANSSHIFT);
+			P_SetThingPosition(mobj);
+		}
+		else
+		{
+			mobj->frame &= ~FF_TRANSMASK;
+
+			if (emblemlocations[i].type == ET_GLOBAL)
+				mobj->reactiontime = emblemlocations[i].var;
+		}
+		break;
+	}
 	case MT_SKYBOX:
 		mobj->angle = 0;
 		if (mthing->options & MTF_OBJECTSPECIAL)
