@@ -995,6 +995,7 @@ typedef enum
 	tc_polyswingdoor,
 	tc_polyflag,
 	tc_polydisplace,
+	tc_polyrotdisplace,
 	tc_end
 } specials_e;
 
@@ -1653,6 +1654,16 @@ static void SavePolydisplaceThinker(const thinker_t *th, const UINT8 type)
 	WRITEFIXED(save_p, ht->oldHeights);
 }
 
+static void SavePolyrotdisplaceThinker(const thinker_t *th, const UINT8 type)
+{
+	const polyrotdisplace_t *ht = (const void *)th;
+	WRITEUINT8(save_p, type);
+	WRITEINT32(save_p, ht->polyObjNum);
+	WRITEUINT32(save_p, SaveSector(ht->controlSector));
+	WRITEFIXED(save_p, ht->rotscale);
+	WRITEUINT8(save_p, ht->turnobjs);
+	WRITEFIXED(save_p, ht->oldHeights);
+}
 
 /*
 //
@@ -1866,6 +1877,11 @@ static void P_NetArchiveThinkers(void)
 		else if (th->function == (actionf_p1)T_PolyObjDisplace)
 		{
 			SavePolydisplaceThinker(th, tc_polydisplace);
+			continue;
+		}
+		else if (th->function == (actionf_p1)T_PolyObjRotDisplace)
+		{
+			SavePolyrotdisplaceThinker(th, tc_polyrotdisplace);
 			continue;
 		}
 #ifdef PARANOIA
@@ -2619,6 +2635,18 @@ static inline void LoadPolydisplaceThinker(actionf_p1 thinker)
 	P_AddThinker(&ht->thinker);
 }
 
+static inline void LoadPolyrotdisplaceThinker(actionf_p1 thinker)
+{
+	polyrotdisplace_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
+	ht->thinker.function = thinker;
+	ht->polyObjNum = READINT32(save_p);
+	ht->controlSector = LoadSector(READUINT32(save_p));
+	ht->rotscale = READFIXED(save_p);
+	ht->turnobjs = READUINT8(save_p);
+	ht->oldHeights = READFIXED(save_p);
+	P_AddThinker(&ht->thinker);
+}
+
 /*
 //
 // LoadWhatThinker
@@ -2817,6 +2845,10 @@ static void P_NetUnArchiveThinkers(void)
 
 			case tc_polydisplace:
 				LoadPolydisplaceThinker((actionf_p1)T_PolyObjDisplace);
+				break;
+
+			case tc_polyrotdisplace:
+				LoadPolyrotdisplaceThinker((actionf_p1)T_PolyObjRotDisplace);
 				break;
 			case tc_scroll:
 				LoadScrollThinker((actionf_p1)T_Scroll);

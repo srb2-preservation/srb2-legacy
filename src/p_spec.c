@@ -1433,6 +1433,33 @@ static boolean PolyDisplace(line_t *line)
 }
 
 
+/** Similar to PolyDisplace().
+ */
+static boolean PolyRotDisplace(line_t *line)
+{
+	polyrotdisplacedata_t pdd;
+	fixed_t anginter, distinter;
+
+	pdd.polyObjNum = line->tag;
+	pdd.controlSector = line->frontsector;
+
+	// Rotate 'anginter' interval for each 'distinter' interval from the control sector.
+	// Use default values if not provided as fallback.
+	anginter	= sides[line->sidenum[0]].rowoffset ? sides[line->sidenum[0]].rowoffset : 90*FRACUNIT;
+	distinter	= sides[line->sidenum[0]].textureoffset ? sides[line->sidenum[0]].textureoffset : 128*FRACUNIT;
+	pdd.rotscale = FixedDiv(anginter, distinter);
+
+	// Same behavior as other rotators when carrying things.
+	if (line->flags & ML_NOCLIMB)
+		pdd.turnobjs = 0;
+	else if (line->flags & ML_EFFECT4)
+		pdd.turnobjs = 2;
+	else
+		pdd.turnobjs = 1;
+
+	return EV_DoPolyObjRotDisplace(&pdd);
+}
+
 /** Changes a sector's tag.
   * Used by the linedef executor tag changer and by crumblers.
   *
@@ -6609,6 +6636,10 @@ void P_SpawnSpecials(INT32 fromnetsave, boolean reloadinggamestate)
 
 			case 31: // Polyobj_Displace
 				PolyDisplace(&lines[i]);
+				break;
+
+			case 32: // Polyobj_RotDisplace
+				PolyRotDisplace(&lines[i]);
 				break;
 		}
 	}
