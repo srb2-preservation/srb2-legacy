@@ -65,7 +65,7 @@
 #include "m_cond.h" // condition initialization
 #include "fastcmp.h"
 #include "keys.h"
-#include "filesrch.h" // refreshdirmenu, mainwadstally
+#include "filesrch.h" // refreshdirmenu
 #include "r_fps.h"
 #include "m_perfstats.h"
 #include "m_random.h"
@@ -1307,7 +1307,6 @@ void D_SRB2Main(void)
 
 #endif //ifndef DEVELOP
 
-	mainwadstally = packetsizetally;
 
 	cht_Init();
 
