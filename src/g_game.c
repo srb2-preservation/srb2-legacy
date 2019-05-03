@@ -128,6 +128,8 @@ INT16 spstage_start, spmarathon_start;
 INT16 sstage_start;
 INT16 sstage_end;
 
+boolean hidetitlepics = false;
+
 boolean looptitle = false;
 boolean useNightsSS = false;
 
@@ -1930,6 +1932,7 @@ void G_Ticker(boolean run)
 			break;
 
 		case GS_TIMEATTACK:
+			F_MenuPresTicker(run);
 			break;
 
 		case GS_INTRO:
@@ -1965,12 +1968,14 @@ void G_Ticker(boolean run)
 			break;
 
 		case GS_TITLESCREEN:
+			F_MenuPresTicker(run);
 			F_TitleScreenTicker(run);
 			break;
 
 		case GS_WAITINGPLAYERS:
 			if (netgame)
 				F_WaitingPlayersTicker();
+			F_MenuPresTicker(run);
 			HU_Ticker();
 			break;
 
