@@ -1997,6 +1997,7 @@ static actionpointer_t actionpointers[] =
 	{A_BrakLobShot,          "A_BRAKLOBSHOT"},
 	{A_NapalmScatter,        "A_NAPALMSCATTER"},
 	{A_SpawnFreshCopy,       "A_SPAWNFRESHCOPY"},
+	{A_DustDevilThink,       "A_DUSTDEVILTHINK"},
 
 	{NULL,                   "NONE"},
 
@@ -5405,6 +5406,17 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_CACTI3",
 	"S_CACTI4",
 
+	//Dust devil
+	"S_DUSTDEVIL",
+	"S_DUSTLAYER1",
+	"S_DUSTLAYER2",
+	"S_DUSTLAYER3",
+	"S_DUSTLAYER4",
+	"S_DUSTLAYER5",
+	"S_ARIDDUST1",
+	"S_ARIDDUST2",
+	"S_ARIDDUST3",
+
 	// Flame jet
 	"S_FLAMEJETSTND",
 	"S_FLAMEJETSTART",
@@ -6683,6 +6695,10 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_CACTI2",
 	"MT_CACTI3",
 	"MT_CACTI4",
+
+	"MT_DUSTDEVIL",
+	"MT_DUSTLAYER",
+	"MT_ARIDDUST",
 
 	// Red Volcano Scenery
 	"MT_FLAMEJET",

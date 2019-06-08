@@ -211,6 +211,7 @@ void A_BrakLobShot(void *actor);
 void A_NapalmScatter(void *actor);
 void A_SpawnFreshCopy(void *actor);
 void A_DebrisRandom(void *actor);
+void A_DustDevilThink(void *actor);
 
 // ratio of states to sprites to mobj types is roughly 6 : 1 : 1
 #define NUMMOBJFREESLOTS 1024
@@ -588,6 +589,9 @@ typedef enum sprite
 	SPR_SSWY, // Yellow Side Spring
 	SPR_SSWR, // Red Side Spring
 	SPR_SSWB, // Blue Side Spring
+
+	SPR_TAZD, // Dust devil
+	SPR_ADST, // Arid dust
 
 	SPR_FIRSTFREESLOT,
 	SPR_LASTFREESLOT = SPR_FIRSTFREESLOT + NUMSPRITEFREESLOTS - 1,
@@ -1968,6 +1972,17 @@ typedef enum state
 	S_CACTI3,
 	S_CACTI4,
 
+	//Dust devil
+	S_DUSTDEVIL,
+	S_DUSTLAYER1,
+	S_DUSTLAYER2,
+	S_DUSTLAYER3,
+	S_DUSTLAYER4,
+	S_DUSTLAYER5,
+	S_ARIDDUST1,
+	S_ARIDDUST2,
+	S_ARIDDUST3,
+
 	// Flame jet
 	S_FLAMEJETSTND,
 	S_FLAMEJETSTART,
@@ -3264,6 +3279,10 @@ typedef enum mobj_type
 	MT_CACTI2,
 	MT_CACTI3,
 	MT_CACTI4,
+
+	MT_DUSTDEVIL,
+	MT_DUSTLAYER,
+	MT_ARIDDUST,
 
 	// Red Volcano Scenery
 	MT_FLAMEJET,
