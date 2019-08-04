@@ -64,6 +64,8 @@ static void MusicPref_OnChange(void);
 static void ModFilter_OnChange(void);
 #endif
 
+static lumpnum_t S_GetMusicLumpNum(const char *mname);
+
 // commands for music and sound servers
 #ifdef MUSSERV
 consvar_t musserver_cmd = CVAR_INIT ("musserver_cmd", "musserver", NULL, CV_SAVE, NULL, NULL);
@@ -1454,6 +1456,7 @@ static void S_AddMusicStackEntry(const char *mname, UINT16 mflags, boolean loopi
 		music_stacks->position = (status == JT_MASTER ? position : S_GetMusicPosition());
 		music_stacks->tic = gametic;
 		music_stacks->status = JT_MASTER;
+		music_stacks->mlumpnum = S_GetMusicLumpNum(music_stacks->musname);
 
 		if (status == JT_MASTER)
 			return; // we just added the user's entry here
@@ -1471,6 +1474,7 @@ static void S_AddMusicStackEntry(const char *mname, UINT16 mflags, boolean loopi
 	new_mst->position = position;
 	new_mst->tic = gametic;
 	new_mst->status = status;
+	new_mst->mlumpnum = S_GetMusicLumpNum(new_mst->musname);
 
 	mst->next = new_mst;
 	new_mst->prev = mst;
@@ -1577,6 +1581,7 @@ boolean S_RecallMusic(UINT16 status, boolean fromfirst)
 		entry->position = mapmusposition;
 		entry->tic = gametic;
 		entry->status = JT_MASTER;
+		entry->mlumpnum = S_GetMusicLumpNum(entry->musname);
 	}
 
 	if (entry->status == JT_MASTER)
@@ -1600,7 +1605,10 @@ boolean S_RecallMusic(UINT16 status, boolean fromfirst)
 			if (!music_stack_noposition) // HACK: Global boolean to toggle position resuming, e.g., de-superize
 				newpos = entry->position + (S_GetMusicLength() ? (UINT32)((float)(gametic - entry->tic)/(float)TICRATE*(float)MUSICRATE) : 0);
 
-			if (newpos > 0 && S_MusicPlaying())
+			// If the newly recalled music lumpnum does not match the lumpnum that we stored in stack,
+			// then discard the new position. That way, we will not recall an invalid position
+			// when the music is replaced or digital/MIDI is toggled.
+			if (newpos > 0 && S_MusicPlaying() && S_GetMusicLumpNum(entry->musname) == entry->mlumpnum)
 				S_SetMusicPosition(newpos);
 			else
 			{
