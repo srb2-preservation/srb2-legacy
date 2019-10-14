@@ -4514,7 +4514,7 @@ static void M_HandleLevelPlatter(INT32 choice)
 						M_LevelSelectWarp(0);
 					Nextmap_OnChange();
 				}
-				else if (!lsoffs[0]) //  prevent sound spam
+				else if (!lsoffs[0]) // prevent sound spam
 				{
 					lsoffs[0] = -8 * FRACUNIT;
 					S_StartSound(NULL,sfx_s3kb2);
@@ -4544,7 +4544,7 @@ static void M_HandleLevelPlatter(INT32 choice)
 
 				ifselectvalnextmap(lscol) else ifselectvalnextmap(0)
 			}
-			else if (!lsoffs[1]) //  prevent sound spam
+			else if (!lsoffs[1]) // prevent sound spam
 			{
 				lsoffs[1] = 8 * FRACUNIT;
 				S_StartSound(NULL,sfx_s3kb7);
@@ -4573,7 +4573,7 @@ static void M_HandleLevelPlatter(INT32 choice)
 
 				ifselectvalnextmap(lscol) else ifselectvalnextmap(0)
 			}
-			else if (!lsoffs[1]) //  prevent sound spam
+			else if (!lsoffs[1]) // prevent sound spam
 			{
 				lsoffs[1] = -8 * FRACUNIT;
 				S_StartSound(NULL,sfx_s3kb7);
@@ -4779,7 +4779,13 @@ static void M_DrawLevelPlatterMenu(void)
 	// finds row at top of the screen
 	while (y > -8)
 	{
-		iter = ((iter == 0) ? levelselect.numrows-1 : iter-1);
+		if (iter == 0)
+		{
+			if (levelselect.numrows < 3)
+				break;
+			iter = levelselect.numrows;
+		}
+		iter--;
 		y -= lsvseperation(iter);
 	}
 
@@ -4788,7 +4794,13 @@ static void M_DrawLevelPlatterMenu(void)
 	{
 		M_DrawLevelPlatterRow(iter, y);
 		y += lsvseperation(iter);
-		iter = ((iter == levelselect.numrows-1) ? 0 : iter+1);
+		if (iter == levelselect.numrows-1)
+		{
+			if (levelselect.numrows < 3)
+				break;
+			iter = UINT8_MAX;
+		}
+		iter++;
 	}
 
 	// draw cursor box, or just the cursor if legacy.pk3 is not loaded
