@@ -1757,7 +1757,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 	{
 		// Single sided line... Deal only with the middletexture (if one exists)
 		gl_midtexture = R_GetTextureNum(gl_sidedef->midtexture);
-		if (gl_midtexture)
+		if (gl_midtexture && gl_linedef->special != 41)
 		{
 			{
 				fixed_t     texturevpeg;
