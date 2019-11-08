@@ -3701,6 +3701,56 @@ void A_UnsetSolidSteam(void *thing)
 	actor->flags |= MF_NOCLIP;
 }
 
+// Function: A_SignSpin
+//
+// Description: Spins a signpost until it hits the ground and reaches its mapthing's angle.
+//
+// var1 = degrees to rotate object
+// var2 = state to set object to once spinning stops
+//
+void A_SignSpin(void *thing)
+{
+	mobj_t *actor = thing;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_SignSpin", actor))
+		return;
+#endif
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+	INT16 i;
+	angle_t rotateangle = FixedAngle(locvar1 << FRACBITS);
+
+	if (P_IsObjectOnGround(actor) && P_MobjFlip(actor) * actor->momz <= 0)
+	{
+		if (actor->spawnpoint)
+		{
+			angle_t mapangle = FixedAngle(actor->spawnpoint->angle << FRACBITS);
+			angle_t diff = mapangle - actor->angle;
+			if (diff < rotateangle)
+			{
+				actor->angle = mapangle;
+				P_SetMobjState(actor, locvar2);
+				return;
+			}
+		}
+		else // no mapthing? just finish in your current angle
+		{
+			P_SetMobjState(actor, locvar2);
+			return;
+		}
+	}
+	actor->angle += rotateangle;
+	if (leveltime & 1 || actor->tracer == NULL) return;
+	for (i = -1; i < 2; i += 2)
+	{
+		P_SpawnMobj(
+			actor->x+P_ReturnThrustX(actor, actor->tracer->angle, i * actor->radius),
+			actor->y+P_ReturnThrustY(actor, actor->tracer->angle, i * actor->radius),
+			actor->z+(actor->eflags & MFE_VERTICALFLIP) ? 0 : actor->height,
+			actor->info->painchance);
+	}
+}
+
 // Function: A_SignPlayer
 //
 // Description: Changes the state of a level end sign to reflect the player that hit it.

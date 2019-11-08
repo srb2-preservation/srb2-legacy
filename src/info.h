@@ -64,6 +64,7 @@ void A_FishJump(void *actor); // Fish Jump
 void A_ThrownRing(void *actor); // Sparkle trail for red ring
 void A_SetSolidSteam(void *actor);
 void A_UnsetSolidSteam(void *actor);
+void A_SignSpin(void *actor);
 void A_SignPlayer(void *actor);
 void A_OverlayThink(void *actor);
 void A_JetChase(void *actor);

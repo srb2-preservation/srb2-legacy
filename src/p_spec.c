@@ -3290,6 +3290,9 @@ void P_SetupSignExit(player_t *player)
 		if (thing->type != MT_SIGN)
 			continue;
 
+		if (!player->mo->target || player->mo->target->type != MT_SIGN)
+			P_SetTarget(&player->mo->target, thing);
+
 		if (thing->state != &states[thing->info->spawnstate])
 			continue;
 
@@ -3314,6 +3317,9 @@ void P_SetupSignExit(player_t *player)
 		thing = (mobj_t *)think;
 		if (thing->type != MT_SIGN)
 			continue;
+
+		if (!player->mo->target || player->mo->target->type != MT_SIGN)
+			P_SetTarget(&player->mo->target, thing);
 
 		if (thing->state != &states[thing->info->spawnstate])
 			continue;
