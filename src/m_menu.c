@@ -2282,6 +2282,13 @@ void M_InitMenuPresTables(void)
 		// so-called "undefined"
 		menupres[i].fadestrength = -1;
 		menupres[i].hidetitlepics = -1; // inherits global hidetitlepics
+		menupres[i].ttmode = TTMODE_NONE;
+		menupres[i].ttscale = UINT8_MAX;
+		menupres[i].ttname[0] = 0;
+		menupres[i].ttx = INT16_MAX;
+		menupres[i].tty = INT16_MAX;
+		menupres[i].ttloop = INT16_MAX;
+		menupres[i].tttics = UINT16_MAX;
 		menupres[i].enterwipe = -1;
 		menupres[i].exitwipe = -1;
 		menupres[i].bgcolor = -1;
@@ -2446,7 +2453,7 @@ static boolean MIT_SetCurFadeValue(UINT32 menutype, INT32 level, INT32 *retval, 
 	return false;
 }
 
-static boolean MIT_SetCurHideTitlePics(UINT32 menutype, INT32 level, INT32 *retval, void **input, boolean fromoldest)
+static boolean MIT_SetCurTitlePics(UINT32 menutype, INT32 level, INT32 *retval, void **input, boolean fromoldest)
 {
 	(void)input;
 	(void)retval;
@@ -2457,8 +2464,41 @@ static boolean MIT_SetCurHideTitlePics(UINT32 menutype, INT32 level, INT32 *retv
 		curhidepics = menupres[menutype].hidetitlepics;
 		return true;
 	}
+	else if (menupres[menutype].ttmode == TTMODE_USER)
+	{
+		if (menupres[menutype].ttname[0])
+		{
+			curhidepics = menupres[menutype].hidetitlepics;
+			curttmode = menupres[menutype].ttmode;
+			curttscale = (menupres[menutype].ttscale != UINT8_MAX ? menupres[menutype].ttscale : ttscale);
+			strncpy(curttname, menupres[menutype].ttname, 9);
+			curttx = (menupres[menutype].ttx != INT16_MAX ? menupres[menutype].ttx : ttx);
+			curtty = (menupres[menutype].tty != INT16_MAX ? menupres[menutype].tty : tty);
+			curttloop = (menupres[menutype].ttloop != INT16_MAX ? menupres[menutype].ttloop : ttloop);
+			curtttics = (menupres[menutype].tttics != UINT16_MAX ? menupres[menutype].tttics : tttics);
+		}
+		else
+			curhidepics = menupres[menutype].hidetitlepics;
+		return true;
+	}
+	else if (menupres[menutype].ttmode != TTMODE_NONE)
+	{
+		curhidepics = menupres[menutype].hidetitlepics;
+		curttmode = menupres[menutype].ttmode;
+		curttscale = (menupres[menutype].ttscale != UINT8_MAX ? menupres[menutype].ttscale : ttscale);
+		return true;
+	}
 	else if (!level)
+	{
 		curhidepics = hidetitlepics;
+		curttmode = ttmode;
+		curttscale = ttscale;
+		strncpy(curttname, ttname, 9);
+		curttx = ttx;
+		curtty = tty;
+		curttloop = ttloop;
+		curtttics = tttics;
+	}
 	return false;
 }
 
@@ -2503,9 +2543,9 @@ void M_SetMenuCurFadeValue(UINT8 defaultvalue)
 	M_IterateMenuTree(MIT_SetCurFadeValue, &defaultvalue);
 }
 
-void M_SetMenuCurHideTitlePics(void)
+void M_SetMenuCurTitlePics(void)
 {
-	M_IterateMenuTree(MIT_SetCurHideTitlePics, NULL);
+	M_IterateMenuTree(MIT_SetCurTitlePics, NULL);
 }
 
 // ====================================
@@ -2555,6 +2595,14 @@ static void M_HandleMenuPresState(menu_t *newMenu)
 	curbgyspeed = titlescrollyspeed;
 	curbghide = false;
 
+	curttmode = ttmode;
+	curttscale = ttscale;
+	strncpy(curttname, ttname, 9);
+	curttx = ttx;
+	curtty = tty;
+	curttloop = ttloop;
+	curtttics = tttics;
+
 	// don't do the below during the in-game menus
 	if (gamestate != GS_TITLESCREEN && gamestate != GS_TIMEATTACK)
 		return;
@@ -2562,7 +2610,7 @@ static void M_HandleMenuPresState(menu_t *newMenu)
 	// Find current presentation values
 	M_SetMenuCurBackground((gamestate == GS_TIMEATTACK) ? "SRB2BACK" : "TITLESKY");
 	M_SetMenuCurFadeValue(16);
-	M_SetMenuCurHideTitlePics();
+	M_SetMenuCurTitlePics();
 
 	// Loop through both menu IDs in parallel and look for type changes
 	// The youngest child in activeMenuId is the entered menu
