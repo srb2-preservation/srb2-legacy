@@ -8955,6 +8955,28 @@ void A_SetScale(void *thing)
 		P_SetScale(target, locvar1); // this instantly changes current scale to var1 if used, if not destscale will alter scale to var1 anyway
 }
 
+// Function: A_DebrisRandom
+//
+// Description: Randomizes debris frame and movement.
+//
+// var1 = Frame range.
+// var2 = unused
+//
+void A_DebrisRandom(void *data)
+{
+	mobj_t *actor = data;
+	INT32 locvar1 = var1;
+
+	if (LUA_CallAction("A_DebrisRandom", actor))
+		return;
+
+	actor->frame |= P_RandomRange(0, locvar1);
+	var1 = 0;
+	var2 = 359;
+	A_ChangeAngleAbsolute(actor);
+	P_Thrust(actor, actor->angle, FRACUNIT * 2);
+}
+
 // Function: A_RemoteDamage
 //
 // Description: Damages, kills or even removes either the actor or its target/tracer. Actor acts as the inflictor/source unless harming itself

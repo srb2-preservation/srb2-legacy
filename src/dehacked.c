@@ -1985,6 +1985,7 @@ static actionpointer_t actionpointers[] =
 	{A_InfoState,            "A_INFOSTATE"},
 	{A_Repeat,               "A_REPEAT"},
 	{A_SetScale,             "A_SETSCALE"},
+	{A_DebrisRandom,         "A_DEBRISRANDOM"},
 	{A_RemoteDamage,         "A_REMOTEDAMAGE"},
 	{A_HomingChase,          "A_HOMINGCHASE"},
 	{A_TrapShot,             "A_TRAPSHOT"},
@@ -6389,6 +6390,10 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_SRB1_GENREX1",
 	"S_SRB1_GENREX2",
 
+	"S_GFZDEBRIS",
+	"S_BRICKDEBRIS",
+	"S_WOODDEBRIS",
+
 #ifdef SEENAMES
 	"S_NAMECHECK",
 #endif
@@ -6891,6 +6896,9 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_ROCKCRUMBLE14",
 	"MT_ROCKCRUMBLE15",
 	"MT_ROCKCRUMBLE16",
+	"MT_GFZDEBRIS",
+	"MT_BRICKDEBRIS",
+	"MT_WOODDEBRIS",
 
 	"MT_SRB1_CRAWLA",
 	"MT_SRB1_BAT",

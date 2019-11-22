@@ -210,6 +210,7 @@ void A_BrakFireShot(void *actor);
 void A_BrakLobShot(void *actor);
 void A_NapalmScatter(void *actor);
 void A_SpawnFreshCopy(void *actor);
+void A_DebrisRandom(void *actor);
 
 // ratio of states to sprites to mobj types is roughly 6 : 1 : 1
 #define NUMMOBJFREESLOTS 1024
@@ -577,6 +578,11 @@ typedef enum sprite
 	SPR_TRE3, // Frozen Hillside
 	SPR_TRE4, // Polygon
 	SPR_TRE5, // Bush tree
+
+	// Level debris
+	SPR_GFZD, // GFZ debris
+	SPR_BRIC, // Bricks
+	SPR_WDDB, // Wood Debris
 
 	SPR_FIRSTFREESLOT,
 	SPR_LASTFREESLOT = SPR_FIRSTFREESLOT + NUMSPRITEFREESLOTS - 1,
@@ -2942,6 +2948,11 @@ typedef enum state
 	S_SRB1_GENREX1,
 	S_SRB1_GENREX2,
 
+	// Level debris
+	S_GFZDEBRIS,
+	S_BRICKDEBRIS,
+	S_WOODDEBRIS,
+
 #ifdef SEENAMES
 	S_NAMECHECK,
 #endif
@@ -3478,6 +3489,11 @@ typedef enum mobj_type
 	MT_SRB1_METALSONIC,
 	MT_SRB1_GOLDBOT,
 	MT_SRB1_GENREX,
+
+	// Level debris
+	MT_GFZDEBRIS,
+	MT_BRICKDEBRIS,
+	MT_WOODDEBRIS,
 #ifdef SEENAMES
 	MT_NAMECHECK,
 #endif

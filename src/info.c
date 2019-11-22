@@ -52,6 +52,7 @@ char sprnames[NUMSPRITES + 1][5] =
 	"ROIJ","ROIK","ROIL","ROIM","ROIN","ROIO","ROIP","BBAL","GWLG","GWLR",
 	"SRBA","SRBB","SRBC","SRBD","SRBE","SRBF","SRBG","SRBH","SRBI","SRBJ",
 	"SRBK","SRBL","SRBM","SRBN","SRBO","TRE1","TRE2","TRE3","TRE4","TRE5",
+	"GFZD","BRIC","WDDB",
 };
 
 skincolor_t skincolors[MAXSKINCOLORS] = {
@@ -2486,6 +2487,10 @@ state_t states[NUMSTATES] =
 	{SPR_SRBC, 0, 2, A_Look, 0, 0, S_SRB1_ROBOFISH1}, // S_SRB1_ROBOFISH1
 	{SPR_SRBC, 1, 2, A_BuzzFly, 0, 0, S_SRB1_ROBOFISH3}, // S_SRB1_ROBOFISH2
 	{SPR_SRBC, 0, 2, A_BuzzFly, 0, 0, S_SRB1_ROBOFISH2}, // S_SRB1_ROBOFISH3
+
+	{SPR_GFZD, FF_ANIMATE, -1, NULL, 31, 1, S_NULL}, // S_GFZDEBRIS
+	{SPR_BRIC, FF_ANIMATE, -1, A_DebrisRandom, 7, 2, S_NULL}, // S_BRICKDEBRIS
+	{SPR_WDDB, FF_ANIMATE, -1, A_DebrisRandom, 7, 2, S_NULL}, // S_WOODDEBRIS
 
 	{SPR_SRBD, 0, 2, A_Look, 0, 0, S_SRB1_VOLCANOGUY1}, // S_SRB1_VOLCANOGUY1
 	{SPR_SRBD, 0, 2, A_BuzzFly, 0, 0, S_SRB1_VOLCANOGUY2}, // S_SRB1_VOLCANOGUY2
@@ -14030,6 +14035,87 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		0,              // damage
 		sfx_None,       // activesound
 		MF_SPECIAL|MF_SHOOTABLE|MF_ENEMY|MF_NOGRAVITY|MF_SLIDEME,  // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_GFZDEBRIS
+		-1,             // doomednum
+		S_GFZDEBRIS,    // spawnstate
+		1,              // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		0,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		32*FRACUNIT,    // radius
+		64*FRACUNIT,    // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_crumbl,     // activesound
+		MF_NOBLOCKMAP|MF_NOCLIPTHING|MF_RUNSPAWNFUNC|MF_NOCLIPHEIGHT|MF_SCENERY, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_BRICKDEBRIS
+		-1,             // doomednum
+		S_BRICKDEBRIS,  // spawnstate
+		1,              // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		0,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		16*FRACUNIT,    // radius
+		16*FRACUNIT,    // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOBLOCKMAP|MF_NOCLIPTHING|MF_RUNSPAWNFUNC|MF_NOCLIPHEIGHT|MF_SCENERY,  // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_WOODDEBRIS
+		-1,             // doomednum
+		S_WOODDEBRIS,   // spawnstate
+		1,              // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		0,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		16*FRACUNIT,    // radius
+		16*FRACUNIT,    // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_wbreak,     // activesound
+		MF_NOBLOCKMAP|MF_NOCLIPTHING|MF_RUNSPAWNFUNC|MF_NOCLIPHEIGHT|MF_SCENERY, // flags
 		S_NULL          // raisestate
 	},
 
