@@ -1115,7 +1115,7 @@ void HWR_DrawMD2(gl_vissprite_t *spr)
 	{
 		sector_t *sector = spr->mobj->subsector->sector;
 		UINT8 lightlevel = 255;
-		extracolormap_t *colormap = sector->extra_colormap;
+		extracolormap_t *colormap = NULL;
 
 		if (sector->numlights)
 		{
