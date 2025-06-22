@@ -56,7 +56,6 @@ static const char *whitelist[] = {
 	".log",
 	".md",
 
-	".ssg",
 	".sav2",
 };
 
