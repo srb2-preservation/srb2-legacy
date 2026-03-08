@@ -230,7 +230,6 @@ extern INT32 ultimate_selectable;
 
 #define MAXSAVEGAMES 31 //note: last save game is "no save"
 #define NOSAVESLOT MAXSAVEGAMES-1 //slot where Play Without Saving appears
-#define MARATHONSLOT 420 // just has to be nonzero, but let's use one that'll show up as an obvious error if something goes wrong while not using our existing saves
 
 void M_ForceSaveSlotSelected(INT32 sslot);
 

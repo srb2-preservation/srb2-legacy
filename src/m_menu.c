@@ -6618,7 +6618,7 @@ static void M_ChooseTimeAttack(INT32 choice)
 	else
 		G_RecordDemo(nameofdemo);
 
-	G_DeferedInitNew(false, G_BuildMapName(cv_nextmap.value), (UINT8)(cv_chooseskin.value), false, false);
+	G_DeferedInitNew(false, G_BuildMapName(cv_nextmap.value), (UINT8)(cv_chooseskin.value-1), false, false);
 }
 
 // Player has selected the "REPLAY" from the time attack screen
@@ -6851,8 +6851,7 @@ static void M_StartMarathon(INT32 choice)
 	marathontime = 0;
 	emeralds = 0;
 	marathonmode = MA_RUNNING|MA_INIT;
-	if (cv_dummymarathon.value == 1)
-		cursaveslot = MARATHONSLOT;
+	cursaveslot = -1;
 	if (!cv_dummycutscenes.value)
 		marathonmode |= MA_NOCUTSCENES;
 	if (cv_dummyloadless.value)

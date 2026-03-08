@@ -40,7 +40,11 @@ jobs:
     - name: Package SRB2 Legacy AppImage
       run: |
        chmod +x srb2-legacy-appimage.sh
-       ./srb2-legacy-appimage.sh --noassets --skipbuild
+       if [[ "${{ github.ref == 'refs/heads/master' }}" == "true" ]]; then
+           ./srb2-legacy-appimage.sh --skipbuild
+       else
+           ./srb2-legacy-appimage.sh --noassets --skipbuild
+       fi
 
     - name: Upload build artifact
       uses: actions/upload-artifact@v6.0.0
