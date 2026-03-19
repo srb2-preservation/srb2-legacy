@@ -71,6 +71,10 @@
 
 #include "i_addrinfo.h"
 
+#ifdef HAVE_DISCORDRPC
+#include "discord.h"
+#endif
+
 // ================================ DEFINITIONS ===============================
 
 #define PACKET_SIZE 1024
@@ -794,6 +798,9 @@ void RegisterServer(void)
 #else
 	AddToMasterServer(NULL);
 #endif
+#ifdef HAVE_DISCORDRPC
+	DRPC_UpdatePresence();
+#endif
 }
 
 void UnregisterServer(void)
@@ -811,6 +818,10 @@ void UnregisterServer(void)
 	con6_state = MSCS_NONE;
 
 	MSLastPing = 0;
+
+#ifdef HAVE_DISCORDRPC
+	DRPC_UpdatePresence();
+#endif
 }
 
 void MasterClient_Ticker(void)

@@ -6,6 +6,7 @@ d_net.c
 d_netfil.c
 d_netcmd.c
 dehacked.c
+discord.c
 z_zone.c
 f_finale.c
 f_wipe.c

@@ -54,6 +54,10 @@
 #include "f_finale.h"
 #endif
 
+#ifdef HAVE_DISCORDRPC
+#include "discord.h"
+#endif
+
 //
 // NETWORKING
 //
@@ -2659,7 +2663,7 @@ consvar_t cv_netticbuffer = CVAR_INIT ("netticbuffer", "1", "Amount of tics to s
 consvar_t cv_allownewplayer = CVAR_INIT ("allowjoin", "On", "Allow or disallow players from joining a netgame", CV_NETVAR, CV_OnOff, NULL);
 consvar_t cv_joinnextround = CVAR_INIT ("joinnextround", "Off", NULL, CV_NETVAR, CV_OnOff, NULL); /// \todo not done
 static CV_PossibleValue_t maxplayers_cons_t[] = {{2, "MIN"}, {32, "MAX"}, {0, NULL}};
-consvar_t cv_maxplayers = CVAR_INIT ("maxplayers", "8", "The maximum amount of players that can join a netgame", CV_SAVE, maxplayers_cons_t, NULL);
+consvar_t cv_maxplayers = CVAR_INIT ("maxplayers", "8", "The maximum amount of players that can join a netgame", CV_SAVE|CV_NETVAR, maxplayers_cons_t, NULL);
 consvar_t cv_allowgamestateresend = CVAR_INIT ("allowgamestateresend", "On", "Allow the server to resend the gamestate if a client goes out of synch", CV_SAVE, CV_OnOff, NULL);
 consvar_t cv_blamecfail = CVAR_INIT ("blamecfail", "Off", "Show when a player is out of synch", 0, CV_OnOff, NULL);
 
@@ -2932,6 +2936,10 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 		COM_BufAddText(va("sayto %d %s\n", newplayernum, motd));
 
 	LUAh_PlayerJoin(newplayernum);
+
+#ifdef HAVE_DISCORDRPC
+	DRPC_UpdatePresence();
+#endif
 }
 
 static boolean SV_AddWaitingPlayers(void)

@@ -232,6 +232,13 @@ ifdef STATIC
 libs+=-static
 endif
 
+ifdef HAVE_DISCORDRPC
+LIBS+=-ldiscord-rpc
+CFLAGS+=-DHAVE_DISCORDRPC
+OBJS+=$(OBJDIR)/discord.o
+OBJS+=$(OBJDIR)/discord_pass.o
+endif
+
 # build with profiling information
 ifdef PROFILEMODE
 opts+=-pg

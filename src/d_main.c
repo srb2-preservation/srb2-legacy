@@ -90,6 +90,9 @@
 
 #include "lua_script.h"
 
+#ifdef HAVE_DISCORDRPC
+#include "discord.h"
+#endif
 
 // Version numbers for netplay :upside_down_face:
 int    VERSION;
@@ -1396,6 +1399,10 @@ void D_SRB2Main(void)
 
 	CONS_Printf("ST_Init(): Init status bar.\n");
 	ST_Init();
+
+#ifdef HAVE_DISCORDRPC
+	DRPC_Init();
+#endif
 
 	if (M_CheckParm("-room"))
 	{

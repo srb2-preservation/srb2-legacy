@@ -56,6 +56,10 @@
 #define CV_RESTRICT 0
 #endif
 
+#ifdef HAVE_DISCORDRPC
+#include "discord.h"
+#endif
+
 // ------
 // protos
 // ------
@@ -864,6 +868,9 @@ void D_RegisterClientCommands(void)
 #if defined(LUA_ALLOW_BYTECODE)
 	COM_AddCommand("dumplua", NULL, Command_Dumplua_f);
 #endif
+#ifdef HAVE_DISCORDRPC
+	CV_RegisterVar(&cv_discordrp);
+#endif
 }
 
 /** Checks if a name (as received from another player) is okay.
@@ -1433,6 +1440,11 @@ static void Got_NameAndColor(UINT8 **cp, INT32 playernum)
 	}
 	else
 		SetPlayerSkinByNum(playernum, skin);
+
+#ifdef HAVE_DISCORDRPC
+	if (playernum == consoleplayer)
+		DRPC_UpdatePresence();
+#endif
 }
 
 void SendWeaponPref(void)
@@ -1892,6 +1904,10 @@ static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 	if (demorecording) // Okay, level loaded, character spawned and skinned,
 		G_BeginRecording(); // I AM NOW READY TO RECORD.
 	demo_start = true;
+
+#ifdef HAVE_DISCORDRPC
+	DRPC_UpdatePresence();
+#endif
 }
 
 static void Command_Pause(void)
@@ -3439,6 +3455,10 @@ static void TimeLimit_OnChange(void)
 	}
 	else if (netgame || multiplayer)
 		CONS_Printf(M_GetText("Time limit disabled\n"));
+
+#ifdef HAVE_DISCORDRPC
+	DRPC_UpdatePresence();
+#endif
 }
 
 /** Adjusts certain settings to match a changed gametype.

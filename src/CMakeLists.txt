@@ -15,6 +15,8 @@ set(SRB2_CONFIG_HAVE_ZLIB ON CACHE BOOL
 	"Enable zlib support.")
 set(SRB2_CONFIG_HAVE_GME ON CACHE BOOL
 	"Enable GME support.")
+set(SRB2_CONFIG_HAVE_DISCORDRPC OFF CACHE BOOL
+	"Enable Discord rich presence support.")
 set(SRB2_CONFIG_HAVE_OPENMPT ON CACHE BOOL
 	"Enable OpenMPT support.")
 set(SRB2_CONFIG_HAVE_THREADS ON CACHE BOOL
@@ -90,6 +92,13 @@ if(${SRB2_CONFIG_HAVE_THREADS})
 	set(SRB2_HAVE_THREADS ON)
 	target_sources(SRB2SDL2 PRIVATE i_threads.c)
 	target_compile_definitions(SRB2SDL2 PRIVATE -DHAVE_THREADS)
+endif()
+
+# TO-DO: make this check for the dependency like the others..
+if(${SRB2_CONFIG_HAVE_DISCORDRPC})
+	add_definitions(-DHAVE_DISCORDRPC)
+	target_link_libraries(SRB2SDL2 PRIVATE discord-rpc stdc++)
+	source_group("Discord RPC" FILES ${SRB2_DISCORDRPC_SOURCES})
 endif()
 
 if(${SRB2_CONFIG_HAVE_ZLIB})

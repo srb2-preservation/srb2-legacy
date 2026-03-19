@@ -50,6 +50,9 @@
 #include "r_fps.h" // Uncapped
 #include "dehacked.h"
 
+#ifdef HAVE_DISCORDRPC
+#include "discord.h"
+#endif
 
 gameaction_t gameaction;
 gamestate_t gamestate = GS_NULL;
@@ -5712,6 +5715,9 @@ boolean G_CheckDemoStatus(void)
 void G_SetGamestate(gamestate_t newstate)
 {
 	gamestate = newstate;
+#ifdef HAVE_DISCORDRPC
+	Discord_RunCallbacks();
+#endif
 }
 
 /* These functions handle the exitgame flag. Before, when the user
