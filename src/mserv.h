@@ -10,6 +10,8 @@
 /// \file  mserv.h
 /// \brief Header file for the master server routines
 
+#include "command.h" // why do i need this??
+
 #ifndef _MSERV_H_
 #define _MSERV_H_
 
@@ -66,6 +68,7 @@ typedef struct
 // ================================ GLOBALS ===============================
 
 extern consvar_t cv_masterserver, cv_servername;
+extern consvar_t cv_rendezvousserver;
 
 // < 0 to not connect (usually -1) (offline mode)
 // == 0 to show all rooms, not a valid hosting room
