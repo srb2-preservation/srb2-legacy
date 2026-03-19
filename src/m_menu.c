@@ -78,6 +78,11 @@
 #endif
 #endif
 
+#ifdef HAVE_DISCORDRPC
+#include "discord_rpc.h"
+#include "discord.h"
+#endif
+
 #define SKULLXOFF -32
 #define LINEHEIGHT 16
 #define STRINGHEIGHT 8
@@ -183,6 +188,12 @@ static void M_RoomMenu(INT32 choice);
 
 // the haxor message menu
 menu_t MessageDef;
+
+#ifdef HAVE_DISCORDRPC
+menu_t DiscordRequestsDef;
+static void M_HandleDiscordRequests(INT32 choice);
+static void M_DrawDiscordRequests(void);
+#endif
 
 menu_t SPauseDef;
 
@@ -554,6 +565,14 @@ typedef enum
 	spause_title,
 	spause_quit
 } spause_e;
+
+
+#ifdef HAVE_DISCORDRPC
+static menuitem_t DiscordRequestsMenu[] =
+{
+	{IT_KEYHANDLER|IT_NOTHING, NULL, "", NULL, M_HandleDiscordRequests, 0},
+};
+#endif
 
 // -----------------
 // Misc menu options
@@ -1607,6 +1626,21 @@ menu_t MISC_AddonsDef =
 menu_t MAPauseDef = PAUSEMENUSTYLE(MAPauseMenu, 40, 72);
 menu_t SPauseDef = PAUSEMENUSTYLE(SPauseMenu, 40, 72);
 menu_t MPauseDef = PAUSEMENUSTYLE(MPauseMenu, 40, 72);
+
+#ifdef HAVE_DISCORDRPC
+static void M_HandleDiscordRequests(INT32 choice);
+static void M_DrawDiscordRequests(void);
+menu_t DiscordRequestsDef = {
+	NULL,
+	sizeof (DiscordRequestsMenu)/sizeof (menuitem_t),
+	NULL,
+	DiscordRequestsMenu,
+	M_DrawDiscordRequests,
+	0, 0,
+	0,
+	NULL
+};
+#endif
 
 // Misc Main Menu
 menu_t MISC_ScrambleTeamDef = DEFAULTMENUSTYLE(NULL, MISC_ScrambleTeamMenu, &MPauseDef, 27, 40);
@@ -2839,6 +2873,16 @@ void M_StartControlPanel(void)
 	// intro might call this repeatedly
 	if (menuactive)
 	{
+#ifdef HAVE_DISCORDRPC
+		// Kind of hi-jacking this...
+		if (discordRequestList != NULL)
+		{
+			// Gotta take care of these requests first
+			DiscordRequestsDef.prevMenu = currentMenu;
+			currentMenu = &DiscordRequestsDef;
+			itemOn = 0;
+		}
+#endif
 		CON_ToggleOff(); // move away console
 		return;
 	}
@@ -9326,3 +9370,72 @@ static void M_QuitSRB2(INT32 choice)
 	(void)choice;
 	M_StartMessage(quitmsg[M_RandomKey(NUM_QUITMESSAGES)], M_QuitResponse, MM_YESNO);
 }
+
+
+#ifdef HAVE_DISCORDRPC
+static void M_HandleDiscordRequests(INT32 choice)
+{
+	discordRequest_t *curRequest = discordRequestList;
+
+	if (curRequest == NULL)
+	{
+		if (currentMenu->prevMenu)
+			M_SetupNextMenu(currentMenu->prevMenu);
+		else
+			M_ClearMenus(true);
+
+		return;
+	}
+
+	switch (choice)
+	{
+		case KEY_ESCAPE:
+			Discord_Respond(curRequest->userID, DISCORD_REPLY_NO);
+			DRPC_RemoveRequest(curRequest);
+			break;
+
+		case KEY_ENTER:
+			Discord_Respond(curRequest->userID, DISCORD_REPLY_YES);
+			DRPC_RemoveRequest(curRequest);
+			break;
+	}
+
+	if (curRequest == NULL)
+	{
+		// was removed, we can exit menu
+		if (currentMenu->prevMenu)
+			M_SetupNextMenu(currentMenu->prevMenu);
+		else
+			M_ClearMenus(true);
+	}
+}
+
+static void M_DrawDiscordRequests(void)
+{
+	discordRequest_t *curRequest = discordRequestList;
+
+	INT32 x = 64;
+	INT32 y = 135;
+
+	if (curRequest == NULL)
+	{
+		// Uh oh! Shouldn't happen!
+		if (currentMenu->prevMenu)
+			M_SetupNextMenu(currentMenu->prevMenu);
+		else
+			M_ClearMenus(true);
+		return;
+	}
+
+	V_DrawThinString(x, y, V_ALLOWLOWERCASE|V_6WIDTHSPACE, curRequest->username);
+	V_DrawThinString(x, y + 24, V_ALLOWLOWERCASE|V_6WIDTHSPACE, "A - Accept   B - Decline");
+	y -= 16;
+
+	while (curRequest->next != NULL)
+	{
+		curRequest = curRequest->next;
+		V_DrawThinString(x, y, V_ALLOWLOWERCASE|V_6WIDTHSPACE, curRequest->username);
+		y -= 8;
+	}
+}
+#endif

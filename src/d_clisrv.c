@@ -876,7 +876,7 @@ static void SV_SendServerInfo(INT32 node, tic_t servertime)
 	if (strcmp(mapheaderinfo[gamemap-1]->lvlttl, ""))
 		strncpy(netbuffer->u.serverinfo.maptitle, (char *)mapheaderinfo[gamemap-1]->lvlttl, 33);
 	else
-		strncpy(netbuffer->u.serverinfo.maptitle, "UNKNOWN", 33);
+		strncpy(netbuffer->u.serverinfo.maptitle, "Unknown", 33);
 
 	netbuffer->u.serverinfo.maptitle[32] = '\0';
 
@@ -1175,7 +1175,7 @@ static void CL_LoadReceivedSavegame(boolean reloading)
 		{
 			CONS_Printf(": %s", mapheaderinfo[gamemap-1]->lvlttl);
 			if (!(mapheaderinfo[gamemap-1]->levelflags & LF_NOZONE))
-				CONS_Printf(M_GetText(" ZONE"));
+				CONS_Printf(M_GetText(" Zone"));
 			if (actnum > 0)
 				CONS_Printf(" %2d", actnum);
 		}
@@ -2662,8 +2662,11 @@ consvar_t cv_netticbuffer = CVAR_INIT ("netticbuffer", "1", "Amount of tics to s
 
 consvar_t cv_allownewplayer = CVAR_INIT ("allowjoin", "On", "Allow or disallow players from joining a netgame", CV_NETVAR, CV_OnOff, NULL);
 consvar_t cv_joinnextround = CVAR_INIT ("joinnextround", "Off", NULL, CV_NETVAR, CV_OnOff, NULL); /// \todo not done
+
+static void MaxPlayers_OnChange(void);
 static CV_PossibleValue_t maxplayers_cons_t[] = {{2, "MIN"}, {32, "MAX"}, {0, NULL}};
-consvar_t cv_maxplayers = CVAR_INIT ("maxplayers", "8", "The maximum amount of players that can join a netgame", CV_SAVE|CV_NETVAR, maxplayers_cons_t, NULL);
+consvar_t cv_maxplayers = CVAR_INIT ("maxplayers", "8", "The maximum amount of players that can join a netgame", CV_SAVE|CV_NETVAR|CV_CALL, maxplayers_cons_t, MaxPlayers_OnChange);
+
 consvar_t cv_allowgamestateresend = CVAR_INIT ("allowgamestateresend", "On", "Allow the server to resend the gamestate if a client goes out of synch", CV_SAVE, CV_OnOff, NULL);
 consvar_t cv_blamecfail = CVAR_INIT ("blamecfail", "Off", "Show when a player is out of synch", 0, CV_OnOff, NULL);
 
@@ -2677,6 +2680,15 @@ static CV_PossibleValue_t downloadspeed_cons_t[] = {{0, "MIN"}, {300, "MAX"}, {0
 consvar_t cv_downloadspeed = CVAR_INIT ("downloadspeed", "16", "The speed of file downloading in packets per tic", CV_SAVE, downloadspeed_cons_t, NULL);
 
 static void Got_AddPlayer(UINT8 **p, INT32 playernum);
+
+static void MaxPlayers_OnChange(void)
+{
+#ifdef HAVE_DISCORDRPC
+	DRPC_UpdatePresence();
+#else
+	return;
+#endif
+}
 
 // called one time at init
 void D_ClientServerInit(void)

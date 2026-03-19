@@ -979,7 +979,7 @@ static void ST_drawLevelTitle(void)
 		lvlttlxpos = ((BASEVIDWIDTH/2) - (V_LevelNameWidth(lvlttl)/2));
 
 	ttlnumxpos = lvlttlxpos + V_LevelNameWidth(lvlttl);
-	zonexpos = ttlnumxpos - V_LevelNameWidth(M_GetText("ZONE"));
+	zonexpos = ttlnumxpos - V_LevelNameWidth(M_GetText("Zone"));
 
 	if (lvlttlxpos < 0)
 		lvlttlxpos = 0;
@@ -1009,7 +1009,7 @@ static void ST_drawLevelTitle(void)
 	V_DrawLevelTitle(lvlttlxpos, lvlttly, 0, lvlttl);
 
 	if (!(mapheaderinfo[gamemap-1]->levelflags & LF_NOZONE))
-		V_DrawLevelTitle(zonexpos, zoney, 0, M_GetText("ZONE"));
+		V_DrawLevelTitle(zonexpos, zoney, 0, M_GetText("Zone"));
 
 	if (lvlttly+48 < 200)
 		V_DrawCenteredString(subttlxpos, lvlttly+48, V_ALLOWLOWERCASE, subttl);

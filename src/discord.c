@@ -27,42 +27,220 @@
 #include "m_menu.h" // gametype_cons_t
 #include "r_things.h" // skins
 #include "mserv.h" // ms_RoomId
+#include "z_zone.h"
+#include "m_random.h" // P_GetInitSeed
 
 #include "discord.h"
 #include "doomdef.h"
 
 // Feel free to provide your own, if you care enough to create another Discord app for this :P
-#define DISCORD_APPID "503531144395096085"
+#define DISCORD_APPID "503531144395096085" // todo: dont leech off of kart
+
+// length of IP strings
+#define IP_SIZE 16
 
 consvar_t cv_discordrp = CVAR_INIT("discordrp", "On", NULL, CV_SAVE|CV_CALL, CV_OnOff, DRPC_UpdatePresence);
 
-//
-// DRPC_Handle's
-//
-static inline void DRPC_HandleReady(const DiscordUser *user)
+discordRequest_t *discordRequestList = NULL;
+
+#ifdef HAVE_CURL
+struct SelfIPbuffer
 {
-	CONS_Printf("Discord: connected to %s#%s - %s\n", user->username, user->discriminator, user->userId);
+	CURL *curl;
+	char *pointer;
+	size_t length;
+};
+static char self_ip[IP_SIZE];
+#endif
+
+/*--------------------------------------------------
+	static char *DRPC_XORIPString(const char *input)
+
+		Simple XOR encryption/decryption. Not complex or
+		very secretive because we aren't sending anything
+		that isn't easily accessible via our Master Server anyway.
+--------------------------------------------------*/
+static char *DRPC_XORIPString(const char *input)
+{
+	const UINT32 is = (P_GetInitSeed() % UINT8_MAX);
+	const UINT8 xor[IP_SIZE] = {is, is+106, is-64, is+251, is-207, is+16, is-28, is+78, is-4, is+118, is-46, is+76, is-153, is+45, is-91, is+100};
+	char *output = malloc(sizeof(char) * IP_SIZE);
+	UINT8 i;
+
+	for (i = 0; i < IP_SIZE; i++)
+	{
+		output[i] = input[i] ^ xor[i];
+	}
+
+	return output;
 }
 
-static inline void DRPC_HandleDisconnect(int err, const char *msg)
+/*--------------------------------------------------
+	static void DRPC_HandleReady(const DiscordUser *user)
+
+		Callback function, ran when the game connects to Discord.
+
+	Input Arguments:-
+		user - Struct containing Discord user info.
+
+	Return:-
+		None
+--------------------------------------------------*/
+static void DRPC_HandleReady(const DiscordUser *user)
+{
+	CONS_Printf("Discord: connected to %s#%s (%s)\n", user->username, user->discriminator, user->userId);
+}
+
+/*--------------------------------------------------
+	static void DRPC_HandleDisconnect(int err, const char *msg)
+
+		Callback function, ran when disconnecting from Discord.
+
+	Input Arguments:-
+		err - Error type
+		msg - Error message
+
+	Return:-
+		None
+--------------------------------------------------*/
+static void DRPC_HandleDisconnect(int err, const char *msg)
 {
 	CONS_Printf("Discord: disconnected (%d: %s)\n", err, msg);
 }
 
-static inline void DRPC_HandleError(int err, const char *msg)
+/*--------------------------------------------------
+	static void DRPC_HandleError(int err, const char *msg)
+
+		Callback function, ran when Discord outputs an error.
+
+	Input Arguments:-
+		err - Error type
+		msg - Error message
+
+	Return:-
+		None
+--------------------------------------------------*/
+static void DRPC_HandleError(int err, const char *msg)
 {
-	CONS_Alert(CONS_WARNING, "Discord: error (%d, %s)\n", err, msg);
+	CONS_Alert(CONS_WARNING, "Discord error (%d: %s)\n", err, msg);
 }
 
-static inline void DRPC_HandleJoin(const char *secret)
+/*--------------------------------------------------
+	static void DRPC_HandleJoin(const char *secret)
+
+		Callback function, ran when Discord wants to
+		connect a player to the game via a channel invite
+		or a join request.
+
+	Input Arguments:-
+		secret - Value that links you to the server.
+
+	Return:-
+		None
+--------------------------------------------------*/
+static void DRPC_HandleJoin(const char *secret)
 {
-	CONS_Printf("Discord: connecting to %s\n", secret);
-	COM_BufAddText(va("connect \"%s\"\n", secret));
+	char *ip = DRPC_XORIPString(secret);
+	CONS_Printf("Connecting to %s via Discord\n", ip);
+	COM_BufAddText(va("connect \"%s\"\n", ip));
+	free(ip);
 }
 
-//
-// DRPC_Init: starting up the handles, call Discord_initalize
-//
+/*--------------------------------------------------
+	static void DRPC_HandleJoinRequest(const DiscordUser *requestUser)
+
+		Callback function, ran when Discord wants to
+		ask the player if another Discord user can join
+		or not.
+
+	Input Arguments:-
+		requestUser - DiscordUser struct for the user trying to connect.
+
+	Return:-
+		None
+--------------------------------------------------*/
+static void DRPC_HandleJoinRequest(const DiscordUser *requestUser)
+{
+	discordRequest_t *append = discordRequestList;
+	discordRequest_t *newRequest = Z_Calloc(sizeof(discordRequest_t), PU_STATIC, NULL);
+
+	// Discord requests exprie after 30 seconds
+	newRequest->timer = (30*TICRATE)-1;
+
+	newRequest->username = Z_Calloc(344+1+8, PU_STATIC, NULL);
+	snprintf(newRequest->username, 344+1+8, "%s#%s",
+		requestUser->username,
+		requestUser->discriminator
+	);
+
+	newRequest->userID = Z_Calloc(32, PU_STATIC, NULL);
+	snprintf(newRequest->userID, 32, "%s", requestUser->userId);
+
+	if (append != NULL)
+	{
+		discordRequest_t *prev = NULL;
+
+		while (append != NULL)
+		{
+			// CHECK FOR DUPES!! Ignore any that already exist from the same user.
+			if (!strcmp(newRequest->userID, append->userID))
+			{
+				Discord_Respond(newRequest->userID, DISCORD_REPLY_IGNORE);
+				DRPC_RemoveRequest(newRequest);
+				return;
+			}
+			prev = append;
+			append = append->next;
+		}
+
+		newRequest->prev = prev;
+		prev->next = newRequest;
+	}
+	else
+	{
+		discordRequestList = newRequest;
+	}
+}
+
+/*--------------------------------------------------
+	void DRPC_RemoveRequest(discordRequest_t *removeRequest)
+
+		See header file for description.
+--------------------------------------------------*/
+void DRPC_RemoveRequest(discordRequest_t *removeRequest)
+{
+	if (removeRequest->prev != NULL)
+	{
+		removeRequest->prev->next = removeRequest->next;
+	}
+
+	if (removeRequest->next != NULL)
+	{
+		removeRequest->next->prev = removeRequest->prev;
+
+		if (removeRequest == discordRequestList)
+		{
+			discordRequestList = removeRequest->next;
+		}
+	}
+	else
+	{
+		if (removeRequest == discordRequestList)
+		{
+			discordRequestList = NULL;
+		}
+	}
+
+	Z_Free(removeRequest->username);
+	Z_Free(removeRequest->userID);
+	Z_Free(removeRequest);
+}
+
+/*--------------------------------------------------
+	void DRPC_Init(void)
+
+		See header file for description.
+--------------------------------------------------*/
 void DRPC_Init(void)
 {
 	DiscordEventHandlers handlers;
@@ -72,6 +250,7 @@ void DRPC_Init(void)
 	handlers.disconnected = DRPC_HandleDisconnect;
 	handlers.errored = DRPC_HandleError;
 	handlers.joinGame = DRPC_HandleJoin;
+	handlers.joinRequest = DRPC_HandleJoinRequest;
 
 	Discord_Initialize(DISCORD_APPID, &handlers, 1, NULL);
 	I_AddExitFunc(Discord_Shutdown);
@@ -79,17 +258,21 @@ void DRPC_Init(void)
 }
 
 #ifdef HAVE_CURL
-#define IP_SIZE 16
-static char self_ip[IP_SIZE];
+/*--------------------------------------------------
+	static size_t DRPC_WriteServerIP(char *s, size_t size, size_t n, void *userdata)
 
-struct SelfIPbuffer
-{
-	CURL *curl;
-	char *pointer;
-	size_t length;
-};
+		Writing function for use with curl. Only intended to be used with simple text.
 
-static size_t DRPC_WriteServerIP(char *s, size_t size, size_t n, void *userdata )
+	Input Arguments:-
+		s - Data to write
+		size - Always 1.
+		n - Length of data
+		userdata - Passed in from CURLOPT_WRITEDATA, intended to be SelfIPbuffer
+
+	Return:-
+		Number of bytes wrote in this pass.
+--------------------------------------------------*/
+static size_t DRPC_WriteServerIP(char *s, size_t size, size_t n, void *userdata)
 {
 	struct SelfIPbuffer *buffer;
 	size_t newlength;
@@ -108,9 +291,13 @@ static size_t DRPC_WriteServerIP(char *s, size_t size, size_t n, void *userdata 
 }
 #endif
 
-//
-// DRPC_GetServerIP: Gets the server's IP address, used to 
-//
+/*--------------------------------------------------
+	static const char *DRPC_GetServerIP(void)
+
+		Retrieves the IP address of the server that you're
+		connected to. Will attempt to use curl for getting your
+		own IP address, if it's not yours.
+--------------------------------------------------*/
 static const char *DRPC_GetServerIP(void)
 {
 	const char *address; 
@@ -119,7 +306,11 @@ static const char *DRPC_GetServerIP(void)
 	if (I_GetNodeAddress && (address = I_GetNodeAddress(servernode)) != NULL)
 	{
 		if (strcmp(address, "self"))
-			return address; // We're not the server, so we could successfully get the IP! No problem here :)
+		{
+			// We're not the server, so we could successfully get the IP!
+			// No need to do anything else :)
+			return address; 
+		}
 	}
 
 #ifdef HAVE_CURL
@@ -135,7 +326,10 @@ static const char *DRPC_GetServerIP(void)
 
 		if (curl)
 		{
-			const char *api = "http://ip4only.me/api/"; // API to get your public IP address from
+			// The API to get your public IP address from.
+			// Picked because it's stupid simple and it's been up for a long time.
+			const char *api = "http://ip4only.me/api/"; 
+
 			struct SelfIPbuffer buffer;
 			CURLcode success;
 
@@ -164,6 +358,8 @@ static const char *DRPC_GetServerIP(void)
 			free(buffer.pointer);
 			curl_easy_cleanup(curl);
 		}
+
+		curl_global_cleanup();
 	}
 
 	if (self_ip[0])
@@ -173,11 +369,16 @@ static const char *DRPC_GetServerIP(void)
 		return NULL; // Could not get your IP for whatever reason, so we cannot do Discord invites
 }
 
-//
-// DRPC_UpdatePresence: Called whenever anything changes about server info
-//
+
+/*--------------------------------------------------
+	void DRPC_UpdatePresence(void)
+
+		See header file for description.
+--------------------------------------------------*/
 void DRPC_UpdatePresence(void)
 {
+	char detailstr[48+1];
+
 	char mapimg[8+1];
 	char mapname[5+21+21+2+1];
 
@@ -194,6 +395,18 @@ void DRPC_UpdatePresence(void)
 		Discord_UpdatePresence(&discordPresence);
 		return;
 	}
+
+/*
+#ifdef DEVELOP
+	// This way, we can use the invite feature in-dev, but not have snoopers seeing any potential secrets! :P
+	discordPresence.largeImageKey = "miscdevelop";
+	discordPresence.largeImageText = "Nope.";
+	discordPresence.state = "Shh! We're testing!";
+
+	Discord_UpdatePresence(&discordPresence);
+	return;
+#endif // DEVELOP
+*/
 
 	// Server info
 	if (netgame)
@@ -215,8 +428,12 @@ void DRPC_UpdatePresence(void)
 		discordPresence.partyMax = cv_maxplayers.value; // Max players (TODO: use another variable to hold this, so maxplayers doesn't have to be a netvar!)
 
 		// Grab the host's IP for joining.
-		if ((join = DRPC_GetServerIP()) != NULL)
-			discordPresence.joinSecret = join;
+		if (cv_allownewplayer.value && ((join = DRPC_GetServerIP()) != NULL))
+		{
+			char *xorjoin = DRPC_XORIPString(join);
+			discordPresence.joinSecret = xorjoin;
+			free(xorjoin);
+		}
 	}
 	else
 	{
@@ -230,15 +447,21 @@ void DRPC_UpdatePresence(void)
 	}
 
 	// Gametype info
-	if (gamestate == GS_LEVEL || gamestate == GS_INTERMISSION)
+		if ((gamestate == GS_LEVEL || gamestate == GS_INTERMISSION) && Playing())
 	{
 		if (modeattacking)
 			discordPresence.details = "Record Attack";
 		else
-			discordPresence.details = gametype_cons_t[gametype].strvalue;
+		{
+			snprintf(detailstr, 48, "%s",
+				gametype_cons_t[gametype].strvalue
+			);
+			discordPresence.details = detailstr;
+		}
 	}
 
-	if (gamestate == GS_LEVEL || gamestate == GS_INTERMISSION) // Map info
+	if ((gamestate == GS_LEVEL || gamestate == GS_INTERMISSION) // Map info
+		&& !(demoplayback))
 	{
 		if ((gamemap >= 1 && gamemap <= 60) // supported race maps
 			|| (gamemap >= 136 && gamemap <= 164)) // supported battle maps
@@ -250,7 +473,7 @@ void DRPC_UpdatePresence(void)
 		else if (mapheaderinfo[gamemap-1]->menuflags & LF2_HIDEINMENU)
 		{
 			// Hell map, use the method that got you here :P
-			discordPresence.largeImageKey = "maphell";
+			discordPresence.largeImageKey = "miscdice";
 		}
 		else
 		{
@@ -265,18 +488,15 @@ void DRPC_UpdatePresence(void)
 		}
 		else
 		{
-			snprintf(mapname, 48, "Map: %s%s%s",
-				mapheaderinfo[gamemap-1]->lvlttl,
-				(strlen(mapheaderinfo[gamemap-1]->lvlttl) > 0) ? va(" %s",mapheaderinfo[gamemap-1]->lvlttl) : // SRB2kart
-				((mapheaderinfo[gamemap-1]->levelflags & LF_NOZONE) ? "" : " Zone"),
-				(mapheaderinfo[gamemap-1]->actnum) > 0 ? va(" %d",mapheaderinfo[gamemap-1]->actnum) : "");
-			discordPresence.largeImageText = mapname; // Map name
+			// Map name on tool tip
+			snprintf(mapname, 48, "Map: %s", G_BuildMapTitle(gamemap));
+			discordPresence.largeImageText = mapname;
 		}
 
-		if (gamestate == GS_LEVEL)
+		if (gamestate == GS_LEVEL && Playing())
 		{
 			const time_t currentTime = time(NULL);
-			const time_t mapTimeStart = currentTime - (leveltime / TICRATE);
+			const time_t mapTimeStart = currentTime - ((leveltime) / TICRATE);
 
 			discordPresence.startTimestamp = mapTimeStart;
 		}
