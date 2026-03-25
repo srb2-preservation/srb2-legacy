@@ -34,7 +34,7 @@
 #include "doomdef.h"
 
 // Feel free to provide your own, if you care enough to create another Discord app for this :P
-#define DISCORD_APPID "503531144395096085" // todo: dont leech off of kart
+#define DISCORD_APPID "1407619178755784715"
 
 // length of IP strings
 #define IP_SIZE 16
@@ -466,7 +466,7 @@ void DRPC_UpdatePresence(void)
 		if ((gamemap >= 1 && gamemap <= 60) // supported race maps
 			|| (gamemap >= 136 && gamemap <= 164)) // supported battle maps
 		{
-			snprintf(mapimg, 8, "%s", G_BuildMapName(gamemap));
+			snprintf(mapimg, 8, "%s%s", G_BuildMapName(gamemap), "P");
 			strlwr(mapimg);
 			discordPresence.largeImageKey = mapimg; // Map image
 		}
