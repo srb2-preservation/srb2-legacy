@@ -9393,40 +9393,30 @@ static void M_QuitSRB2(INT32 choice)
 
 
 #ifdef HAVE_DISCORDRPC
+static const tic_t confirmLength = 3*TICRATE/4;
+static tic_t confirmDelay = 0;
+static boolean confirmAccept = false;
+
 static void M_HandleDiscordRequests(INT32 choice)
 {
-	discordRequest_t *curRequest = discordRequestList;
-
-	if (curRequest == NULL)
-	{
-		if (currentMenu->prevMenu)
-			M_SetupNextMenu(currentMenu->prevMenu);
-		else
-			M_ClearMenus(true);
-
+	if (confirmDelay > 0)
 		return;
-	}
 
 	switch (choice)
 	{
-		case KEY_ESCAPE:
-			Discord_Respond(curRequest->userID, DISCORD_REPLY_NO);
-			DRPC_RemoveRequest(curRequest);
-			break;
-
 		case KEY_ENTER:
-			Discord_Respond(curRequest->userID, DISCORD_REPLY_YES);
-			DRPC_RemoveRequest(curRequest);
+			Discord_Respond(discordRequestList->userID, DISCORD_REPLY_YES);
+			confirmAccept = true;
+			confirmDelay = confirmLength;
+			S_StartSound(NULL, sfx_s3k63);
 			break;
-	}
 
-	if (curRequest == NULL)
-	{
-		// was removed, we can exit menu
-		if (currentMenu->prevMenu)
-			M_SetupNextMenu(currentMenu->prevMenu);
-		else
-			M_ClearMenus(true);
+		case KEY_ESCAPE:
+			Discord_Respond(discordRequestList->userID, DISCORD_REPLY_NO);
+			confirmAccept = false;
+			confirmDelay = confirmLength;
+			S_StartSound(NULL, sfx_s3kb2);
+			break;
 	}
 }
 

@@ -29,7 +29,6 @@ extern struct discordInfo_s {
 } discordInfo;
 
 typedef struct discordRequest_s {
-	tic_t timer; // Tics left on the request before it expires.
 	char *discriminator; // Discord discriminator (The little hashtag thing after the username). Separated for a "hide discriminators" cvar.
 	char *username; // Discord user name + their discriminator.
 	char *userID; // The ID of the Discord user, gets used with Discord_Respond()
@@ -73,16 +72,6 @@ void DRPC_Init(void);
 --------------------------------------------------*/
 
 void DRPC_SendDiscordInfo(void);
-
-
-/*--------------------------------------------------
-	void DRPC_RecieveDiscordInfo(UINT8 **p, INT32 playernum);
-
-		Recieves the server's information needed for
-		the rich presence state.
---------------------------------------------------*/
-
-void DRPC_RecieveDiscordInfo(UINT8 **p, INT32 playernum);
 
 
 /*--------------------------------------------------

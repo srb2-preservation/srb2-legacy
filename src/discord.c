@@ -28,7 +28,6 @@
 #include "r_things.h" // skins
 #include "mserv.h" // ms_RoomId
 #include "z_zone.h"
-#include "m_random.h" // P_GetInitSeed
 #include "byteptr.h"
 
 #include "discord.h"
@@ -70,15 +69,29 @@ static char self_ip[IP_SIZE];
 --------------------------------------------------*/
 static char *DRPC_XORIPString(const char *input)
 {
-	const UINT32 is = (P_GetInitSeed() % UINT8_MAX);
-	const UINT8 xor[IP_SIZE] = {is, is+106, is-64, is+251, is-207, is+16, is-28, is+78, is-4, is+118, is-46, is+76, is-153, is+45, is-91, is+100};
-	char *output = malloc(sizeof(char) * IP_SIZE);
+	const UINT8 xor[IP_SIZE] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
+	char *output = malloc(sizeof(char) * (IP_SIZE+1));
+
 	UINT8 i;
 
 	for (i = 0; i < IP_SIZE; i++)
 	{
-		output[i] = input[i] ^ xor[i];
+		char xorinput;
+
+		if (!input[i])
+			break;
+
+		xorinput = input[i] ^ xor[i];
+
+		if (xorinput < 32 || xorinput > 126)
+		{
+			xorinput = input[i];
+		}
+
+		output[i] = xorinput;
 	}
+
+	output[i] = '\0';
 
 	return output;
 }
@@ -232,9 +245,6 @@ static void DRPC_HandleJoinRequest(const DiscordUser *requestUser)
 
 	newRequest = Z_Calloc(sizeof(discordRequest_t), PU_STATIC, NULL);
 
-	// Discord requests expire after 30 seconds
-	newRequest->timer = (30*TICRATE)-1;
-
 	newRequest->username = Z_Calloc(344, PU_STATIC, NULL);
 	snprintf(newRequest->username, 344, "%s", requestUser->username);
 
@@ -346,45 +356,6 @@ void DRPC_SendDiscordInfo(void)
 	WRITEUINT8(p, cv_discordinvites.value);
 
 	SendNetXCmd(XD_DISCORD, &buf, 3);
-}
-
-/*--------------------------------------------------
-	void DRPC_RecieveDiscordInfo(UINT8 **p, INT32 playernum)
-
-		See header file for description.
---------------------------------------------------*/
-void DRPC_RecieveDiscordInfo(UINT8 **p, INT32 playernum)
-{
-	if (playernum != serverplayer /*&& !IsPlayerAdmin(playernum)*/)
-	{
-		// protect against hacked/buggy client
-		CONS_Alert(CONS_WARNING, M_GetText("Illegal Discord info command received from %s\n"), player_names[playernum]);
-		if (server)
-		{
-			UINT8 buf[2];
-
-			buf[0] = (UINT8)playernum;
-			buf[1] = KICK_MSG_CON_FAIL;
-			SendNetXCmd(XD_KICK, &buf, 2);
-		}
-		return;
-	}
-
-	discordInfo.maxPlayers = READUINT8(*p);
-	discordInfo.joinsAllowed = (boolean)READUINT8(*p);
-	discordInfo.everyoneCanInvite = (boolean)READUINT8(*p);
-
-	DRPC_UpdatePresence();
-
-	if (DRPC_InvitesAreAllowed() == false)
-	{
-		// Flush the request list, if it still exists
-		while (discordRequestList != NULL)
-		{
-			Discord_Respond(discordRequestList->userID, DISCORD_REPLY_IGNORE);
-			DRPC_RemoveRequest(discordRequestList);
-		}
-	}
 }
 
 #ifdef HAVE_CURL
@@ -499,6 +470,20 @@ static const char *DRPC_GetServerIP(void)
 		return NULL; // Could not get your IP for whatever reason, so we cannot do Discord invites
 }
 
+/*--------------------------------------------------
+	void DRPC_EmptyRequests(void)
+
+		Empties the request list. Any existing requests
+		will get an ignore reply.
+--------------------------------------------------*/
+static void DRPC_EmptyRequests(void)
+{
+	while (discordRequestList != NULL)
+	{
+		Discord_Respond(discordRequestList->userID, DISCORD_REPLY_IGNORE);
+		DRPC_RemoveRequest(discordRequestList);
+	}
+}
 
 /*--------------------------------------------------
 	void DRPC_UpdatePresence(void)
@@ -514,6 +499,7 @@ void DRPC_UpdatePresence(void)
 
 	char charimg[4+SKINNAMESIZE+1];
 	char charname[11+SKINNAMESIZE+1];
+	boolean joinSecretSet = false;
 
 	DiscordRichPresence discordPresence;
 	memset(&discordPresence, 0, sizeof(discordPresence));
@@ -522,21 +508,21 @@ void DRPC_UpdatePresence(void)
 	{
 		// User doesn't want to show their game information, so update with empty presence.
 		// This just shows that they're playing SRB2Kart. (If that's too much, then they should disable game activity :V)
+		DRPC_EmptyRequests();
 		Discord_UpdatePresence(&discordPresence);
 		return;
 	}
 
-/*
 #ifdef DEVELOP
 	// This way, we can use the invite feature in-dev, but not have snoopers seeing any potential secrets! :P
 	discordPresence.largeImageKey = "miscdevelop";
 	discordPresence.largeImageText = "Nope.";
 	discordPresence.state = "Shh! We're testing!";
 
+	DRPC_EmptyRequests();
 	Discord_UpdatePresence(&discordPresence);
 	return;
 #endif // DEVELOP
-*/
 
 	// Server info
 	if (netgame)
@@ -553,23 +539,30 @@ void DRPC_UpdatePresence(void)
 
 		discordPresence.partyId = server_context; // Thanks, whoever gave us Mumble support, for implementing the EXACT thing Discord wanted for this field!
 		discordPresence.partySize = D_NumPlayers(); // Players in server
-		discordPresence.partyMax = cv_maxplayers.value; // Max players (TODO: use another variable to hold this, so maxplayers doesn't have to be a netvar!)
+		discordPresence.partyMax = discordInfo.maxPlayers; // Max players
 
 		if (DRPC_InvitesAreAllowed() == true)
 		{
 			const char *join;
 
 			// Grab the host's IP for joining.
-			if ((join = DRPC_GetServerIP()) != NULL)
+			if (cv_allownewplayer.value && ((join = DRPC_GetServerIP()) != NULL))
 			{
 				char *xorjoin = DRPC_XORIPString(join);
 				discordPresence.joinSecret = xorjoin;
 				free(xorjoin);
+
+				joinSecretSet = true;
 			}
 		}
 	}
 	else
 	{
+		// Reset discord info if you're not in a place that uses it!
+		// Important for if you join a server that compiled without HAVE_DISCORDRPC,
+		// so that you don't ever end up using bad information from another server.
+		memset(&discordInfo, 0, sizeof(discordInfo));
+
 		// Offline info
 		if (Playing())
 			discordPresence.state = "Offline";
@@ -677,6 +670,12 @@ void DRPC_UpdatePresence(void)
 
 		snprintf(charname, 28, "Character: %s", skins[players[consoleplayer].skin].realname);
 		discordPresence.smallImageText = charname; // Character name
+	}
+
+	if (joinSecretSet == false)
+	{
+		// Not able to join? Flush the request list, if it exists.
+		DRPC_EmptyRequests();
 	}
 
 	Discord_UpdatePresence(&discordPresence);
