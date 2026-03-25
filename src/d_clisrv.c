@@ -2666,12 +2666,13 @@ static void Command_ResendGamestate(void)
 static CV_PossibleValue_t netticbuffer_cons_t[] = {{0, "MIN"}, {3, "MAX"}, {0, NULL}};
 consvar_t cv_netticbuffer = CVAR_INIT ("netticbuffer", "1", "Amount of tics to save in a buffer, reduces network induced frame lag", CV_SAVE, netticbuffer_cons_t, NULL);
 
-consvar_t cv_allownewplayer = CVAR_INIT ("allowjoin", "On", "Allow or disallow players from joining a netgame", CV_NETVAR, CV_OnOff, NULL);
+static void Joinable_OnChange(void);
+
+consvar_t cv_allownewplayer = CVAR_INIT ("allowjoin", "On", "Allow or disallow players from joining a netgame", CV_CALL, CV_OnOff, Joinable_OnChange);
 consvar_t cv_joinnextround = CVAR_INIT ("joinnextround", "Off", NULL, CV_NETVAR, CV_OnOff, NULL); /// \todo not done
 
-static void MaxPlayers_OnChange(void);
 static CV_PossibleValue_t maxplayers_cons_t[] = {{2, "MIN"}, {32, "MAX"}, {0, NULL}};
-consvar_t cv_maxplayers = CVAR_INIT ("maxplayers", "8", "The maximum amount of players that can join a netgame", CV_SAVE|CV_NETVAR|CV_CALL, maxplayers_cons_t, MaxPlayers_OnChange);
+consvar_t cv_maxplayers = CVAR_INIT ("maxplayers", "8", "The maximum amount of players that can join a netgame", CV_SAVE|CV_CALL, maxplayers_cons_t, Joinable_OnChange);
 
 consvar_t cv_allowgamestateresend = CVAR_INIT ("allowgamestateresend", "On", "Allow the server to resend the gamestate if a client goes out of synch", CV_SAVE, CV_OnOff, NULL);
 consvar_t cv_blamecfail = CVAR_INIT ("blamecfail", "Off", "Show when a player is out of synch", 0, CV_OnOff, NULL);
@@ -2687,10 +2688,10 @@ consvar_t cv_downloadspeed = CVAR_INIT ("downloadspeed", "16", "The speed of fil
 
 static void Got_AddPlayer(UINT8 **p, INT32 playernum);
 
-static void MaxPlayers_OnChange(void)
+static void Joinable_OnChange(void)
 {
 #ifdef HAVE_DISCORDRPC
-	DRPC_UpdatePresence();
+	DRPC_SendDiscordInfo();
 #else
 	return;
 #endif

@@ -589,6 +589,10 @@ void D_RegisterServerCommands(void)
 #endif
 
 	CV_RegisterVar(&cv_dummyconsvar);
+
+#ifdef HAVE_DISCORDRPC
+	RegisterNetXCmd(XD_DISCORD, DRPC_RecieveDiscordInfo);
+#endif
 }
 
 // =========================================================================
@@ -870,6 +874,9 @@ void D_RegisterClientCommands(void)
 #endif
 #ifdef HAVE_DISCORDRPC
 	CV_RegisterVar(&cv_discordrp);
+	CV_RegisterVar(&cv_discordstreamer);
+	CV_RegisterVar(&cv_discordasks);
+	CV_RegisterVar(&cv_discordinvites);
 #endif
 }
 
