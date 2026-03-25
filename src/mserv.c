@@ -170,7 +170,6 @@ static void ServerName_OnChange(void);
 
 #define DEF_PORT "28900"
 consvar_t cv_masterserver = CVAR_INIT ("masterserver", "ms.srb2classic.net:"DEF_PORT, "The URL for the Master Server", CV_SAVE, NULL, MasterServer_OnChange);
-consvar_t cv_rendezvousserver = CVAR_INIT("rendezvousserver", "relay.kartkrew.org", NULL, CV_SAVE, NULL, NULL); // i hope kk doesnt mind grinning
 consvar_t cv_servername = CVAR_INIT ("servername", "SRB2 server", "Name of the server as displayed on the server listing", CV_SAVE|CV_CALL|CV_NOINIT, NULL, ServerName_OnChange);
 
 INT16 ms_RoomId = -1;
@@ -214,7 +213,6 @@ void AddMServCommands(void)
 {
 #ifndef NONET
 	CV_RegisterVar(&cv_masterserver);
-	CV_RegisterVar(&cv_rendezvousserver);
 	CV_RegisterVar(&cv_servername);
 	COM_AddCommand("listserv", NULL,  Command_Listserv_f);
 #endif
