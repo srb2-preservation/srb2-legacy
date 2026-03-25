@@ -464,7 +464,7 @@ void DRPC_UpdatePresence(void)
 		&& !(demoplayback))
 	{
 		if ((gamemap >= 1 && gamemap <= 60) // supported race maps
-			|| (gamemap >= 136 && gamemap <= 164)) // supported battle maps
+			|| (gamemap >= 136 && gamemap <= 164) && !(savemoddata)) // supported battle maps
 		{
 			snprintf(mapimg, 8, "%s%s", G_BuildMapName(gamemap), "P");
 			strlwr(mapimg);
