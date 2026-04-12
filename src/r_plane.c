@@ -105,7 +105,6 @@ fixed_t cachedxstep[MAXVIDHEIGHT];
 fixed_t cachedystep[MAXVIDHEIGHT];
 
 static fixed_t xoffs, yoffs;
-
 //
 // R_InitPlanes
 // Only at game startup.
@@ -428,6 +427,7 @@ visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel,
 #ifdef ESLOPE
 			, pslope_t *slope
 #endif
+			, fixed_t scale
 			)
 {
 	visplane_t *check;
@@ -477,6 +477,7 @@ visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel,
 #ifdef ESLOPE
 			&& check->slope == slope
 #endif
+			&& check->scale == scale
 			)
 		{
 			return check;
@@ -492,6 +493,7 @@ visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel,
 	check->maxx = -1;
 	check->xoffs = xoff;
 	check->yoffs = yoff;
+	check->scale = scale;
 	check->extra_colormap = planecolormap;
 	check->ffloor = pfloor;
 	check->viewx = viewx;
@@ -577,6 +579,7 @@ visplane_t *R_CheckPlane(visplane_t *pl, INT32 start, INT32 stop)
 #ifdef ESLOPE
 		new_pl->slope = pl->slope;
 #endif
+		new_pl->scale = pl->scale;
 		pl = new_pl;
 		pl->minx = start;
 		pl->maxx = stop;
@@ -932,9 +935,9 @@ void R_DrawSinglePlane(visplane_t *pl)
 			break;
 	}
 
-	xoffs = pl->xoffs;
-	yoffs = pl->yoffs;
-	planeheight = abs(pl->height - pl->viewz);
+	xoffs = FixedMul(pl->scale, pl->xoffs);
+	yoffs = FixedMul(pl->scale, pl->yoffs);
+	planeheight = FixedMul(pl->scale, abs(pl->height - pl->viewz));
 
 	if (light >= LIGHTLEVELS)
 		light = LIGHTLEVELS-1;

@@ -480,6 +480,7 @@ static void P_NetUnArchivePlayers(void)
 //
 // P_NetArchiveWorld
 //
+
 static void P_NetArchiveWorld(void)
 {
 	size_t i;
@@ -498,24 +499,14 @@ static void P_NetArchiveWorld(void)
 	WRITEUINT32(save_p, ARCHIVEBLOCK_WORLD);
 	put = save_p;
 
-	if (W_IsLumpWad(lastloadedmaplumpnum)) // welp it's a map wad in a pk3
-	{ // HACK: Open wad file rather quickly so we can get the data from the relevant lumps
-		UINT8 *wadData = W_CacheLumpNum(lastloadedmaplumpnum, PU_STATIC);
-		filelump_t *fileinfo = (filelump_t *)(wadData + ((wadinfo_t *)wadData)->infotableofs);
-#define retrieve_mapdata(d, f)\
-		d = Z_Malloc((f)->size, PU_CACHE, NULL); \
-		M_Memcpy(d, wadData + (f)->filepos, (f)->size)
-		retrieve_mapdata(ms, fileinfo + ML_SECTORS);
-		retrieve_mapdata(mld, fileinfo + ML_LINEDEFS);
-		retrieve_mapdata(msd, fileinfo + ML_SIDEDEFS);
-#undef retrieve_mapdata
-		Z_Free(wadData); // we're done with this now
-	}
-	else // phew it's just a WAD
 	{
-			ms = W_CacheLumpNum(lastloadedmaplumpnum+ML_SECTORS, PU_CACHE);
-			mld = W_CacheLumpNum(lastloadedmaplumpnum+ML_LINEDEFS, PU_CACHE);
-			msd = W_CacheLumpNum(lastloadedmaplumpnum+ML_SIDEDEFS, PU_CACHE);
+		virtres_t* virt 	= 	vres_GetMap(lastloadedmaplumpnum);
+		virtlump_t* virtms	=	vres_Find(virt, "SECTORS");
+		virtlump_t* virtmld	=	vres_Find(virt, "LINEDEFS");
+		virtlump_t* virtmsd	=	vres_Find(virt, "SIDEDEFS");
+		ms =	(mapsector_t*)	virtms->data;
+		mld =	(maplinedef_t*)	virtmld->data;
+		msd =	(mapsidedef_t*)	virtmsd->data;
 	}
 
 	for (i = 0; i < numsectors; i++, ss++, ms++)

@@ -44,6 +44,13 @@ typedef struct visplane_s
 
 	fixed_t xoffs, yoffs; // Scrolling flats.
 
+	// SoM: frontscale should be stored in the first seg of the subsector
+	// where the planes themselves are stored. I'm doing this now because
+	// the old way caused trouble with the drawseg array was re-sized.
+	INT32 scaleseg;
+
+	fixed_t scale;
+
 	struct ffloor_s *ffloor;
 #ifdef POLYOBJECTS_PLANES
 	polyobj_t *polyobj;
@@ -87,6 +94,7 @@ visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel, fixed_t 
 #ifdef ESLOPE
 	, pslope_t *slope
 #endif
+	, fixed_t scale
 	);
 visplane_t *R_CheckPlane(visplane_t *pl, INT32 start, INT32 stop);
 void R_ExpandPlane(visplane_t *pl, INT32 start, INT32 stop);

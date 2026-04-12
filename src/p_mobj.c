@@ -8673,41 +8673,69 @@ void P_MovePlayerToStarpost(INT32 playernum)
 mapthing_t *huntemeralds[MAXHUNTEMERALDS];
 INT32 numhuntemeralds;
 
-//
-// P_SpawnMapThing
-// The fields of the mapthing should
-// already be in host byte order.
-//
+/** Returns corresponding mobj type from mapthing.
+ * \param mthing Mapthing in question.
+ * \return Mobj type; MT_UNKNOWN if nothing found.
+ */
+static mobjtype_t P_GetMobjtype(mapthing_t *mthing)
+{
+	mobjtype_t i;
+	UINT16 type = mthing->type;
+	for (i = 0; i < NUMMOBJTYPES; i++)
+		if (type == mobjinfo[i].doomednum)
+			return i;
+	CONS_Alert(CONS_WARNING, M_GetText("Unknown thing type %d placed at (%d, %d)\n"), type, mthing->x, mthing->y);
+	return MT_UNKNOWN;
+}
+/*
+static boolean P_DoesRingFloat(UINT16 type)
+{
+	if (
+		type == 300
+		|| type == 308 || type == 309 // Team Rings
+		)
+		return true;
+	return false;
+}*/
+
+/** Proceeds to spawn a mapthing.
+ *
+ * \note The fields of the mapthing should already be in host byte order.
+ * \param *mthing Mapthing pointer.
+ */
 void P_SpawnMapThing(mapthing_t *mthing)
 {
 	mobjtype_t i;
 	mobj_t *mobj;
 	fixed_t x, y, z;
-	subsector_t *ss;
+	fixed_t scale;
 
 	if (!mthing->type)
 		return; // Ignore type-0 things as NOPs
 
-	// Always spawn in objectplace.
-	// Skip all returning code.
+	if (mthing->type == 3328) // 3D Mode start Thing
+		return;
+
+
+	/// In objectplace mode, all returning code is skipped, so everything spawns no matter what.
 	if (objectplacing)
 	{
-		// find which type to spawn
-		for (i = 0; i < NUMMOBJTYPES; i++)
-			if (mthing->type == mobjinfo[i].doomednum)
-				break;
-
-		if (i == NUMMOBJTYPES)
-		{
-			if (mthing->type == 3328) // 3D Mode start Thing
-				return;
-			CONS_Alert(CONS_WARNING, M_GetText("Unknown thing type %d placed at (%d, %d)\n"), mthing->type, mthing->x, mthing->y);
-			i = MT_UNKNOWN;
-		}
+		i = P_GetMobjtype(mthing);
 		goto noreturns;
 	}
 
-	// count deathmatch start positions
+	/// Player spawns aren't "spawned", but instead added to global player start arrays; player spawning is handled separately.
+	// Coop spawns.
+	if (mthing->type > 0 && mthing->type <= 32)
+	{
+		// save spots for respawning in network games
+		if (!metalrecording)
+			playerstarts[mthing->type-1] = mthing;
+		return;
+	}
+
+
+	// Deathmatch spawns.
 	if (mthing->type == 33)
 	{
 		if (numdmstarts < MAX_DM_STARTS)
@@ -8719,7 +8747,8 @@ void P_SpawnMapThing(mapthing_t *mthing)
 		return;
 	}
 
-	else if (mthing->type == 34) // Red CTF Starts
+	// Red CTF Starts.
+	else if (mthing->type == 34)
 	{
 		if (numredctfstarts < MAXPLAYERS)
 		{
@@ -8730,7 +8759,8 @@ void P_SpawnMapThing(mapthing_t *mthing)
 		return;
 	}
 
-	else if (mthing->type == 35) // Blue CTF Starts
+	// Blue CTF Starts.
+	else if (mthing->type == 35)
 	{
 		if (numbluectfstarts < MAXPLAYERS)
 		{
@@ -8744,6 +8774,7 @@ void P_SpawnMapThing(mapthing_t *mthing)
 	else if (mthing->type == 750) // Slope vertex point (formerly chaos spawn)
 		return;
 
+	/// Rings, ring patterns and hoops are skipped. \todo Get rid of the extra function and the additional mapthing run? The Z coordinate handling is already done in this function instead.
 	else if (mthing->type == 300 // Ring
 		|| mthing->type == 308 || mthing->type == 309 // Team Rings
 		|| mthing->type == 1706 // Nights Wing
@@ -8755,37 +8786,19 @@ void P_SpawnMapThing(mapthing_t *mthing)
 		return;
 	}
 
-	// check for players specially
-	if (mthing->type > 0 && mthing->type <= 32)
+	i = P_GetMobjtype(mthing);
+
+	/// When recording a Metal Sonic "race", the player's spawn will be overriden with the race spawnpoint. Enemies, bosses, tokens and starposts are additionally ommited.
+	if (metalrecording)
 	{
-		// save spots for respawning in network games
-		if (!metalrecording)
-			playerstarts[mthing->type-1] = mthing;
-		return;
-	}
-
-	if (metalrecording && mthing->type == mobjinfo[MT_METALSONIC_RACE].doomednum)
-	{ // If recording, you ARE Metal Sonic. Do not spawn it, do not save normal spawnpoints.
-		playerstarts[0] = mthing;
-		return;
-	}
-
-	// find which type to spawn
-	for (i = 0; i < NUMMOBJTYPES; i++)
-		if (mthing->type == mobjinfo[i].doomednum)
-			break;
-
-	if (i == NUMMOBJTYPES)
-	{
-		if (mthing->type == 3328) // 3D Mode start Thing
+		if (mthing->type == mobjinfo[MT_METALSONIC_RACE].doomednum)
+		{
+			playerstarts[0] = mthing;
 			return;
-		CONS_Alert(CONS_WARNING, M_GetText("Unknown thing type %d placed at (%d, %d)\n"), mthing->type, mthing->x, mthing->y);
-		i = MT_UNKNOWN;
-	}
-
-	if (metalrecording) // Metal Sonic can't use these things.
-		if (mobjinfo[i].flags & (MF_ENEMY|MF_BOSS) || i == MT_EMMY || i == MT_STARPOST)
+		}
+		if (mobjinfo[i].flags & (MF_ENEMY|MF_BOSS) || i == MT_TOKEN || i == MT_STARPOST)
 			return;
+	}
 
 	if (i >= MT_EMERALD1 && i <= MT_EMERALD7) // Pickupable Emeralds
 	{
@@ -8799,22 +8812,16 @@ void P_SpawnMapThing(mapthing_t *mthing)
 			return;
 	}
 
+	/// Weapons/panels are shooter gametype-only.
 	if (!G_RingSlingerGametype() || !cv_specialrings.value)
 		if (P_WeaponOrPanel(i))
-			return; // Don't place weapons/panels in non-ringslinger modes
-
-	if (i == MT_EMERHUNT)
-	{
-		// Emerald Hunt is Coop only.
-		if (gametype != GT_COOP)
 			return;
 
-		ss = R_PointInSubsector(mthing->x << FRACBITS, mthing->y << FRACBITS);
-		mthing->z = (INT16)(((
-#ifdef ESLOPE
-								ss->sector->f_slope ? P_GetZAt(ss->sector->f_slope, mthing->x << FRACBITS, mthing->y << FRACBITS) :
-#endif
-								ss->sector->floorheight)>>FRACBITS) + (mthing->options >> ZSHIFT));
+	/// Emerald Hunt is Coop only.
+	if (i == MT_EMERHUNT)
+	{
+		if (gametype != GT_COOP)
+			return;
 
 		if (numhuntemeralds < MAXHUNTEMERALDS)
 			huntemeralds[numhuntemeralds++] = mthing;
@@ -8832,7 +8839,7 @@ void P_SpawnMapThing(mapthing_t *mthing)
 		runemeraldmanager = true;
 	}
 
-	if (!G_PlatformGametype()) // No enemies in match or CTF modes
+	if (!G_PlatformGametype()) /// Enemies and bosses aren't spawned in shooter gametypes.
 		if ((mobjinfo[i].flags & MF_ENEMY) || (mobjinfo[i].flags & MF_BOSS))
 			return;
 
@@ -8869,14 +8876,15 @@ void P_SpawnMapThing(mapthing_t *mthing)
 		}
 	}
 
-	if (gametype != GT_CTF) // CTF specific things
+	/// Team-specific rings and boxes are spawned as regular boxes in non-CTF.
+	if (gametype != GT_CTF)
 	{
 		if (i == MT_BLUETEAMRING || i == MT_REDTEAMRING)
 			i = MT_RING;
 		else if (i == MT_BLUERINGBOX || i == MT_REDRINGBOX)
 			i = MT_SUPERRINGBOX;
 		else if (i == MT_BLUEFLAG || i == MT_REDFLAG)
-			return; // No flags in non-CTF modes!
+			return;
 	}
 	else
 	{
@@ -8887,12 +8895,13 @@ void P_SpawnMapThing(mapthing_t *mthing)
 		}
 	}
 
+	/// Avoid spawning starposts and exit signs in shooter gametypes.
 	if (!G_PlatformGametype() && (i == MT_SIGN || i == MT_STARPOST))
-		return; // Don't spawn exit signs or starposts in wrong game modes
+		return;
 
+	/// In Record Attack, 1-ups are spawned as score monitors, and starposts are omitted as they wouldn't be usable.
 	if (modeattacking) // Record Attack special stuff
 	{
-		// Don't spawn starposts that wouldn't be usable
 		if (i == MT_STARPOST)
 			return;
 
@@ -8903,14 +8912,14 @@ void P_SpawnMapThing(mapthing_t *mthing)
 		// 1UPs -->> Score TVs
 		else if (i == MT_PRUP) // 1UP
 		{
-			// Either or, doesn't matter which.
-			if (mthing->options & (MTF_AMBUSH|MTF_OBJECTSPECIAL))
+			if (mthing->options & (MTF_AMBUSH|MTF_OBJECTSPECIAL)) // Either or, doesn't matter which.
 				i = MT_SCORETVLARGE; // 10,000
 			else
 				i = MT_SCORETVSMALL; // 1,000
 		}
 	}
 
+	/// In ultimate mode, shields aren't spawned at all*.
 	if (ultimatemode)
 	{
 		if (i == MT_PITYTV || i == MT_GREENTV || i == MT_YELLOWTV || i == MT_BLUETV || i == MT_BLACKTV || i == MT_WHITETV)
@@ -8918,10 +8927,13 @@ void P_SpawnMapThing(mapthing_t *mthing)
 
 		if (i == MT_SUPERRINGBOX && !G_IsSpecialStage(gamemap))
 			return; // No rings in Ultimate mode (except special stages)
+
+		/// \note *Don't include the gold repeating boxes in Ultimate mode skipping. They're likely facets of the level's design and therefore required to progress.
 	}
 
+	/// Skips spawning tokens in case they have been already obtained, or there are too many, or the game mode's not right.
 	if (i == MT_EMMY && (gametype != GT_COOP || ultimatemode || tokenbits == 30 || tokenlist & (1 << tokenbits++)))
-		return; // you already got this token, or there are too many, or the gametype's not right
+		return;
 
 	// Objectplace landing point
 	noreturns:
@@ -8929,105 +8941,35 @@ void P_SpawnMapThing(mapthing_t *mthing)
 	// spawn it
 	x = mthing->x << FRACBITS;
 	y = mthing->y << FRACBITS;
-	ss = R_PointInSubsector(x, y);
+	z = mthing->z << FRACBITS;
+	scale = mthing->scale > 0 ? mthing->scale : FRACUNIT; // Avoid invalid scales by defaulting to FRACUNIT.
 
-	if (i == MT_NIGHTSBUMPER)
-		z = (
-#ifdef ESLOPE
-			ss->sector->f_slope ? P_GetZAt(ss->sector->f_slope, x, y) :
-#endif
-			ss->sector->floorheight) + ((mthing->options >> ZSHIFT) << FRACBITS);
-	else if (i == MT_AXIS || i == MT_AXISTRANSFER || i == MT_AXISTRANSFERLINE)
+/// Before spawning, the z coordinate is corrected to account for MF_SPAWNCEILING and MTF_OBJECTFLIP. Additionally, some objects get an extra offset.
+	if (i == MT_AXIS || i == MT_AXISTRANSFER || i == MT_AXISTRANSFERLINE)
 		z = ONFLOORZ;
-	else if (i == MT_SPECIALSPIKEBALL || P_WeaponOrPanel(i) || i == MT_EMERALDSPAWN || i == MT_EMMY)
-	{
-		if (mthing->options & MTF_OBJECTFLIP)
-		{
-			z = (
-#ifdef ESLOPE
-			ss->sector->c_slope ? P_GetZAt(ss->sector->c_slope, x, y) :
-#endif
-			ss->sector->ceilingheight);
-
-			if (mthing->options & MTF_AMBUSH) // Special flag for rings
-				z -= 24*FRACUNIT;
-			if (mthing->options >> ZSHIFT)
-				z -= (mthing->options >> ZSHIFT)*FRACUNIT;
-
-			z -= mobjinfo[i].height; //Don't forget the height!
-		}
-		else
-		{
-			z = (
-#ifdef ESLOPE
-			ss->sector->f_slope ? P_GetZAt(ss->sector->f_slope, x, y) :
-#endif
-			ss->sector->floorheight);
-
-			if (mthing->options & MTF_AMBUSH) // Special flag for rings
-				z += 24*FRACUNIT;
-			if (mthing->options >> ZSHIFT)
-				z += (mthing->options >> ZSHIFT)*FRACUNIT;
-		}
-
-		if (z == ONFLOORZ)
-			mthing->z = 0;
-		else
-			mthing->z = (INT16)(z>>FRACBITS);
-	}
 	else
 	{
 		fixed_t offset = 0;
 		boolean flip = (!!(mobjinfo[i].flags & MF_SPAWNCEILING) ^ !!(mthing->options & MTF_OBJECTFLIP));
-
-		// base positions
 		if (flip)
-			z = (
-#ifdef ESLOPE
-			ss->sector->c_slope ? P_GetZAt(ss->sector->c_slope, x, y) :
-#endif
-			ss->sector->ceilingheight) - mobjinfo[i].height;
-		else
-			z = (
-#ifdef ESLOPE
-			ss->sector->f_slope ? P_GetZAt(ss->sector->f_slope, x, y) :
-#endif
-			ss->sector->floorheight);
+			z -= mobjinfo[i].height;
 
 		// offsetting
-		if (mthing->options >> ZSHIFT)
-			offset = ((mthing->options >> ZSHIFT) << FRACBITS);
-		else if (i == MT_CRAWLACOMMANDER || i == MT_DETON || i == MT_JETTBOMBER || i == MT_JETTGUNNER || i == MT_EGGMOBILE2)
+		if (i == MT_CRAWLACOMMANDER || i == MT_DETON || i == MT_JETTBOMBER || i == MT_JETTGUNNER || i == MT_EGGMOBILE2)
 			offset = 33*FRACUNIT;
 		else if (i == MT_EGGMOBILE)
 			offset = 128*FRACUNIT;
 		else if (i == MT_GOLDBUZZ || i == MT_REDBUZZ)
 			offset = 288*FRACUNIT;
 
-		// applying offsets! (if any)
-		if (flip)
-		{
-			if (offset)
-				z -= offset;
-			else
-				z = ONCEILINGZ;
-		}
-		else
-		{
-			if (offset)
-				z += offset;
-			else
-				z = ONFLOORZ;
-		}
-
-		if (z == ONFLOORZ)
-			mthing->z = 0;
-		else
-			mthing->z = (INT16)(z>>FRACBITS);
+		// Apply offsets (if any).
+		z += flip ? -offset : offset;
 	}
 
 	mobj = P_SpawnMobj(x, y, z, i);
 	mobj->spawnpoint = mthing;
+	P_SetScale(mobj, scale);
+	mobj->destscale = scale;
 
 	switch(mobj->type)
 	{
@@ -9053,7 +8995,10 @@ void P_SpawnMapThing(mapthing_t *mthing)
 		if (mthing->angle)
 			mobj->health = mthing->angle;
 		else
-			mobj->health = FixedMul(ss->sector->ceilingheight-ss->sector->floorheight, 3*(FRACUNIT/4))>>FRACBITS;
+			{
+				subsector_t *ss = R_PointInSubsector(x, y);
+				mobj->health = FixedMul(ss->sector->ceilingheight-ss->sector->floorheight, 3*(FRACUNIT/4))>>FRACBITS;
+			}
 		break;
 	case MT_WATERDRIP:
 		if (mthing->angle)
@@ -9483,14 +9428,12 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing)
 	mobj_t *mobj = NULL;
 	INT32 r, i;
 	fixed_t x, y, z, finalx, finaly, finalz;
-	sector_t *sec;
 	TVector v, *res;
 	angle_t closestangle, fa;
 
 	x = mthing->x << FRACBITS;
 	y = mthing->y << FRACBITS;
-
-	sec = R_PointInSubsector(x, y)->sector;
+	z = mthing->z << FRACBITS;
 
 	// NiGHTS hoop!
 	if (mthing->type == 1705)
@@ -9499,20 +9442,12 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing)
 		mobj_t *hoopcenter;
 		INT16 spewangle;
 
-		z = mthing->options << FRACBITS;
-
 		hoopcenter = P_SpawnMobj(x, y, z, MT_HOOPCENTER);
 
 		hoopcenter->spawnpoint = mthing;
 
 		// Screw these damn hoops, I need this thinker.
 		//hoopcenter->flags |= MF_NOTHINK;
-
-		z +=
-#ifdef ESLOPE
-			sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
-#endif
-			sec->floorheight;
 
 		hoopcenter->z = z - hoopcenter->height/2;
 
@@ -9639,18 +9574,8 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing)
 		INT32 hoopsize;
 		INT32 hoopplacement;
 
-		// Save our flags!
-		z = (mthing->options>>ZSHIFT) << FRACBITS;
-
 		hoopcenter = P_SpawnMobj(x, y, z, MT_HOOPCENTER);
 		hoopcenter->spawnpoint = mthing;
-
-		z +=
-#ifdef ESLOPE
-			sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
-#endif
-			sec->floorheight;
-		hoopcenter->z = z - hoopcenter->height/2;
 
 		P_UnsetThingPosition(hoopcenter);
 		hoopcenter->x = x;
@@ -9761,16 +9686,6 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing)
 	// Wing logo item.
 	else if (mthing->type == mobjinfo[MT_NIGHTSWING].doomednum)
 	{
-		z =
-#ifdef ESLOPE
-			sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
-#endif
-			sec->floorheight;
-		if (mthing->options >> ZSHIFT)
-			z += ((mthing->options >> ZSHIFT) << FRACBITS);
-
-		mthing->z = (INT16)(z>>FRACBITS);
-
 		mobj = P_SpawnMobj(x, y, z, MT_NIGHTSWING);
 		mobj->spawnpoint = mthing;
 
@@ -9814,25 +9729,7 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing)
 
 		// Set proper height
 		if (mthing->options & MTF_OBJECTFLIP)
-		{
-			z = (
-#ifdef ESLOPE
-			sec->c_slope ? P_GetZAt(sec->c_slope, x, y) :
-#endif
-			sec->ceilingheight) - mobjinfo[ringthing].height;
-			if (mthing->options >> ZSHIFT)
-				z -= ((mthing->options >> ZSHIFT) << FRACBITS);
-		}
-		else
-		{
-			z =
-#ifdef ESLOPE
-			sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
-#endif
-			sec->floorheight;
-			if (mthing->options >> ZSHIFT)
-				z += ((mthing->options >> ZSHIFT) << FRACBITS);
-		}
+			z -= mobjinfo[ringthing].height;
 
 		if (mthing->options & MTF_AMBUSH) // Special flag for rings
 		{
@@ -9841,8 +9738,6 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing)
 			else
 				z += 24*FRACUNIT;
 		}
-
-		mthing->z = (INT16)(z>>FRACBITS);
 
 		mobj = P_SpawnMobj(x, y, z, ringthing);
 		mobj->spawnpoint = mthing;
@@ -9880,25 +9775,9 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing)
 		for (r = 1; r <= 5; r++)
 		{
 			if (mthing->options & MTF_OBJECTFLIP)
-			{
-				z = (
-#ifdef ESLOPE
-					sec->c_slope ? P_GetZAt(sec->c_slope, x, y) :
-#endif
-					sec->ceilingheight) - mobjinfo[ringthing].height - dist*r;
-				if (mthing->options >> ZSHIFT)
-					z -= ((mthing->options >> ZSHIFT) << FRACBITS);
-			}
+				z = (mthing->z << FRACBITS) - mobjinfo[ringthing].height - dist*r;
 			else
-			{
-				z = (
-#ifdef ESLOPE
-					sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
-#endif
-					sec->floorheight) + dist*r;
-				if (mthing->options >> ZSHIFT)
-					z += ((mthing->options >> ZSHIFT) << FRACBITS);
-			}
+				z = (mthing->z << FRACBITS) + dist*r;
 
 			mobj = P_SpawnMobj(x, y, z, ringthing);
 
@@ -9938,25 +9817,10 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing)
 			y += FixedMul(64*FRACUNIT, FINESINE(angle));
 
 			if (mthing->options & MTF_OBJECTFLIP)
-			{
-				z = (
-#ifdef ESLOPE
-					sec->c_slope ? P_GetZAt(sec->c_slope, x, y) :
-#endif
-					sec->ceilingheight) - mobjinfo[ringthing].height - 64*FRACUNIT*r;
-				if (mthing->options >> ZSHIFT)
-					z -= ((mthing->options >> ZSHIFT) << FRACBITS);
-			}
+				z -= 64*FRACUNIT;
 			else
-			{
-				z = (
-#ifdef ESLOPE
-					sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
-#endif
-					sec->floorheight) + 64*FRACUNIT*r;
-				if (mthing->options >> ZSHIFT)
-					z += ((mthing->options >> ZSHIFT) << FRACBITS);
-			}
+				z += 64*FRACUNIT;
+
 
 			mobj = P_SpawnMobj(x, y, z, ringthing);
 
@@ -9983,14 +9847,6 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing)
 			numitems = 16;
 			size = 192*FRACUNIT;
 		}
-
-		z =
-#ifdef ESLOPE
-			sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
-#endif
-			sec->floorheight;
-		if (mthing->options >> ZSHIFT)
-			z += ((mthing->options >> ZSHIFT) << FRACBITS);
 
 		closestangle = FixedAngle(mthing->angle*FRACUNIT);
 

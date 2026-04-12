@@ -79,6 +79,10 @@ extern line_t *lines;
 extern size_t numsides;
 extern side_t *sides;
 
+extern sector_t *sectorscopy;
+extern line_t *linescopy;
+extern side_t *sidescopy;
+
 //
 // POV data.
 //

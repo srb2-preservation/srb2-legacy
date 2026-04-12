@@ -147,6 +147,61 @@ static void R_InstallSpriteLump(UINT16 wad,            // graphics patch
 		sprtemp[frame].flip &= ~(1<<rotation);
 }
 
+
+static inline boolean AddSprite(const char* idchars, UINT16 wadnum, UINT16 l)
+{
+	patch_t patch;
+	UINT8 frame		= R_Char2Frame	(idchars[0]);
+	UINT8 rotation	= (UINT8)		(idchars[1] - '0');
+
+	if (frame >= 64 || rotation > 8)
+	{
+		CONS_Alert(CONS_WARNING, M_GetText("Bad sprite name: %s\n"), idchars);
+		return false;
+	}
+
+	// skip NULL sprites from very old dmadds pwads
+	if (W_LumpLengthPwad(wadnum,l)<=8)
+		return false;
+
+	// store sprite info in lookup tables
+	//FIXME : numspritelumps do not duplicate sprite replacements
+	W_ReadLumpHeaderPwad(wadnum, l, &patch, sizeof (patch_t), 0);
+	spritecachedinfo[numspritelumps].width		= SHORT(patch.width)<<FRACBITS;
+	spritecachedinfo[numspritelumps].offset		= SHORT(patch.leftoffset)<<FRACBITS;
+	spritecachedinfo[numspritelumps].topoffset	= SHORT(patch.topoffset)<<FRACBITS;
+	spritecachedinfo[numspritelumps].height		= SHORT(patch.height)<<FRACBITS;
+
+	//BP: we cannot use special tric in hardware mode because feet in ground caused by z-buffer
+	if (rendermode != render_none) // not for psprite
+		spritecachedinfo[numspritelumps].topoffset += 4<<FRACBITS;
+	// Being selective with this causes bad things. :( Like the special stage tokens breaking apart.
+	/*if (rendermode != render_none // not for psprite
+	 && SHORT(patch.topoffset)>0 && SHORT(patch.topoffset)<SHORT(patch.height))
+		// perfect is patch.height but sometime it is too high
+		spritecachedinfo[numspritelumps].topoffset = min(SHORT(patch.topoffset)+4,SHORT(patch.height))<<FRACBITS;*/
+
+	//----------------------------------------------------
+
+	R_InstallSpriteLump(wadnum, l, numspritelumps, frame, rotation, 0);
+
+	if (idchars[2])
+	{
+		frame		= R_Char2Frame	(idchars[2]);
+		rotation	= (UINT8)		(idchars[3] - '0');
+		R_InstallSpriteLump(wadnum, l, numspritelumps, frame, rotation, 1);
+	}
+
+	if (++numspritelumps >= max_spritelumps)
+	{
+		max_spritelumps *= 2;
+		Z_Realloc(spritecachedinfo, max_spritelumps*sizeof(*spritecachedinfo), PU_STATIC, &spritecachedinfo);
+	}
+
+	return true;
+}
+
+
 // Install a single sprite, given its identifying name (4 chars)
 //
 // (originally part of R_AddSpriteDefs)
@@ -188,59 +243,38 @@ static boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef,
 	if (endlump > wadfiles[wadnum]->numlumps)
 		endlump = wadfiles[wadnum]->numlumps;
 
+	/// Supports following format in PK3s: "../RING/A2A8.lmp"
+	if (wadfiles[wadnum]->type == RET_PK3)
+	{
+		UINT16 folstart;
+		UINT16 folend;
+		char* find;
+        // Find start lump.
+        for (l = startlump; l < endlump; l++)
+		{
+			if ((find = strstr(wadfiles[wadnum]->lumpinfo[l].name2, sprname)) != NULL)
+			{
+				folstart = l;
+				CONS_Printf("%s\n", find);
+
+				break;
+			}
+		}
+
+
+		folend = W_CheckNumForFolderEndPK3(wadfiles[wadnum]->lumpinfo[l].name2, wadnum, l);
+		if (find)
+			for (l++; l < folend; l++)
+				if (AddSprite(W_CheckNameForNumPwad(wadnum,l), wadnum, l))
+					++numadded;
+	}
+
+	/// Supports traditional WAD format for all resources: "RINGA2A8"
 	for (l = startlump; l < endlump; l++)
 	{
-		if (memcmp(lumpinfo[l].name,sprname,4)==0)
-		{
-			frame = R_Char2Frame(lumpinfo[l].name[4]);
-			rotation = (UINT8)(lumpinfo[l].name[5] - '0');
-
-			if (frame >= 64 || rotation > 8) // Give an actual NAME error -_-...
-			{
-				CONS_Alert(CONS_WARNING, M_GetText("Bad sprite name: %s\n"), W_CheckNameForNumPwad(wadnum,l));
-				continue;
-			}
-
-			// skip NULL sprites from very old dmadds pwads
-			if (W_LumpLengthPwad(wadnum,l)<=8)
-				continue;
-
-			// store sprite info in lookup tables
-			//FIXME : numspritelumps do not duplicate sprite replacements
-			W_ReadLumpHeaderPwad(wadnum, l, &patch, sizeof (patch_t), 0);
-			spritecachedinfo[numspritelumps].width = SHORT(patch.width)<<FRACBITS;
-			spritecachedinfo[numspritelumps].offset = SHORT(patch.leftoffset)<<FRACBITS;
-			spritecachedinfo[numspritelumps].topoffset = SHORT(patch.topoffset)<<FRACBITS;
-			spritecachedinfo[numspritelumps].height = SHORT(patch.height)<<FRACBITS;
-
-			//BP: we cannot use special tric in hardware mode because feet in ground caused by z-buffer
-			if (rendermode != render_none) // not for psprite
-				spritecachedinfo[numspritelumps].topoffset += 4<<FRACBITS;
-			// Being selective with this causes bad things. :( Like the special stage tokens breaking apart.
-			/*if (rendermode != render_none // not for psprite
-			 && SHORT(patch.topoffset)>0 && SHORT(patch.topoffset)<SHORT(patch.height))
-				// perfect is patch.height but sometime it is too high
-				spritecachedinfo[numspritelumps].topoffset = min(SHORT(patch.topoffset)+4,SHORT(patch.height))<<FRACBITS;*/
-
-			//----------------------------------------------------
-
-			R_InstallSpriteLump(wadnum, l, numspritelumps, frame, rotation, 0);
-
-			if (lumpinfo[l].name[6])
-			{
-				frame = R_Char2Frame(lumpinfo[l].name[6]);
-				rotation = (UINT8)(lumpinfo[l].name[7] - '0');
-				R_InstallSpriteLump(wadnum, l, numspritelumps, frame, rotation, 1);
-			}
-
-			if (++numspritelumps >= max_spritelumps)
-			{
-				max_spritelumps *= 2;
-				Z_Realloc(spritecachedinfo, max_spritelumps*sizeof(*spritecachedinfo), PU_STATIC, &spritecachedinfo);
-			}
-
-			++numadded;
-		}
+		if (memcmp(W_CheckNameForNumPwad(wadnum,l), sprname, 4) == 0 )
+			if (AddSprite(&W_CheckNameForNumPwad(wadnum,l)[4], wadnum, l))
+				++numadded;
 	}
 
 	//

@@ -897,6 +897,7 @@ static void R_Subsector(size_t num)
 #ifdef ESLOPE
 			, frontsector->f_slope
 #endif
+			, frontsector->floor_scale
 			);
 	}
 	else
@@ -919,6 +920,7 @@ static void R_Subsector(size_t num)
 #ifdef ESLOPE
 			, frontsector->c_slope
 #endif
+			, frontsector->ceiling_scale
 			);
 	}
 	else
@@ -980,6 +982,7 @@ static void R_Subsector(size_t num)
 #ifdef ESLOPE
 					, *rover->b_slope
 #endif
+					, frontsector->floor_scale
 					);
 
 #ifdef ESLOPE
@@ -1026,6 +1029,7 @@ static void R_Subsector(size_t num)
 #ifdef ESLOPE
 					, *rover->t_slope
 #endif
+					, frontsector->ceiling_scale
 					);
 
 #ifdef ESLOPE
@@ -1094,6 +1098,7 @@ static void R_Subsector(size_t num)
 #ifdef ESLOPE
 					, NULL // will ffloors be slopable eventually?
 #endif
+					, polysec->floor_scale
 					);
 
 				ffloor[numffloors].height = polysec->floorheight;
@@ -1139,6 +1144,7 @@ static void R_Subsector(size_t num)
 #ifdef ESLOPE
 					, NULL // will ffloors be slopable eventually?
 #endif
+					, polysec->ceiling_scale
 					);
 
 				ffloor[numffloors].polyobj = po;
@@ -1186,9 +1192,11 @@ static void R_Subsector(size_t num)
 	while (count--)
 	{
 //		CONS_Debug(DBG_GAMELOGIC, "Adding normal line %d...(%d)\n", line->linedef-lines, leveltime);
+		if (!line->glseg
 #ifdef POLYOBJECTS
-		if (!line->polyseg) // ignore segs that belong to polyobjects
+		&& !line->polyseg // ignore segs that belong to polyobjects
 #endif
+		)
 		R_AddLine(line);
 		line++;
 		curline = NULL; /* cph 2001/11/18 - must clear curline now we're done with it, so stuff doesn't try using it for other things */

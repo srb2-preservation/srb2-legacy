@@ -313,6 +313,9 @@ typedef struct sector_s
 	fixed_t floor_xoffs, floor_yoffs;
 	fixed_t ceiling_xoffs, ceiling_yoffs;
 
+	fixed_t floor_scale;
+	fixed_t ceiling_scale;
+
 	// flat angle
 	angle_t floorpic_angle;
 	angle_t ceilingpic_angle;
@@ -451,14 +454,20 @@ typedef struct line_s
 
 typedef struct
 {
-	// add this to the calculated texture column
-	fixed_t textureoffset;
+	fixed_t textureoffset;	/**< Global horizontal offset. */
+	fixed_t rowoffset;		/**< Global vertical offset. */
 
-	// add this to the calculated texture top
-	fixed_t rowoffset;
+	// Individual scaling.
+	fixed_t scalex_top, scaley_top;
+	fixed_t scalex_mid, scaley_mid;
+	fixed_t scalex_bot, scaley_bot;
 
-	// Texture indices.
-	// We do not maintain names here.
+	// Individual offsets.
+	fixed_t offsetx_top, offsety_top;
+	fixed_t offsetx_mid, offsety_mid;
+	fixed_t offsetx_bot, offsety_bot;
+
+	// Texture indices (We do not maintain names here).
 	INT32 toptexture, bottomtexture, midtexture;
 
 	// Sector the SideDef is facing.
@@ -479,7 +488,7 @@ typedef struct
 typedef struct subsector_s
 {
 	sector_t *sector;
-	INT16 numlines;
+	UINT16 numlines;
 	UINT16 firstline;
 #ifdef POLYOBJECTS
 	struct polyobj_s *polyList; // haleyjd 02/19/06: list of polyobjects
@@ -590,6 +599,7 @@ typedef struct seg_s
 	polyobj_t *polyseg;
 	boolean dontrenderme;
 #endif
+	boolean glseg;
 } seg_t;
 
 //
