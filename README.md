@@ -23,5 +23,9 @@ Nightly builds can be obtained below
 - [Linux](https://nightly.link/P-AS/srb2-legacy/workflows/ubuntu/next)
 - [macOS](https://nightly.link/P-AS/srb2-legacy/workflows/macos/next)
 
+## Interact
+- Join the [srb2-preservation Matrix space](https://matrix.to/#/#srb2-preservation:merrycorps.xyz)
+- Join the [srb2-preservation Discord server (Git updates only) ](https://discord.gg/2bakGxA5DY)
+
 ## Disclaimer
 Sonic Team Junior is in no way affiliated with SEGA or Sonic Team. We do not claim ownership of any of SEGA's intellectual property used in SRB2.

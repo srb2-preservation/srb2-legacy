@@ -329,6 +329,9 @@ void HWR_Lighting(FSurfaceInfo *Surface, INT32 light_level, extracolormap_t *col
 	tint_color.rgba = (colormap != NULL) ? (UINT32)colormap->rgba : GL_DEFAULTMIX;
 	fade_color.rgba = (colormap != NULL) ? (UINT32)colormap->fadergba : GL_DEFAULTFOG;
 
+	// Clamp the light level, since it can sometimes go out of the 0-255 range from animations
+	light_level = min(max(light_level, cv_secbright.value), 255);
+
 	// Crappy backup coloring if you can't do shaders
 	if (!HWR_UseShader())
 	{
@@ -366,8 +369,7 @@ void HWR_Lighting(FSurfaceInfo *Surface, INT32 light_level, extracolormap_t *col
 		poly_color.s.blue = (UINT8)blue;
 	}
 
-	// Clamp the light level, since it can sometimes go out of the 0-255 range from animations
-	light_level = min(max(light_level, 0), 255);
+
 
 	V_CubeApply(&tint_color.s.red, &tint_color.s.green, &tint_color.s.blue);
 	V_CubeApply(&fade_color.s.red, &fade_color.s.green, &fade_color.s.blue);
@@ -3879,7 +3881,10 @@ static void HWR_DrawSpriteShadow(gl_vissprite_t *spr, GLPatch_t *gpatch)
 	sSurf.PolyColor.s.green = 0x01;
 
 	if (HWR_UseShader())
+	{
 		HWR_Lighting(&sSurf, 0, NULL);
+		sSurf.LightInfo.light_level = 0;
+	}
 
 	// shadow is always half as translucent as the sprite itself
 	if (!cv_translucency.value) // use default translucency (main sprite won't have any translucency)

@@ -797,10 +797,18 @@ void F_IntroDrawer(void)
 
 			// Stay on black for a bit. =)
 			{
-				tic_t quittime;
-				quittime = I_GetTime() + NEWTICRATE*2; // Shortened the quit time, used to be 2 seconds
-				while (quittime > I_GetTime())
+				tic_t nowtime, quittime, lasttime;
+				nowtime = lasttime = I_GetTime();
+				quittime = nowtime + NEWTICRATE*2; // Shortened the quit time, used to be 2 seconds
+				while (quittime > nowtime)
 				{
+					while (!((nowtime = I_GetTime()) - lasttime))
+					{
+						I_Sleep(cv_sleep.value);
+						I_UpdateTime(cv_timescale.value);
+					}
+					lasttime = nowtime;
+
 					I_OsPolling();
 					I_UpdateNoBlit();
 					M_Drawer(); // menu is drawn even on top of wipes
@@ -809,6 +817,7 @@ void F_IntroDrawer(void)
 			}
 
 			D_StartTitle();
+			wipegamestate = GS_INTRO;
 			return;
 		}
 		F_NewCutscene(introtext[++intro_scenenum]);
@@ -1125,6 +1134,10 @@ void F_StartCredits(void)
 	// Just in case they're open ... somehow
 	M_ClearMenus(true);
 
+	// Save the second we enter the credits
+	if ((!modifiedgame || savemoddata) && !(netgame || multiplayer) && !marathonmode && cursaveslot >= 0)
+		G_SaveGame((UINT32)cursaveslot);
+
 	if (creditscutscene)
 	{
 		F_StartCustomCutscene(creditscutscene - 1, false, false);
@@ -1289,6 +1302,12 @@ void F_StartGameEvaluation(void)
 
 	// Just in case they're open ... somehow
 	M_ClearMenus(true);
+
+	// Save the second we enter the evaluation
+	// We need to do this again!  Remember, it's possible a mod designed skipped
+	// the credits sequence!
+	if ((!modifiedgame || savemoddata) && !(netgame || multiplayer) && !marathonmode && cursaveslot >= 0)
+		G_SaveGame((UINT32)cursaveslot);
 
 	gameaction = ga_nothing;
 	paused = false;

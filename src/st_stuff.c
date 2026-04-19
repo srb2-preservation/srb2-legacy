@@ -690,7 +690,7 @@ static void ST_drawTime(void)
 		V_DrawScaledPatch(hudinfo[colonspos].x, hudinfo[colonspos].y + v_splitoffset, colonflags, sbocolon); // Colon
 		V_DrawPaddedTallNum(hudinfo[secondspos].x, hudinfo[secondspos].y + v_splitoffset, secondsflags, seconds, 2); // Seconds
 
-		if (cv_timetic.value == 1 || cv_timetic.value == 2 || modeattacking || marathonmode)
+		if (!splitscreen && (cv_timetic.value == 1 || cv_timetic.value == 2 || modeattacking || marathonmode)) // there's not enough room for tics in splitscreen, don't even bother trying!
 		{
 			V_DrawScaledPatch(hudinfo[HUD_TIMETICCOLON].x, hudinfo[HUD_TIMETICCOLON].y, colonflags, sboperiod); // Period
 			V_DrawPaddedTallNum(hudinfo[HUD_TICS].x, hudinfo[HUD_TICS].y, secondsflags, centiseconds, 2); // Centiseconds

@@ -2315,6 +2315,13 @@ static int lib_gTicsToMilliseconds(lua_State *L)
 	return 1;
 }
 
+static int lib_ierror(lua_State *L)
+{
+	const char *error = luaL_checkstring(L, 1);
+	I_Error("%s", error);
+	return 0;
+}
+
 static luaL_Reg lib[] = {
 	{"print", lib_print},
 	{"chatprint", lib_chatprint},
@@ -2519,6 +2526,8 @@ static luaL_Reg lib[] = {
 	{"G_TicsToSeconds",lib_gTicsToSeconds},
 	{"G_TicsToCentiseconds",lib_gTicsToCentiseconds},
 	{"G_TicsToMilliseconds",lib_gTicsToMilliseconds},
+
+	{"I_Error",lib_ierror},
 
 	{NULL, NULL}
 };

@@ -13,6 +13,7 @@
 
 #include "doomdef.h"
 #include "r_local.h"
+#include "r_main.h"
 #include "r_sky.h"
 
 #include "r_splats.h"
@@ -399,11 +400,11 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 			rlight->flags = light->flags;
 
 			if (rlight->flags & FF_FOG || (rlight->extra_colormap && rlight->extra_colormap->fog))
-				lightnum = (rlight->lightlevel >> LIGHTSEGSHIFT);
+				lightnum = max((rlight->lightlevel >> LIGHTSEGSHIFT), cv_secbright.value);
 			else if (colfunc == fuzzcolfunc)
 				lightnum = LIGHTLEVELS - 1;
 			else
-				lightnum = (rlight->lightlevel >> LIGHTSEGSHIFT);
+				lightnum = max((rlight->lightlevel >> LIGHTSEGSHIFT), cv_secbright.value);
 
 			if (rlight->extra_colormap && rlight->extra_colormap->fog)
 				;
@@ -425,7 +426,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 				lightnum = LIGHTLEVELS - 1;
 		}
 		else
-			lightnum = (frontsector->lightlevel >> LIGHTSEGSHIFT);
+			lightnum = max((frontsector->lightlevel >> LIGHTSEGSHIFT), cv_secbright.value);
 
 		if (colfunc == R_DrawFogColumn_8
 			|| (frontsector->extra_colormap && frontsector->extra_colormap->fog))
@@ -830,9 +831,9 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 
 			// Check if the current light effects the colormap/lightlevel
 			if (pfloor->flags & FF_FOG)
-				rlight->lightnum = (pfloor->master->frontsector->lightlevel >> LIGHTSEGSHIFT);
+				rlight->lightnum = max((pfloor->master->frontsector->lightlevel >> LIGHTSEGSHIFT), cv_secbright.value);
 			else
-				rlight->lightnum = (rlight->lightlevel >> LIGHTSEGSHIFT);
+				rlight->lightnum = max((rlight->lightlevel >> LIGHTSEGSHIFT), cv_secbright.value);
 
 			if (pfloor->flags & FF_FOG || rlight->flags & FF_FOG || (rlight->extra_colormap && rlight->extra_colormap->fog))
 				;
@@ -850,14 +851,14 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	{
 		// Get correct light level!
 		if ((frontsector->extra_colormap && frontsector->extra_colormap->fog))
-			lightnum = (frontsector->lightlevel >> LIGHTSEGSHIFT);
+			lightnum = max((frontsector->lightlevel >> LIGHTSEGSHIFT), cv_secbright.value);
 		else if (pfloor->flags & FF_FOG)
-			lightnum = (pfloor->master->frontsector->lightlevel >> LIGHTSEGSHIFT);
+			lightnum = max((pfloor->master->frontsector->lightlevel >> LIGHTSEGSHIFT), cv_secbright.value);
 		else if (colfunc == fuzzcolfunc)
 			lightnum = LIGHTLEVELS-1;
 		else
-			lightnum = R_FakeFlat(frontsector, &tempsec, &templight, &templight, false)
-				->lightlevel >> LIGHTSEGSHIFT;
+			lightnum = max((R_FakeFlat(frontsector, &tempsec, &templight, &templight, false)
+				->lightlevel >> LIGHTSEGSHIFT), cv_secbright.value);
 
 		if (pfloor->flags & FF_FOG || (frontsector->extra_colormap && frontsector->extra_colormap->fog));
 			else if (curline->v1->y == curline->v2->y)
@@ -1421,7 +1422,7 @@ static void R_RenderSegLoop (void)
 			for (i = 0; i < dc_numlights; i++)
 			{
 				INT32 lightnum;
-				lightnum = (dc_lightlist[i].lightlevel >> LIGHTSEGSHIFT);
+				lightnum = max((dc_lightlist[i].lightlevel >> LIGHTSEGSHIFT), cv_secbright.value);
 
 				if (dc_lightlist[i].extra_colormap)
 					;
@@ -2450,7 +2451,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		//  use different light tables
 		//  for horizontal / vertical / diagonal
 		// OPTIMIZE: get rid of LIGHTSEGSHIFT globally
-		lightnum = (frontsector->lightlevel >> LIGHTSEGSHIFT);
+		lightnum = max((frontsector->lightlevel >> LIGHTSEGSHIFT), cv_secbright.value);
 
 		if (curline->v1->y == curline->v2->y)
 			lightnum--;

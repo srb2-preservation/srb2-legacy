@@ -15,6 +15,7 @@
 #include "console.h"
 #include "g_game.h"
 #include "r_local.h"
+#include "r_main.h"
 #include "st_stuff.h"
 #include "w_wad.h"
 #include "z_zone.h"
@@ -976,7 +977,7 @@ static void R_SplitSprite(vissprite_t *sprite, mobj_t *thing)
 		newsprite->cut |= SC_TOP;
 		if (!(sector->lightlist[i].caster->flags & FF_NOSHADE))
 		{
-			lightnum = (*sector->lightlist[i].lightlevel >> LIGHTSEGSHIFT);
+			lightnum = max((*sector->lightlist[i].lightlevel >> LIGHTSEGSHIFT), cv_secbright.value);
 
 			if (lightnum < 0)
 				spritelights = scalelight[0];
@@ -1383,7 +1384,7 @@ static void R_ProjectSprite(mobj_t *thing)
 				break;
 			}
 		}
-		lightnum = (*thing->subsector->sector->lightlist[light].lightlevel >> LIGHTSEGSHIFT);
+		lightnum = max((*thing->subsector->sector->lightlist[light].lightlevel >> LIGHTSEGSHIFT), cv_secbright.value);
 
 		if (lightnum < 0)
 			spritelights = scalelight[0];
@@ -1728,7 +1729,7 @@ void R_AddSprites(sector_t *sec, INT32 lightlevel)
 	{
 		if (sec->heightsec == -1) lightlevel = sec->lightlevel;
 
-		lightnum = (lightlevel >> LIGHTSEGSHIFT);
+		lightnum = max((lightlevel >> LIGHTSEGSHIFT), cv_secbright.value);
 
 		if (lightnum < 0)
 			spritelights = scalelight[0];
