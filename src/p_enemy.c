@@ -6935,6 +6935,87 @@ void A_ChangeAngleAbsolute(void *thing)
 	actor->angle = FixedAngle(P_RandomRange(amin, amax));
 }
 
+// Function: A_RollAngle
+//
+// Description: Changes the roll angle.
+//
+// var1 = angle
+// var2 = relative? (default)
+//
+void A_RollAngle(void *thing)
+{
+	mobj_t *actor = thing;
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+	const angle_t angle = FixedAngle(locvar1*FRACUNIT);
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_RollAngle", actor))
+		return;
+#endif
+
+	// relative (default)
+	if (!locvar2)
+		actor->rollangle += angle;
+	// absolute
+	else
+		actor->rollangle = angle;
+}
+
+// Function: A_ChangeRollAngleRelative
+//
+// Description: Changes the roll angle to a random relative value between the min and max. Set min and max to the same value to eliminate randomness
+//
+// var1 = min
+// var2 = max
+//
+void A_ChangeRollAngleRelative(void *thing)
+{
+	mobj_t *actor = thing;
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+	const fixed_t amin = locvar1*FRACUNIT;
+	const fixed_t amax = locvar2*FRACUNIT;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_ChangeRollAngleRelative", actor))
+		return;
+#endif
+
+#ifdef PARANOIA
+	if (amin > amax)
+		I_Error("A_ChangeRollAngleRelative: var1 is greater than var2");
+#endif
+
+	actor->rollangle += FixedAngle(P_RandomRange(amin, amax));
+}
+
+// Function: A_ChangeRollAngleAbsolute
+//
+// Description: Changes the roll angle to a random absolute value between the min and max. Set min and max to the same value to eliminate randomness
+//
+// var1 = min
+// var2 = max
+//
+void A_ChangeRollAngleAbsolute(void *thing)
+{
+	mobj_t *actor = thing;
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+	const fixed_t amin = locvar1*FRACUNIT;
+	const fixed_t amax = locvar2*FRACUNIT;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_ChangeRollAngleAbsolute", actor))
+		return;
+#endif
+
+#ifdef PARANOIA
+	if (amin > amax)
+		I_Error("A_ChangeRollAngleAbsolute: var1 is greater than var2");
+#endif
+
+	actor->rollangle = FixedAngle(P_RandomRange(amin, amax));
+}
+
 // Function: A_PlaySound
 //
 // Description: Plays a sound

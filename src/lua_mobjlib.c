@@ -31,9 +31,15 @@ enum mobj_e {
 	mobj_snext,
 	mobj_sprev,
 	mobj_angle,
+	mobj_rollangle,
+	mobj_sloperoll,
 	mobj_sprite,
 	mobj_frame,
 	mobj_anim_duration,
+	mobj_spritexscale,
+	mobj_spriteyscale,
+	mobj_spritexoffset,
+	mobj_spriteyoffset,
 	mobj_touching_sectorlist,
 	mobj_subsector,
 	mobj_floorz,
@@ -80,7 +86,8 @@ enum mobj_e {
 	mobj_extravalue2,
 	mobj_cusval,
 	mobj_cvmem,
-	mobj_standingslope
+	mobj_standingslope,
+	mobj_rollmodel
 };
 
 static const char *const mobj_opt[] = {
@@ -91,9 +98,15 @@ static const char *const mobj_opt[] = {
 	"snext",
 	"sprev",
 	"angle",
+	"rollangle",
+	"sloperoll",
 	"sprite",
 	"frame",
 	"anim_duration",
+	"spritexscale",
+	"spriteyscale",
+	"spritexoffset",
+	"spriteyoffset",
 	"touching_sectorlist",
 	"subsector",
 	"floorz",
@@ -141,6 +154,7 @@ static const char *const mobj_opt[] = {
 	"cusval",
 	"cvmem",
 	"standingslope",
+	"rollmodel",
 	NULL};
 
 static int mobj_fields_ref = LUA_NOREF;
@@ -213,6 +227,12 @@ static int mobj_get(lua_State *L)
 	case mobj_angle:
 		lua_pushangle(L, mo->angle);
 		break;
+	case mobj_rollangle:
+		lua_pushangle(L, mo->rollangle);
+		break;
+	case mobj_sloperoll:
+		lua_pushangle(L, mo->sloperoll); // read-only: get the player's slope roll angle
+		break;
 	case mobj_sprite:
 		lua_pushinteger(L, mo->sprite);
 		break;
@@ -221,6 +241,18 @@ static int mobj_get(lua_State *L)
 		break;
 	case mobj_anim_duration:
 		lua_pushinteger(L, mo->anim_duration);
+		break;
+	case mobj_spritexscale:
+		lua_pushfixed(L, mo->spritexscale);
+		break;
+	case mobj_spriteyscale:
+		lua_pushfixed(L, mo->spriteyscale);
+		break;
+	case mobj_spritexoffset:
+		lua_pushfixed(L, mo->spritexoffset);
+		break;
+	case mobj_spriteyoffset:
+		lua_pushfixed(L, mo->spriteyoffset);
 		break;
 	case mobj_touching_sectorlist:
 		return UNIMPLEMENTED;
@@ -376,6 +408,9 @@ static int mobj_get(lua_State *L)
 	case mobj_standingslope:
 		LUA_PushUserdata(L, mo->standingslope, META_SLOPE);
 		break;
+	case mobj_rollmodel:
+		lua_pushboolean(L, mo->rollmodel);
+		break;
 	default: // extra custom variables in Lua memory
 		lua_getfield(L, LUA_REGISTRYINDEX, LREG_EXTVARS);
 		I_Assert(lua_istable(L, -1));
@@ -438,6 +473,9 @@ static int mobj_set(lua_State *L)
 		else if (mo->player == &players[secondarydisplayplayer])
 			localangle2 = mo->angle;
 		break;
+	case mobj_rollangle:
+		mo->rollangle = luaL_checkangle(L, 3);
+		break;
 	case mobj_sprite:
 		mo->sprite = luaL_checkinteger(L, 3);
 		break;
@@ -446,6 +484,24 @@ static int mobj_set(lua_State *L)
 		break;
 	case mobj_anim_duration:
 		mo->anim_duration = (UINT16)luaL_checkinteger(L, 3);
+		break;
+	case mobj_spritexscale:
+		//if (!mo->player)
+			mo->spritexscale = luaL_checkfixed(L, 3);
+		//else
+			//mo->realxscale = luaL_checkfixed(L, 3);
+		break;
+	case mobj_spriteyscale:
+		//if (!mo->player)
+			mo->spriteyscale = luaL_checkfixed(L, 3);
+		//else
+			//mo->realyscale = luaL_checkfixed(L, 3);
+		break;
+	case mobj_spritexoffset:
+		mo->spritexoffset = luaL_checkfixed(L, 3);
+		break;
+	case mobj_spriteyoffset:
+		mo->spriteyoffset = luaL_checkfixed(L, 3);
 		break;
 	case mobj_touching_sectorlist:
 		return UNIMPLEMENTED;
@@ -670,6 +726,9 @@ static int mobj_set(lua_State *L)
 		break;
 	case mobj_standingslope:
 		return NOSET;
+	case mobj_rollmodel:
+		mo->rollmodel = luaL_checkboolean(L, 3);
+		break;
 	default:
 		lua_getfield(L, LUA_REGISTRYINDEX, LREG_EXTVARS);
 		I_Assert(lua_istable(L, -1));

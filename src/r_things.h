@@ -16,6 +16,7 @@
 
 #include "sounds.h"
 #include "r_plane.h"
+#include "r_patch.h"
 
 // "Left" and "Right" character symbols for additional rotation functionality
 #define ROT_L ('L' - '0')
@@ -28,6 +29,8 @@
 #define VISSPRITECHUNKBITS 6	// 2^6 = 64 sprites per chunk
 #define VISSPRITESPERCHUNK (1 << VISSPRITECHUNKBITS)
 #define VISSPRITEINDEXMASK (VISSPRITESPERCHUNK - 1)
+
+#define FEETADJUST (4<<FRACBITS) // R_AddSingleSpriteDef
 
 // Constant arrays used for psprite clipping
 //  and initializing clipping.
@@ -147,12 +150,21 @@ typedef struct vissprite_s
 	fixed_t pz, pzt; // physical bottom/top for sorting with 3D floors
 
 	fixed_t startfrac; // horizontal position of x1
-	fixed_t scale, sortscale; // sortscale only differs from scale for flat sprites
+	fixed_t xscale, scale; // projected horizontal and vertical scales
+	fixed_t sortscale; // sortscale only differs from scale for flat sprites
 	fixed_t scalestep; // only for flat sprites, 0 otherwise
+	fixed_t paperoffset, paperdistance; // for paper sprites, offset/dist relative to the angle
 	fixed_t xiscale; // negative if flipped
 
+	angle_t centerangle; // for paper sprites
+
+	struct {
+		fixed_t tan; // The amount to shear the sprite vertically per row
+		INT32 offset; // The center of the shearing location offset from x1
+	} shear;
+
 	fixed_t texturemid;
-	lumpnum_t patch;
+	patch_t *patch;
 
 	lighttable_t *colormap; // for color translation and shadow draw
 	                        // maxbright frames as well
@@ -165,7 +177,7 @@ typedef struct vissprite_s
 
 	extracolormap_t *extra_colormap; // global colormaps
 
-	fixed_t xscale;
+	//fixed_t xscale;
 
 	// Precalculated top and bottom screen coords for the sprite.
 	fixed_t thingheight; // The actual height of the thing (for 3D floors)
@@ -173,6 +185,11 @@ typedef struct vissprite_s
 	INT16 sz, szt;
 
 	spritecut_e cut;
+	
+	UINT32 renderflags;
+
+	fixed_t spritexscale, spriteyscale;
+	fixed_t spritexoffset, spriteyoffset;
 
 	INT16 clipbot[MAXVIDWIDTH], cliptop[MAXVIDWIDTH];
 

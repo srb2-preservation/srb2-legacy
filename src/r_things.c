@@ -22,6 +22,7 @@
 #include "m_misc.h"
 #include "i_video.h" // rendermode
 #include "r_things.h"
+#include "r_patch.h"
 #include "r_plane.h"
 #include "p_tick.h"
 #include "p_local.h"
@@ -58,6 +59,8 @@ static lighttable_t **spritelights;
 // constant arrays used for psprite clipping and initializing clipping
 INT16 negonearray[MAXVIDWIDTH];
 INT16 screenheightarray[MAXVIDWIDTH];
+
+spriteinfo_t spriteinfo[NUMSPRITES];
 
 //
 // INITIALIZATION FUNCTIONS
@@ -118,7 +121,7 @@ static void R_InstallSpriteLump(UINT16 wad,            // graphics patch
 {
 	char cn = R_Frame2Char(frame); // for debugging
 
-	INT32 r;
+	INT32 r, ang;
 	lumpnum_t lumppat = wad;
 	lumppat <<= 16;
 	lumppat += lump;
@@ -128,6 +131,15 @@ static void R_InstallSpriteLump(UINT16 wad,            // graphics patch
 
 	if (maxframe ==(size_t)-1 || frame > maxframe)
 		maxframe = frame;
+
+	// rotsprite
+#ifdef ROTSPRITE
+	for (r = 0; r < 16; r++)
+	{
+		sprtemp[frame].rotated[0][r] = NULL;
+		sprtemp[frame].rotated[1][r] = NULL;
+	}
+#endif/*ROTSPRITE*/
 
 	if (rotation == 0)
 	{
@@ -465,12 +477,24 @@ static vissprite_t *visspritechunks[MAXVISSPRITES >> VISSPRITECHUNKBITS] = {NULL
 void R_InitSprites(void)
 {
 	size_t i;
+#ifdef ROTSPRITE
+	INT32 angle;
+	float fa;
+#endif
 
 	for (i = 0; i < MAXVIDWIDTH; i++)
 	{
 		negonearray[i] = -1;
 	}
 
+#ifdef ROTSPRITE
+	for (angle = 1; angle < ROTANGLES; angle++)
+	{
+		fa = ANG2RAD(FixedAngle((ROTANGDIFF * angle)<<FRACBITS));
+		rollcosang[angle] = FLOAT_TO_FIXED(cos(-fa));
+		rollsinang[angle] = FLOAT_TO_FIXED(sin(-fa));
+	}
+#endif
 	//
 	// count the number of sprite names, and allocate sprites table
 	//
@@ -624,6 +648,8 @@ void R_DrawMaskedColumn(column_t *column)
 	dc_texturemid = basetexturemid;
 }
 
+INT32 lengthcol; // column->length : for flipped column function pointers and multi-patch on 2sided wall = texture->height
+
 static void R_DrawFlippedMaskedColumn(column_t *column, INT32 texheight)
 {
 	INT32 topscreen;
@@ -702,8 +728,9 @@ static void R_DrawVisSprite(vissprite_t *vis)
 #ifdef RANGECHECK
 	INT32 texturecolumn;
 #endif
+	INT32 pwidth;
 	fixed_t frac;
-	patch_t *patch = W_CacheLumpNum(vis->patch, PU_CACHE);
+	patch_t *patch = vis->patch;
 	fixed_t this_scale = vis->thingscale;
 	INT32 x1, x2;
 	INT64 overflow_test;
@@ -810,6 +837,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	if (!(vis->scalestep))
 	{
 		sprtopscreen = centeryfrac - FixedMul(dc_texturemid, spryscale);
+		sprtopscreen += vis->shear.tan * vis->shear.offset;
 		dc_iscale = FixedDiv(FRACUNIT, vis->scale);
 	}
 
@@ -825,6 +853,8 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	if (vis->x2 >= vid.width)
 		vis->x2 = vid.width-1;
 
+	lengthcol = patch->height;
+
 	for (dc_x = vis->x1; dc_x <= vis->x2; dc_x++, frac += vis->xiscale)
 	{
 #ifdef RANGECHECK
@@ -836,6 +866,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 #else
 		column = (column_t *)((UINT8 *)patch + LONG(patch->columnofs[frac>>FRACBITS]));
 #endif
+		fixed_t scalestep = FixedMul(vis->scalestep, vis->spriteyscale);
 		if (vis->scalestep)
 		{
 			sprtopscreen = (centeryfrac - FixedMul(dc_texturemid, spryscale));
@@ -845,7 +876,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 			R_DrawFlippedMaskedColumn(column, patch->height);
 		else
 			R_DrawMaskedColumn(column);
-		spryscale += vis->scalestep;
+		spryscale += scalestep;
 	}
 
 	colfunc = basecolfunc;
@@ -867,7 +898,7 @@ static void R_DrawPrecipitationVisSprite(vissprite_t *vis)
 	INT64 overflow_test;
 
 	//Fab : R_InitSprites now sets a wad lump number
-	patch = W_CacheLumpNum(vis->patch, PU_CACHE);
+	patch = vis->patch;
 	if (!patch)
 		return;
 
@@ -1113,6 +1144,7 @@ fixed_t R_GetShadowZ(mobj_t *thing, pslope_t **shadowslope)
 //
 static void R_ProjectSprite(mobj_t *thing)
 {
+	mobj_t *oldthing = thing;
 	fixed_t tr_x, tr_y;
 	fixed_t gxt, gyt;
 	fixed_t tx, tz;
@@ -1122,6 +1154,9 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	spritedef_t *sprdef;
 	spriteframe_t *sprframe;
+#ifdef ROTSPRITE
+	spriteinfo_t *sprinfo;
+#endif
 	size_t lump;
 
 	size_t rot;
@@ -1141,7 +1176,17 @@ static void R_ProjectSprite(mobj_t *thing)
 	fixed_t gz, gzt;
 	INT32 heightsec, phs;
 	INT32 light = 0;
-	fixed_t this_scale;
+	fixed_t this_scale = thing->scale;
+	fixed_t spritexscale, spriteyscale;
+
+	// rotsprite
+	fixed_t spr_width, spr_height;
+	fixed_t spr_offset, spr_topoffset;
+#ifdef ROTSPRITE
+	patch_t *rotsprite = NULL;
+	INT32 rollangle = 0;
+	angle_t rollsum = 0;
+#endif
 	fixed_t ang_scale = FRACUNIT;
 
 	interpmobjstate_t interp = {0};
@@ -1180,7 +1225,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	tx = -(gyt + gxt);
 
 	// too far off the side?
-	if (abs(tx) > tz<<2)
+	if (!papersprite && abs(tx) > tz<<2) // papersprite clipping is handled later
 		return;
 
 	// aspect ratio stuff
@@ -1199,11 +1244,19 @@ static void R_ProjectSprite(mobj_t *thing)
 	if (thing->skin && thing->sprite == SPR_PLAY)
 	{
 		sprdef = &((skin_t *)thing->skin)->spritedef;
+#ifdef ROTSPRITE
+			sprinfo = &spriteinfo[thing->sprite];
+#endif
 		if (rot >= sprdef->numframes)
 			sprdef = &sprites[thing->sprite];
 	}
 	else
+	{
+#ifdef ROTSPRITE
+		sprinfo = &spriteinfo[thing->sprite];
+#endif
 		sprdef = &sprites[thing->sprite];
+	}
 
 	if (rot >= sprdef->numframes)
 	{
@@ -1212,6 +1265,9 @@ static void R_ProjectSprite(mobj_t *thing)
 		thing->sprite = states[S_UNKNOWN].sprite;
 		thing->frame = states[S_UNKNOWN].frame;
 		sprdef = &sprites[thing->sprite];
+#ifdef ROTSPRITE
+		sprinfo = &spriteinfo[thing->sprite];
+#endif
 		rot = thing->frame&FF_FRAMEMASK;
 		if (!thing->skin)
 		{
@@ -1263,12 +1319,61 @@ static void R_ProjectSprite(mobj_t *thing)
 	if (thing->skin && ((skin_t *)thing->skin)->flags & SF_HIRES)
 		this_scale = FixedMul(this_scale, ((skin_t *)thing->skin)->highresscale);
 
+	spr_width = spritecachedinfo[lump].width;
+	spr_height = spritecachedinfo[lump].height;
+	spr_offset = spritecachedinfo[lump].offset;
+	spr_topoffset = spritecachedinfo[lump].topoffset;
+
+#ifdef ROTSPRITE
+	if ((thing->rollangle)||(thing->sloperoll))
+	{
+		rollsum = (thing->rollangle)+(thing->sloperoll);
+		rollangle = R_GetRollAngle(rollsum);
+		rotsprite = Patch_GetRotatedSprite(sprframe, (thing->frame & FF_FRAMEMASK), rot, flip, sprinfo, rollangle);
+		
+		if (rotsprite != NULL)
+		{
+			spr_width = rotsprite->width << FRACBITS;
+			spr_height = rotsprite->height << FRACBITS;
+			spr_offset = rotsprite->leftoffset << FRACBITS;
+			spr_topoffset = rotsprite->topoffset << FRACBITS;
+			spr_topoffset += FEETADJUST;
+			
+			// flip -> rotate, not rotate -> flip
+			flip = 0;
+		}
+	}
+#endif
+
 	// calculate edges of the shape
-	if (flip)
-		offset = spritecachedinfo[lump].offset - spritecachedinfo[lump].width;
+
+	spritexscale = thing->spritexscale;
+	spriteyscale = thing->spriteyscale;
+	if (spritexscale < 1 || spriteyscale < 1)
+		return;
+
+	if (thing->renderflags & RF_ABSOLUTEOFFSETS)
+	{
+		spr_offset = thing->spritexoffset;
+		spr_topoffset = thing->spriteyoffset;
+	}
 	else
-		offset = -spritecachedinfo[lump].offset;
-	offset = FixedMul(offset, this_scale);
+	{
+		SINT8 flipoffset = 1;
+
+		if ((thing->renderflags & RF_FLIPOFFSETS) && flip)
+			flipoffset = -1;
+
+		spr_offset += thing->spritexoffset * flipoffset;
+		spr_topoffset += thing->spriteyoffset * flipoffset;
+	}
+
+	if (flip)
+		offset = spr_offset - spr_width;
+	else
+		offset = -spr_offset;
+
+	offset = FixedMul(offset, FixedMul(spritexscale, this_scale));
 	tx += FixedMul(offset, ang_scale);
 	x1 = (centerxfrac + FixedMul (tx,xscale)) >>FRACBITS;
 
@@ -1276,7 +1381,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	if (x1 > viewwidth)
 		return;
 
-	offset2 = FixedMul(spritecachedinfo[lump].width, this_scale);
+	offset2 = FixedMul(spr_width, FixedMul(spritexscale, this_scale));
 	tx += FixedMul(offset2, ang_scale);
 	x2 = ((centerxfrac + FixedMul (tx,xscale)) >> FRACBITS) - (papersprite ? 2 : 1);
 
@@ -1353,15 +1458,15 @@ static void R_ProjectSprite(mobj_t *thing)
 		// sprite height - sprite topoffset is the proper inverse of the vertical offset, of course.
 		// remember gz and gzt should be seperated by sprite height, not thing height - thing height can be shorter than the sprite itself sometimes!
 		if (thing->scale != thing->old_scale) // Interpolate heights in reverse gravity when scaling mobjs
-			gz = interp.z + FixedMul(thing->height, FixedDiv(interp.scale, thing->scale)) - FixedMul(spritecachedinfo[lump].topoffset, this_scale);
+			gz = interp.z + FixedMul(thing->height, FixedDiv(interp.scale, thing->scale)) - FixedMul(spr_topoffset, this_scale);
 		else
-			gz = interp.z + thing->height - FixedMul(spritecachedinfo[lump].topoffset,  this_scale);
-		gzt = gz + FixedMul(spritecachedinfo[lump].height, this_scale);
+			gz = interp.z + thing->height - FixedMul(spr_topoffset,  this_scale);
+		gzt = gz + FixedMul(spr_height, this_scale);
 	}
 	else
 	{
-		gzt = interp.z + FixedMul(spritecachedinfo[lump].topoffset, this_scale);
-		gz = gzt - FixedMul(spritecachedinfo[lump].height, this_scale);
+		gzt = interp.z + FixedMul(spr_topoffset, this_scale);
+		gz = gzt - FixedMul(spr_height, this_scale);
 	}
 
 	if (thing->subsector->sector->cullheight)
@@ -1426,17 +1531,17 @@ static void R_ProjectSprite(mobj_t *thing)
 	vis->thingheight = thing->height;
 	vis->pz = interp.z;
 	vis->pzt = vis->pz + vis->thingheight;
-	vis->texturemid = vis->gzt - viewz;
+	vis->texturemid = FixedDiv(gzt - viewz, spriteyscale);
 	vis->scalestep = scalestep;
 
 	vis->mobj = thing; // Easy access! Tails 06-07-2002
+
+	
 
 
 	vis->x1 = x1 < portalclipstart ? portalclipstart : x1;
 	vis->x2 = x2 >= portalclipend ? portalclipend-1 : x2;
 
-
-	vis->xscale = xscale; //SoM: 4/17/2000
 	vis->sector = thing->subsector->sector;
 	vis->szt = (INT16)((centeryfrac - FixedMul(vis->gzt - viewz, sortscale))>>FRACBITS);
 	vis->sz = (INT16)((centeryfrac - FixedMul(vis->gz - viewz, sortscale))>>FRACBITS);
@@ -1446,11 +1551,21 @@ static void R_ProjectSprite(mobj_t *thing)
 	else
 		vis->extra_colormap = thing->subsector->sector->extra_colormap;
 
-	iscale = FixedDiv(FRACUNIT, xscale);
+
+	vis->xscale = FixedMul(spritexscale, xscale); //SoM: 4/17/2000
+	vis->scale = FixedMul(spriteyscale, yscale); //<<detailshift;
+	vis->thingscale = interp.scale;
+
+	vis->spritexscale = spritexscale;
+	vis->spriteyscale = spriteyscale;
+	vis->spritexoffset = spr_offset;
+	vis->spriteyoffset = spr_topoffset;
+
+	iscale = FixedDiv(FRACUNIT, vis->xscale);
 
 	if (flip)
 	{
-		vis->startfrac = spritecachedinfo[lump].width-1;
+		vis->startfrac = spr_width-1;
 		vis->xiscale = -iscale;
 	}
 	else
@@ -1469,8 +1584,12 @@ static void R_ProjectSprite(mobj_t *thing)
 	vis->thingscale = interp.scale;
 	//Fab: lumppat is the lump number of the patch to use, this is different
 	//     than lumpid for sprites-in-pwad : the graphics are patched
-	vis->patch = sprframe->lumppat[rot];
-
+#ifdef ROTSPRITE
+	if (rotsprite != NULL)
+		vis->patch = rotsprite;
+	else
+#endif
+		vis->patch = W_CachePatchNum(sprframe->lumppat[rot], PU_CACHE);
 //
 // determine the colormap (lightlevel & special effects)
 //
@@ -1544,7 +1663,7 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 	{
 		R_InterpolatePrecipMobjState(thing, rendertimefrac, &interp);
 	}
-     	else
+    else
 	{
 		R_InterpolatePrecipMobjState(thing, FRACUNIT, &interp);
 	}
@@ -1682,7 +1801,7 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 
 	//Fab: lumppat is the lump number of the patch to use, this is different
 	//     than lumpid for sprites-in-pwad : the graphics are patched
-	vis->patch = sprframe->lumppat[0];
+	vis->patch = W_CachePatchNum(sprframe->lumppat[0], PU_CACHE);
 
 	// specific translucency
 	if (thing->frame & FF_TRANSMASK)
@@ -2197,7 +2316,7 @@ static boolean R_CheckSpriteVisible(vissprite_t *spr, INT32 x1, INT32 x2)
 
 	fixed_t texturemid = 0, yscale = 0, scalestep = spr->scalestep; // "= 0" pleases the compiler
 	INT32 height = 0;
-	patch_t *patch = W_CacheLumpNum(spr->patch, PU_CACHE);
+	patch_t *patch = spr->patch;
 
 	if (scalestep)
 	{

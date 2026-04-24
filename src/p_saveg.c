@@ -954,7 +954,18 @@ typedef enum
 	MD2_EXTVAL2     = 1<<6,
 	MD2_HNEXT       = 1<<7,
 	MD2_HPREV       = 1<<8,
-	MD2_SLOPE       = 1<<9
+	MD2_SLOPE       = 1<<9,
+	MD2_ROLLANGLE   = 1<<12,
+	MD2_ROLLMODEL   = 1<<13,
+	MD2_RENDERFLAGS  = 1<<14,
+	MD2_SPRITEXSCALE = 1<<15,
+	MD2_SPRITEYSCALE = 1<<16,
+	MD2_SPRITEXOFFSET = 1<<17,
+	MD2_SPRITEYOFFSET = 1<<18,
+	MD2_STRETCHSLAM = 1<<21,
+	MD2_SLOPEROLL 	= 1<<22,
+	MD2_RESERVEZANGLE = 1<<23,
+	MD2_RESERVEXYDIR = 1<<24
 } mobj_diff2_t;
 
 typedef enum
@@ -1145,6 +1156,28 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		diff2 |= MD2_HPREV;
 	if (mobj->standingslope)
 		diff2 |= MD2_SLOPE;
+	if (mobj->rollangle)
+		diff2 |= MD2_ROLLANGLE;
+	if (mobj->rollmodel)
+		diff2 |= MD2_ROLLMODEL;
+	if (mobj->renderflags)
+		diff2 |= MD2_RENDERFLAGS;
+	if (mobj->spritexscale != FRACUNIT)
+		diff2 |= MD2_SPRITEXSCALE;
+	if (mobj->spriteyscale != FRACUNIT)
+		diff2 |= MD2_SPRITEYSCALE;
+	if (mobj->spritexoffset)
+		diff2 |= MD2_SPRITEXOFFSET;
+	if (mobj->spriteyoffset)
+		diff2 |= MD2_SPRITEYOFFSET;
+	if (mobj->stretchslam)
+		diff2 |= MD2_STRETCHSLAM;
+	if (mobj->sloperoll)
+		diff2 |= MD2_SLOPEROLL;
+	if (mobj->reservezangle)
+		diff2 |= MD2_RESERVEZANGLE;
+	if (mobj->reservexydir)
+		diff2 |= MD2_RESERVEXYDIR;
 	if (diff2 != 0)
 		diff |= MD_MORE;
 
@@ -1262,6 +1295,28 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		WRITEUINT32(save_p, mobj->hprev->mobjnum);
 	if (diff2 & MD2_SLOPE)
 		WRITEUINT16(save_p, mobj->standingslope->id);
+	if (diff2 & MD2_ROLLANGLE)
+		WRITEANGLE(save_p, mobj->rollangle);
+	if (diff2 & MD2_ROLLMODEL)
+		WRITEUINT8(save_p, mobj->rollmodel);
+	if (diff2 & MD2_RENDERFLAGS)
+		WRITEUINT32(save_p, mobj->renderflags);
+	if (diff2 & MD2_SPRITEXSCALE)
+		WRITEFIXED(save_p, mobj->spritexscale);
+	if (diff2 & MD2_SPRITEYSCALE)
+		WRITEFIXED(save_p, mobj->spriteyscale);
+	if (diff2 & MD2_SPRITEXOFFSET)
+		WRITEFIXED(save_p, mobj->spritexoffset);
+	if (diff2 & MD2_SPRITEYOFFSET)
+		WRITEFIXED(save_p, mobj->spriteyoffset);
+	if (diff2 & MD2_STRETCHSLAM)
+		WRITEFIXED(save_p, mobj->stretchslam);
+	if (diff2 & MD2_SLOPEROLL)
+		WRITEANGLE(save_p, mobj->sloperoll);
+	if (diff2 & MD2_RESERVEZANGLE)
+		WRITEANGLE(save_p, mobj->reservezangle);
+	if (diff2 & MD2_RESERVEXYDIR)
+		WRITEANGLE(save_p, mobj->reservexydir);
 
 	WRITEUINT32(save_p, mobj->mobjnum);
 }
@@ -2129,6 +2184,32 @@ static void LoadMobjThinker(actionf_p1 thinker)
 		mobj->hprev = (mobj_t *)(size_t)READUINT32(save_p);
 	if (diff2 & MD2_SLOPE)
 		mobj->standingslope = P_SlopeById(READUINT16(save_p));
+	if (diff2 & MD2_ROLLANGLE)
+		mobj->rollangle = READANGLE(save_p);
+	if (diff2 & MD2_ROLLMODEL)
+		mobj->rollmodel = READUINT8(save_p);
+	if (diff2 & MD2_RENDERFLAGS)
+		mobj->renderflags = READUINT32(save_p);
+	if (diff2 & MD2_SPRITEXSCALE)
+		mobj->spritexscale = READFIXED(save_p);
+	else
+		mobj->spritexscale = FRACUNIT;
+	if (diff2 & MD2_SPRITEYSCALE)
+		mobj->spriteyscale = READFIXED(save_p);
+	else
+		mobj->spriteyscale = FRACUNIT;
+	if (diff2 & MD2_SPRITEXOFFSET)
+		mobj->spritexoffset = READFIXED(save_p);
+	if (diff2 & MD2_SPRITEYOFFSET)
+		mobj->spriteyoffset = READFIXED(save_p);
+	if (diff2 & MD2_STRETCHSLAM)
+		mobj->stretchslam = READFIXED(save_p);
+	if (diff2 & MD2_SLOPEROLL)
+		mobj->sloperoll = READANGLE(save_p);
+	if (diff2 & MD2_RESERVEZANGLE)
+		mobj->reservezangle = READANGLE(save_p);
+	if (diff2 & MD2_RESERVEXYDIR)
+		mobj->reservexydir = READANGLE(save_p);
 
 
 	if (diff & MD_REDFLAG)

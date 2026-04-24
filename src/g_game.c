@@ -11,6 +11,7 @@
 /// \file  g_game.c
 /// \brief game loop functions, events handling
 
+#include "command.h"
 #include "doomdef.h"
 #include "console.h"
 #include "d_main.h"
@@ -361,6 +362,15 @@ consvar_t cv_useranalog = CVAR_INIT ("useranalog", "Off", "Player faces and move
 consvar_t cv_useranalog2 = CVAR_INIT ("useranalog2", "Off", "Player faces and moves in the same direction as input, instead of always facing the direction of the camera", CV_SAVE|CV_CALL, CV_OnOff, UserAnalog2_OnChange);
 
 static CV_PossibleValue_t zerotoone_cons_t[] = {{0, "MIN"}, {FRACUNIT, "MAX"}, {0, NULL}};
+
+consvar_t cv_sloperoll = CVAR_INIT("sloperoll", "Off", NULL, CV_SAVE, CV_OnOff, NULL);
+
+static CV_PossibleValue_t sloperolldist_cons_t[] = {
+	/*{256, "256"},*/	{512, "512"},	{768, "768"},
+	{1024, "1024"},	{1536, "1536"},	{2048, "2048"},
+	{3072, "3072"},	{4096, "4096"},	{6144, "6144"},
+	{8192, "8192"},	{0, "Infinite"},	{0, NULL}};
+consvar_t cv_sloperolldist = CVAR_INIT("sloperolldist", "Infinite", NULL, CV_SAVE, sloperolldist_cons_t, NULL);
 
 typedef enum
 {

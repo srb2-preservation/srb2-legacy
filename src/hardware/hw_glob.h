@@ -56,18 +56,22 @@ typedef struct gl_vissprite_s
 	struct gl_vissprite_s *prev;
 	struct gl_vissprite_s *next;
 	float x1, x2;
+	float z1, z2;
+	float gz, gzt;
 	float tz, ty;
-	lumpnum_t patchlumpnum;
+	float scale;
+	//lumpnum_t patchlumpnum;
+	float spritexscale, spriteyscale;
+	float spritexoffset, spriteyoffset;
+	GLPatch_t *gpatch;
 	boolean flip;
 	UINT8 translucency;       //alpha level 0-255
 	mobj_t *mobj;
-	float scale;
 	boolean precip; // Tails 08-25-2002
 	boolean vflip;
    //Hurdler: 25/04/2000: now support colormap in hardware mode
 	UINT8 *colormap;
 	INT32 dispoffset; // copy of info->dispoffset, affects ordering but not drawing
-	float z1, z2;
 } gl_vissprite_t;
 
 // --------

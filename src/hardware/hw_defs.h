@@ -122,6 +122,7 @@ typedef struct
 	FLOAT       anglex,angley;   // aimingangle / viewangle
 #endif
 	FLOAT       scalex,scaley,scalez;
+	FLOAT       spritexscale,spriteyscale;
 	FLOAT       fovxangle, fovyangle;
 	UINT8       splitscreen;
 	boolean     flip;            // screenflip
@@ -130,6 +131,10 @@ typedef struct
 #endif
 	boolean     roll;
 	FLOAT       rollangle;
+	boolean     rollmodel;
+	SINT8       rollflip;
+	UINT8       rotaxis;
+	FLOAT       centerx, centery;
 	boolean     shearing;        // 14042019
 	float       viewaiming;      // 17052019
 } FTransform;

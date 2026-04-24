@@ -1844,6 +1844,9 @@ void R_RegisterEngineStuff(void)
 	CV_RegisterVar(&cv_quakeiv);
 	CV_RegisterVar(&cv_quakelive);
 
+	CV_RegisterVar(&cv_sloperoll);
+	CV_RegisterVar(&cv_sloperolldist);
+
 	CV_RegisterVar(&cv_showhud);
 	CV_RegisterVar(&cv_translucenthud);
 	CV_RegisterVar(&cv_uncappedhud);

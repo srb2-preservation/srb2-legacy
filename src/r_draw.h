@@ -129,6 +129,8 @@ void R_FillBackScreen(void);
 void R_DrawViewBorder(void);
 #endif
 
+#define TRANSPARENTPIXEL 247
+
 // -----------------
 // 8bpp DRAWING CODE
 // -----------------

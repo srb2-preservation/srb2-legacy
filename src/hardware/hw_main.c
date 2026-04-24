@@ -26,6 +26,7 @@
 #include "../p_local.h"
 #include "../p_setup.h"
 #include "../r_local.h"
+#include "../r_patch.h" // a mystery as to what this is for
 #include "../r_bsp.h"
 #include "../d_clisrv.h"
 #include "../w_wad.h"
@@ -3946,17 +3947,17 @@ static void HWR_RotateSpritePolyToAim(gl_vissprite_t *spr, FOutVector *wallVerts
 		// X, Y, AND Z need to be manipulated for the polys to rotate around the
 		// origin, because of how the origin setting works I believe that should
 		// be mobj->z or mobj->z + mobj->height
-		wallVerts[2].y = wallVerts[3].y = (spr->ty - basey) * gl_viewludsin + basey;
+		wallVerts[2].y = wallVerts[3].y = (spr->gzt - basey) * gl_viewludsin + basey;
 		wallVerts[0].y = wallVerts[1].y = (lowy - basey) * gl_viewludsin + basey;
 		// translate back to be around 0 before translating back
-		wallVerts[3].x += ((spr->ty - basey) * gl_viewludcos) * gl_viewcos;
-		wallVerts[2].x += ((spr->ty - basey) * gl_viewludcos) * gl_viewcos;
+		wallVerts[3].x += ((spr->gzt - basey) * gl_viewludcos) * gl_viewcos;
+		wallVerts[2].x += ((spr->gzt - basey) * gl_viewludcos) * gl_viewcos;
 
 		wallVerts[0].x += ((lowy - basey) * gl_viewludcos) * gl_viewcos;
 		wallVerts[1].x += ((lowy - basey) * gl_viewludcos) * gl_viewcos;
 
-		wallVerts[3].z += ((spr->ty - basey) * gl_viewludcos) * gl_viewsin;
-		wallVerts[2].z += ((spr->ty - basey) * gl_viewludcos) * gl_viewsin;
+		wallVerts[3].z += ((spr->gzt - basey) * gl_viewludcos) * gl_viewsin;
+		wallVerts[2].z += ((spr->gzt - basey) * gl_viewludcos) * gl_viewsin;
 
 		wallVerts[0].z += ((lowy - basey) * gl_viewludcos) * gl_viewsin;
 		wallVerts[1].z += ((lowy - basey) * gl_viewludcos) * gl_viewsin;
@@ -3995,7 +3996,7 @@ static void HWR_SplitSprite(gl_vissprite_t *spr)
 	if (hires)
 		this_scale = this_scale * FIXED_TO_FLOAT(((skin_t *)spr->mobj->skin)->highresscale);
 
-	gpatch = W_CachePatchNum(spr->patchlumpnum, PU_PATCH);
+	gpatch = spr->gpatch;
 
 	// cache the patch in the graphics card memory
 	//12/12/99: Hurdler: same comment as above (for md2)
@@ -4007,11 +4008,8 @@ static void HWR_SplitSprite(gl_vissprite_t *spr)
 	baseWallVerts[0].z = baseWallVerts[3].z = spr->z1;
 	baseWallVerts[1].z = baseWallVerts[2].z = spr->z2;
 
-	baseWallVerts[2].y = baseWallVerts[3].y = spr->ty;
-	if (spr->mobj && fabsf(this_scale - 1.0f) > 1.0E-36f)
-		baseWallVerts[0].y = baseWallVerts[1].y = spr->ty - gpatch->height * this_scale;
-	else
-		baseWallVerts[0].y = baseWallVerts[1].y = spr->ty - gpatch->height;
+	baseWallVerts[2].y = baseWallVerts[3].y = spr->gzt;
+	baseWallVerts[0].y = baseWallVerts[1].y = spr->gz;
 
 	v1x = FLOAT_TO_FIXED(spr->x1);
 	v1y = FLOAT_TO_FIXED(spr->z1);
@@ -4273,7 +4271,7 @@ static void HWR_DrawSprite(gl_vissprite_t *spr)
 	//          sure to do it the right way. So actually, we keep normal sprite
 	//          in memory and we add the md2 model if it exists for that sprite
 
-	gpatch = W_CachePatchNum(spr->patchlumpnum, PU_PATCH);
+	gpatch = spr->gpatch;
 
 	// create the sprite billboard
 	//
@@ -4285,12 +4283,8 @@ static void HWR_DrawSprite(gl_vissprite_t *spr)
 	// these were already scaled in HWR_ProjectSprite
 	wallVerts[0].x = wallVerts[3].x = spr->x1;
 	wallVerts[2].x = wallVerts[1].x = spr->x2;
-	wallVerts[2].y = wallVerts[3].y = spr->ty;
-	if (spr->mobj && fabsf(this_scale - 1.0f) > 1.0E-36f)
-		wallVerts[0].y = wallVerts[1].y = spr->ty - gpatch->height * this_scale;
-	else
-		wallVerts[0].y = wallVerts[1].y = spr->ty - gpatch->height;
-
+	wallVerts[2].y = wallVerts[3].y = spr->gzt;
+	wallVerts[0].y = wallVerts[1].y = spr->gz;
 	// make a wall polygon (with 2 triangles), using the floor/ceiling heights,
 	// and the 2d map coords of start/end vertices
 	wallVerts[0].z = wallVerts[3].z = spr->z1;
@@ -4407,7 +4401,7 @@ static inline void HWR_DrawPrecipitationSprite(gl_vissprite_t *spr)
 		return;
 
 	// cache sprite graphics
-	gpatch = W_CachePatchNum(spr->patchlumpnum, PU_PATCH);
+	gpatch = spr->gpatch; 
 
 	// create the sprite billboard
 	//
@@ -4858,7 +4852,7 @@ static void HWR_DrawSprites(void)
 	for (i = 0; i < gl_visspritecount; i++)
 	{
 		gl_vissprite_t *spr = gl_vsprorder[i];
-		GLPatch_t *gpatch = W_CachePatchNum(spr->patchlumpnum, PU_CACHE);
+		GLPatch_t *gpatch = spr->gpatch;
 		HWR_GetPatch(gpatch);
 		if (spr->precip)
 			HWR_DrawPrecipitationSprite(spr);
@@ -4946,10 +4940,12 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	float tz;
 	float x1, x2;
 	float rightsin, rightcos;
-	float this_scale;
+	float this_scale, this_xscale, this_yscale;
+	float spritexscale, spriteyscale;
 	float gz, gzt;
 	spritedef_t *sprdef;
 	spriteframe_t *sprframe;
+	spriteinfo_t *sprinfo;
 	md2_t *md2;
 	size_t lumpoff;
 	unsigned rot;
@@ -4958,6 +4954,15 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	INT32 heightsec, phs;
 	const boolean papersprite = (thing->frame & FF_PAPERSPRITE);
 	float z1, z2;
+	vector3_t pos;
+	
+	fixed_t spr_width, spr_height;
+	fixed_t spr_offset, spr_topoffset;
+#ifdef ROTSPRITE
+	patch_t *rotsprite = NULL;
+	INT32 rollangle = 0;
+	angle_t rollsum = 0;
+#endif
 
 	// uncapped/interpolation
 	interpmobjstate_t interp = {0};
@@ -4975,7 +4980,14 @@ static void HWR_ProjectSprite(mobj_t *thing)
 		R_InterpolateMobjState(thing, FRACUNIT, &interp);
 	}
 
+	if (thing->spritexscale < 1 || thing->spriteyscale < 1)
+		return;
+
 	this_scale = FIXED_TO_FLOAT(interp.scale);
+	spritexscale = FIXED_TO_FLOAT(thing->spritexscale);
+	spriteyscale = FIXED_TO_FLOAT(thing->spriteyscale);
+
+
 
 	// transform the origin point
 	tr_x = FIXED_TO_FLOAT(interp.x) - gl_viewx;
@@ -5016,9 +5028,19 @@ static void HWR_ProjectSprite(mobj_t *thing)
 
 	//Fab : 02-08-98: 'skin' override spritedef currently used for skin
 	if (thing->skin && thing->sprite == SPR_PLAY)
+	{
 		sprdef = &((skin_t *)thing->skin)->spritedef;
+#ifdef ROTSPRITE
+		sprinfo = &spriteinfo[thing->sprite];
+#endif
+	}
 	else
+	{
 		sprdef = &sprites[thing->sprite];
+#ifdef ROTSPRITE
+		sprinfo = &spriteinfo[thing->sprite];
+#endif
+	}
 
 	if (rot >= sprdef->numframes)
 	{
@@ -5082,6 +5104,48 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	if (thing->skin && ((skin_t *)thing->skin)->flags & SF_HIRES)
 		this_scale = this_scale * FIXED_TO_FLOAT(((skin_t *)thing->skin)->highresscale);
 
+	spr_width = spritecachedinfo[lumpoff].width;
+	spr_height = spritecachedinfo[lumpoff].height;
+	spr_offset = spritecachedinfo[lumpoff].offset;
+	spr_topoffset = spritecachedinfo[lumpoff].topoffset;
+
+#ifdef ROTSPRITE
+	if ((thing->rollangle)||(thing->sloperoll))
+	{
+		rollsum = (thing->rollangle)+(thing->sloperoll);
+		rollangle = R_GetRollAngle(rollsum);
+		rotsprite = Patch_GetRotatedSprite(sprframe, (thing->frame & FF_FRAMEMASK), rot, flip, sprinfo, rollangle);
+		
+		if (rotsprite != NULL)
+		{
+			spr_width = rotsprite->width << FRACBITS;
+			spr_height = rotsprite->height << FRACBITS;
+			spr_offset = rotsprite->leftoffset << FRACBITS;
+			spr_topoffset = rotsprite->topoffset << FRACBITS;
+			spr_topoffset += FEETADJUST;
+			
+			// flip -> rotate, not rotate -> flip
+			flip = 0;
+		}
+	}
+#endif
+
+	if (thing->renderflags & RF_ABSOLUTEOFFSETS)
+	{
+		spr_offset = thing->spritexoffset;
+		spr_topoffset = thing->spriteyoffset;
+	}
+	else
+	{
+		SINT8 flipoffset = 1;
+
+		if ((thing->renderflags & RF_FLIPOFFSETS) && flip)
+			flipoffset = -1;
+
+		spr_offset += thing->spritexoffset * flipoffset;
+		spr_topoffset += thing->spriteyoffset * flipoffset;
+	}
+
 	if (papersprite)
 	{
 		rightsin = FIXED_TO_FLOAT(FINESINE((interp.angle)>>ANGLETOFINESHIFT));
@@ -5093,15 +5157,18 @@ static void HWR_ProjectSprite(mobj_t *thing)
 		rightcos = FIXED_TO_FLOAT(FINECOSINE((viewangle + ANGLE_90)>>ANGLETOFINESHIFT));
 	}
 
+	this_xscale = spritexscale * this_scale;
+	this_yscale = spriteyscale * this_scale;
+
 	if (flip)
 	{
-		x1 = (FIXED_TO_FLOAT(spritecachedinfo[lumpoff].width - spritecachedinfo[lumpoff].offset) * this_scale);
-		x2 = (FIXED_TO_FLOAT(spritecachedinfo[lumpoff].offset) * this_scale);
+		x1 = (FIXED_TO_FLOAT(spr_width - spr_offset) * this_xscale);
+		x2 = (FIXED_TO_FLOAT(spr_offset) * this_xscale);
 	}
 	else
 	{
-		x1 = (FIXED_TO_FLOAT(spritecachedinfo[lumpoff].offset) * this_scale);
-		x2 = (FIXED_TO_FLOAT(spritecachedinfo[lumpoff].width - spritecachedinfo[lumpoff].offset) * this_scale);
+		x1 = (FIXED_TO_FLOAT(spr_offset) * this_xscale);
+		x2 = (FIXED_TO_FLOAT(spr_width - spr_offset) * this_xscale);
 	}
 
 	z1 = tr_y + x1 * rightsin;
@@ -5112,15 +5179,15 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	if (thing->eflags & MFE_VERTICALFLIP)
 	{
 		if (thing->scale != thing->old_scale) // Interpolate heights in reverse gravity when scaling mobjs
-				gz = FIXED_TO_FLOAT(interp.z + FixedMul(thing->height, FixedDiv(interp.scale, thing->scale))) - (FIXED_TO_FLOAT(spritecachedinfo[lumpoff].topoffset) * this_scale);
+				gz = FIXED_TO_FLOAT(interp.z + FixedMul(thing->height, FixedDiv(interp.scale, thing->scale))) - (FIXED_TO_FLOAT(spr_topoffset) * this_yscale);
 		else
-				gz = FIXED_TO_FLOAT(interp.z + thing->height) - (FIXED_TO_FLOAT(spritecachedinfo[lumpoff].topoffset) * this_scale);
-		gzt = gz + FIXED_TO_FLOAT(spritecachedinfo[lumpoff].height) * this_scale;
+				gz = FIXED_TO_FLOAT(interp.z + thing->height) - (FIXED_TO_FLOAT(spr_topoffset) * this_yscale);
+		gzt = gz + FIXED_TO_FLOAT(spr_height) * this_yscale;
 	}
 	else
 	{
-		gzt = FIXED_TO_FLOAT(interp.z) + FIXED_TO_FLOAT(spritecachedinfo[lumpoff].topoffset) * this_scale;
-		gz = gzt - FIXED_TO_FLOAT(spritecachedinfo[lumpoff].height) * this_scale;
+		gzt = FIXED_TO_FLOAT(interp.z) + FIXED_TO_FLOAT(spr_topoffset) * this_yscale;
+		gz = gzt - FIXED_TO_FLOAT(spr_height) * this_yscale;
 	}
 
 	if (thing->subsector->sector->cullheight)
@@ -5155,8 +5222,19 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	vis->z2 = z2;
 	vis->tz = tz; // Keep tz for the simple sprite sorting that happens
 	vis->dispoffset = thing->info->dispoffset; // Monster Iestyn: 23/11/15: HARDWARE SUPPORT AT LAST
-	vis->patchlumpnum = sprframe->lumppat[rot];
 	vis->flip = flip;
+	vis->scale = this_scale;
+	vis->spritexscale = spritexscale;
+	vis->spriteyscale = spriteyscale;
+	vis->spritexoffset = FIXED_TO_FLOAT(spr_offset);
+	vis->spriteyoffset = FIXED_TO_FLOAT(spr_topoffset);
+	//vis->patchlumpnum = sprframe->lumppat[rot];
+#ifdef ROTSPRITE
+	if (rotsprite)
+			vis->gpatch = (GLPatch_t *)rotsprite;
+	else
+#endif
+			vis->gpatch = (GLPatch_t *)W_CachePatchNum(sprframe->lumppat[rot], PU_CACHE);
 	vis->mobj = thing;
 	vis->z1 = z1;
 	vis->z2 = z2;
@@ -5188,6 +5266,9 @@ static void HWR_ProjectSprite(mobj_t *thing)
 
 	// set top/bottom coords
 	vis->ty = gzt;
+
+	vis->gzt = gzt;
+	vis->gz = gz;
 
 	//CONS_Debug(DBG_RENDER, "------------------\nH: sprite  : %d\nH: frame   : %x\nH: type    : %d\nH: sname   : %s\n\n",
 	//            thing->sprite, thing->frame, thing->type, sprnames[thing->sprite]);
@@ -5308,7 +5389,8 @@ static void HWR_ProjectPrecipitationSprite(precipmobj_t *thing)
 	vis->z2 = z2;
 	vis->tz = tz;
 	vis->dispoffset = 0; // Monster Iestyn: 23/11/15: HARDWARE SUPPORT AT LAST
-	vis->patchlumpnum = sprframe->lumppat[rot];
+	//vis->patchlumpnum = sprframe->lumppat[rot];
+	vis->gpatch = (GLPatch_t *)W_CachePatchNum(sprframe->lumppat[rot], PU_CACHE);
 	vis->flip = flip;
 	vis->mobj = (mobj_t *)thing;
 
@@ -5316,6 +5398,9 @@ static void HWR_ProjectPrecipitationSprite(precipmobj_t *thing)
 
 	// set top/bottom coords
 	vis->ty = FIXED_TO_FLOAT(thing->z + spritecachedinfo[lumpoff].topoffset);
+
+	vis->gzt = FIXED_TO_FLOAT(thing->z + spritecachedinfo[lumpoff].topoffset);
+	vis->gz = vis->gzt - FIXED_TO_FLOAT(spritecachedinfo[lumpoff].height);
 
 	vis->precip = true;
 }
@@ -6284,9 +6369,9 @@ void HWR_RenderWall(FOutVector *wallVerts, FSurfaceInfo *pSurf, FBITFIELD blend,
 	if (HWR_UseShader())
 	{
 		if (fogwall)
-		shader = SHADER_FOG;
-	else
-		shader = SHADER_WALL;
+			shader = SHADER_FOG;
+		else
+			shader = SHADER_WALL;
 
 	blendmode |= PF_ColorMapped;
 	}

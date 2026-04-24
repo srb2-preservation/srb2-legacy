@@ -7597,6 +7597,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 	mobj->radius = info->radius;
 	mobj->height = info->height;
 	mobj->flags = info->flags;
+	mobj->sloperoll = 0;
 
 	mobj->health = info->spawnhealth;
 
@@ -7622,6 +7623,12 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 	mobj->scale = FRACUNIT;
 	mobj->destscale = mobj->scale;
 	mobj->scalespeed = FRACUNIT/12;
+
+		// Rendering-related things
+	//mobj->realxscale = mobj->realyscale = mobj->scale; 
+	mobj->spritexscale = mobj->scale;
+	mobj->spriteyscale = mobj->scale; 
+	mobj->spritexoffset = mobj->spriteyoffset = 0;
 
 	// TODO: Make this a special map header
 	if ((maptol & TOL_ERZ3) && !(mobj->type == MT_BLACKEGGMAN))
