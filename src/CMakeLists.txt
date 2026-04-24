@@ -50,7 +50,7 @@ endif()
 
 if(${CMAKE_SYSTEM} MATCHES "Android")
 	set(SRB2_CONFIG_USE_INTERNAL_LIBRARIES ON)
-	set(SRB2_CONFIG_HWRENDER OFF)
+	#set(SRB2_CONFIG_HWRENDER OFF)
 	set(SRB2_CONFIG_LTO OFF)
 endif()
 
@@ -187,6 +187,10 @@ endif()
 if(${SRB2_CONFIG_HWRENDER})
 	target_compile_definitions(SRB2SDL2 PRIVATE -DHWRENDER)
 	add_subdirectory(hardware)
+
+	if((${CMAKE_SYSTEM} MATCHES "Android") AND ${SRB2_CONFIG_USE_INTERNAL_LIBRARIES})
+		target_link_libraries(SRB2SDL2 PRIVATE ${CMAKE_SOURCE_DIR}/thirdparty/gl4es/libs/${CMAKE_ANDROID_ARCH_ABI}/libGL.so)
+	endif()
 endif()
 
 if(${SRB2_CONFIG_HWRENDER} AND ${SRB2_CONFIG_STATIC_OPENGL})

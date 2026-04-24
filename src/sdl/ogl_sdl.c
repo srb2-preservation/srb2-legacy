@@ -76,6 +76,15 @@ boolean LoadGL(void)
 
 	if (M_CheckParm ("-OGLlib") && M_IsNextParm())
 		OGLLibname = M_GetNextParm();
+#ifdef ANDROID
+	// On Android, use gl4es (libGL.so) which provides OpenGL 1.x/2.x
+	// compatibility over OpenGL ES 2.0, including GLSL built-in translation.
+	// SDL_GL_LoadLibrary must be called so that SDL_GL_GetProcAddress returns
+	// gl4es function pointers (including glCreateShader, glShaderSource, etc.)
+	// rather than the raw GLES2 versions which lack GLSL 1.x built-in support.
+	if (!OGLLibname)
+		OGLLibname = "libGL.so";
+#endif
 
 	if (SDL_GL_LoadLibrary(OGLLibname) != 0)
 	{
