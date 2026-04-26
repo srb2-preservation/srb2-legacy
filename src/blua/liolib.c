@@ -181,7 +181,7 @@ static int CheckFileName(lua_State *L, const char *filename)
 	boolean pass = false;
 	size_t i;
 
-	if (strchr(filename, '\\'))
+	if (luaL_strchr(filename, '\\'))
 	{
 		luaL_error(L, "access denied to %s: \\ is not allowed, use / instead", filename);
 		return pushresult(L,0,filename);
@@ -194,7 +194,7 @@ static int CheckFileName(lua_State *L, const char *filename)
 			break;
 		}
 	if (strstr(filename, "./")
-		|| strstr(filename, "..") || strchr(filename, ':')
+		|| strstr(filename, "..") || luaL_strchr(filename, ':')
 		|| filename[0] == '/'
 		|| !pass)
 	{
@@ -216,7 +216,7 @@ static int io_opennew (lua_State *L) {
 
 	luaL_checktype(L, 3, LUA_TFUNCTION);
 
-	if (!(strchr(mode, 'r') || strchr(mode, '+')))
+	if (!(luaL_strchr(mode, 'r') || luaL_strchr(mode, '+')))
 		luaL_error(L, "opennew() is only for reading, use openlocal() for writing");
 
 	AddLuaFileTransfer(filename, mode);
@@ -640,4 +640,3 @@ LUALIB_API int luaopen_io (lua_State *L) {
   lua_pop(L, 1);  /* pop environment for default files */
   return 1;
 }
-

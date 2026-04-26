@@ -136,6 +136,11 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #endif
 #endif // NOMUMBLE
 
+#if defined(__ANDROID__)
+#include "../android-jni/jni_android.h" // includes jni.h
+#include "../android-jni/ndk_crash_handler.h"
+#endif
+
 #ifndef O_BINARY
 #define O_BINARY 0
 #endif
@@ -148,7 +153,7 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #include <errno.h>
 #endif
 
-#if defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON)
+#if (defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON)) && !defined(__ANDROID__)
 #ifndef NOEXECINFO
 #include <execinfo.h>
 #endif
@@ -3020,7 +3025,36 @@ static const char *locateWad(void)
 {
 	const char *envstr;
 	const char *WadPath;
+#if defined(__ANDROID__)
+	// Access the shared storage location
+	WadPath = I_SharedStorageLocation();
+	if (WadPath)
+	{
+	    I_OutputMsg("Shared storage: %s", WadPath);
+	    strcpy(returnWadPath, WadPath);
+	    if (isWadPathOk(returnWadPath))
+	        return returnWadPath;
+	}
 
+	// Access removable storage
+	WadPath = JNI_RemovableStoragePath();
+	if (WadPath)
+	{
+	    I_OutputMsg("Removable storage: %s", WadPath);
+	    strcpy(returnWadPath, WadPath);
+	    if (isWadPathOk(returnWadPath))
+	        return returnWadPath;
+	}
+
+	// Access app-specific storage last
+	// This will always return the path, even if isWadPathOk would fail.
+	WadPath = I_AppStorageLocation();
+	if (WadPath)
+	{
+	    I_OutputMsg("App-specific storage: %s", WadPath);
+	    return WadPath;
+	}
+#endif
 	// SRB2WADDIR environment variable has been renamed to SRB2LEGACYWADDIR to prevent conflicts with 2.2+.
 	I_OutputMsg("SRB2LEGACYWADDIR");
 	// does SRB2LEGACYWADDIR exist?
@@ -3035,6 +3069,10 @@ static const char *locateWad(void)
 		return NULL;
 #endif
 
+
+#if defined(__ANDROID__)
+#define SHAREDSTORAGEFOLDER "SRB2 Legacy"
+#endif
 
 #ifdef CMAKECONFIG
 #ifndef NDEBUG
@@ -3054,6 +3092,9 @@ static const char *locateWad(void)
 	{
 		return returnWadPath;
 	}
+#endif
+#ifdef ANDROID
+	return "/storage/emulated/0/SRB2 Legacy";
 #endif
 
 	// examine default dirs
@@ -3158,6 +3199,46 @@ const char *I_LocateWad(void)
 #endif
 	}
 	return waddir;
+}
+const char *I_AppStorageLocation(void)
+{
+#if defined(__ANDROID__)
+    return SDL_AndroidGetExternalStoragePath();
+#else
+    return NULL;
+#endif
+}
+
+const char *I_SharedStorageLocation(void)
+{
+#if defined(__ANDROID__)
+    static char *sharedStorage = NULL;
+
+    if (sharedStorage == NULL)
+    {
+        char *dir = JNI_GetStorageDirectory();
+        if (dir)
+        {
+            char *gamePath = SHAREDSTORAGEFOLDER;
+            size_t size = strlen(dir) + strlen(PATHSEP) + strlen(gamePath) + 1;
+            sharedStorage = (char*)malloc(size);
+            snprintf(sharedStorage, size, "%s" PATHSEP "%s", dir, gamePath);
+        }
+    }
+
+    return sharedStorage;
+#else
+    return NULL;
+#endif
+}
+
+const char *I_RemovableStorageLocation(void)
+{
+#if defined(__ANDROID__)
+    return JNI_RemovableStoragePath();
+#else
+    return NULL;
+#endif
 }
 
 #ifdef __linux__
@@ -3285,6 +3366,52 @@ size_t I_GetFreeMem(size_t *total)
 	if (total)
 		*total = 48<<20;
 	return 48<<20;
+#endif
+}
+
+INT32 I_CheckSystemPermission(const char *permission)
+{
+#if defined(__ANDROID__)
+    if (JNI_CheckPermission(permission))
+        return 1;
+#else
+    (void)permission;
+#endif
+    return 0;
+}
+
+INT32 I_RequestSystemPermission(const char *permission)
+{
+#if defined(__ANDROID__)
+    if (SDL_AndroidRequestPermission(permission))
+        return 1;
+#else
+    (void)permission;
+#endif
+    return 0;
+}
+
+INT32 I_StoragePermission(void)
+{
+#if defined(__ANDROID__)
+    if (JNI_StoragePermissionGranted())
+        return 1;
+    else
+        return 0;
+#else
+    return 1;
+#endif
+}
+
+INT32 I_SystemStoragePermission(void)
+{
+#if defined(__ANDROID__)
+    if (JNI_CheckStoragePermission())
+        return 1;
+    else
+        return 0;
+#else
+    return 1;
 #endif
 }
 

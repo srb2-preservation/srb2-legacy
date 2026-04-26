@@ -54,7 +54,7 @@
 
 #ifdef HAVE_SDL
 #include "sdl/hwsym_sdl.h"
-#ifdef __linux__
+#if defined(__linux__) && !defined(__BIONIC__) && !defined(__ANDROID__)
 #ifndef _LARGEFILE64_SOURCE
 typedef off_t off64_t;
 #endif

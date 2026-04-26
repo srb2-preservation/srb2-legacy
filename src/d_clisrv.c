@@ -47,6 +47,7 @@
 #include "md5.h"
 #include "r_fps.h"
 #include "m_perfstats.h"
+#include "s_sound.h"
 
 #ifdef CLIENT_LOADINGSCREEN
 // cl loading screen

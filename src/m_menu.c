@@ -262,6 +262,7 @@ menu_t OP_ControlsDef;
 menu_t OP_P1ControlsDef, OP_P2ControlsDef, OP_MouseOptionsDef;
 menu_t OP_Mouse2OptionsDef, OP_Joystick1Def, OP_Joystick2Def;
 static void M_VideoModeMenu(INT32 choice);
+static void M_ResolutionMenu(INT32 choice);
 static void M_Setup1PControlsMenu(INT32 choice);
 static void M_Setup2PControlsMenu(INT32 choice);
 static void M_Setup1PJoystickMenu(INT32 choice);
@@ -272,6 +273,9 @@ static void M_ChangeControl(INT32 choice);
 // Video & Sound
 static void M_VideoOptions(INT32 choice);
 menu_t OP_VideoOptionsDef, OP_VideoModeDef, OP_ColorOptionsDef;
+#ifdef NATIVESCREENRES
+menu_t OP_ResolutionDef;
+#endif // NATIVESCREENRES
 #ifdef HWRENDER
 static void M_OpenGLOptionsMenu(void);
 menu_t OP_OpenGLOptionsDef;
@@ -318,6 +322,9 @@ static void M_DrawMarathon(void);
 static void M_DrawSetupChoosePlayerMenu(void);
 static void M_DrawControl(void);
 static void M_DrawVideoMode(void);
+#ifdef NATIVESCREENRES
+static void M_DrawResolutionOptions(void);
+#endif
 static void M_DrawColorMenu(void);
 static void M_DrawMonitorToggles(void);
 #ifndef NONET
@@ -1190,7 +1197,7 @@ enum
 
 static menuitem_t OP_VideoOptionsMenu[] =
 {
-	{IT_STRING | IT_CALL,  NULL,   "Video Modes...", "Change game resolution",      M_VideoModeMenu,          5},
+	{IT_STRING | IT_CALL,  NULL,   "Video Modes...", "Change game resolution",      M_ResolutionMenu,          5},
 
 #ifdef HWRENDER
 	{IT_STRING | IT_CVAR, NULL, "Renderer (F10)",      NULL,         &cv_renderer,        10},
@@ -1263,6 +1270,19 @@ static menuitem_t OP_ColorOptionsMenu[] =
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Saturation", NULL,   &cv_msaturation, 145},
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Brightness", NULL,   &cv_mgamma,      150},
 };
+
+#ifdef NATIVESCREENRES
+static menuitem_t OP_ResolutionMenu[] =
+{
+	{IT_STRING | IT_CALL,                NULL, "Video Mode List...",    NULL,     M_VideoModeMenu,       20},
+	{IT_WHITESTRING | IT_SPACE,          NULL, "Current Resolution",    NULL,     NULL,                  10},
+
+	{IT_STRING | IT_CVAR,                NULL, "Use Native Resolution", NULL,     &cv_nativeres,         40},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Scale Divider",         NULL,     &cv_nativeresdiv,      50},
+	{IT_STRING | IT_CVAR,                NULL, "Scale Comparison",      NULL,     &cv_nativerescompare,  60},
+	{IT_STRING | IT_CVAR,                NULL, "Adjust Field Of View",  NULL,     &cv_nativeresfov,      70},
+};
+#endif
 
 static void M_VideoOptions(INT32 choice)
 {
@@ -1563,14 +1583,15 @@ static menuitem_t OP_LegacyCreditsMenu[] = // This barely fits on green resoluti
 	{IT_STRING, NULL, "tatokis", NULL,  NULL, 72},
 	{IT_STRING, NULL, "luigi budd", NULL,  NULL, 82}, // Enhanced server info screen
 	{IT_STRING, NULL, "Lamibe", NULL,  NULL, 92},
-	{IT_STRING, NULL, "Clusterguy!!", NULL,  NULL, 102}, // Software sky barreling
+	{IT_STRING, NULL, "UnitickDelta", NULL,  NULL, 102}, // Software sky barreling
 	{IT_STRING, NULL, "Bewer", NULL,  NULL, 112}, // SRB2Kart text colormaps
 	{IT_STRING, NULL, "alufolie91", NULL,  NULL, 122},
-	{IT_HEADER|IT_STRING, NULL, "Special Thanks:", NULL,  NULL, 132},
-	{IT_STRING, NULL, "Upstream SRB2 Contributors", NULL, NULL, 142},
-	{IT_STRING, NULL, "SRB2 Classic", NULL, NULL, 152},
-	{IT_STRING, NULL, "SRB2Kart-Saturn", NULL, NULL, 162},
-	{IT_STRING, NULL, "SRB2EventZ", NULL, NULL,  172}, // Netgame testing and feature ideas
+	{IT_STRING, NULL, "xdf", NULL,  NULL, 132}, // Marathon mode
+	{IT_HEADER|IT_STRING, NULL, "Special Thanks:", NULL,  NULL, 142},
+	{IT_STRING, NULL, "Upstream SRB2 Contributors", NULL, NULL, 152},
+	{IT_STRING, NULL, "SRB2 Classic", NULL, NULL, 162},
+	{IT_STRING, NULL, "SRB2Kart-Saturn", NULL, NULL, 172},
+	{IT_STRING, NULL, "SRB2EventZ", NULL, NULL,  182}, // Netgame testing and feature ideas
 };
 
 static void M_LegacyCreditsToolTips(void)
@@ -1892,7 +1913,11 @@ menu_t OP_VideoModeDef =
 {
 	"M_VIDEO",
 	1,
+#ifdef NATIVESCREENRES
+	&OP_ResolutionDef,
+#else
 	&OP_VideoOptionsDef,
+#endif
 	OP_VideoModeMenu,
 	M_DrawVideoMode,
 	48, 26,
@@ -1910,6 +1935,20 @@ menu_t OP_ColorOptionsDef =
 	0,
 	NULL
 };
+
+#ifdef NATIVESCREENRES
+menu_t OP_ResolutionDef =
+{
+	"M_VIDEO",
+	sizeof(OP_ResolutionMenu) / sizeof(menuitem_t),
+	&OP_VideoOptionsDef,
+	OP_ResolutionMenu,
+	M_DrawResolutionOptions,
+	35, 30,
+	0,
+	NULL
+};
+#endif
 menu_t OP_SoundOptionsDef = DEFAULTMENUSTYLE("M_SOUND", OP_SoundOptionsMenu, &OP_MainDef, 60, 30);
 menu_t OP_SoundAdvancedDef = DEFAULTMENUSTYLE("M_SOUND", OP_SoundAdvancedMenu, &OP_SoundOptionsDef, 30, 30);
 menu_t OP_GameOptionsDef = DEFAULTSCROLLMENUSTYLE("M_GAME", OP_GameOptionsMenu, &OP_MainDef, 30, 30);
@@ -8845,6 +8884,32 @@ UINT16 M_GetColorPrev(UINT16 base)
 
 static modedesc_t modedescs[MAXMODEDESCS];
 
+static void M_ResolutionMenu(INT32 choice)
+{
+#ifdef NATIVESCREENRES
+	(void)choice;
+	M_SetupNextMenu(&OP_ResolutionDef);
+#else
+	M_VideoModeMenu(choice);
+#endif
+}
+
+#ifdef NATIVESCREENRES
+static void M_DrawResolutionString(INT32 y)
+{
+	V_DrawRightAlignedString(BASEVIDWIDTH - currentMenu->x, y,
+	(SCR_IsAspectCorrect(vid.width, vid.height) ? V_GREENMAP : V_YELLOWMAP),
+		va("%dx%d", vid.width, vid.height));
+}
+
+
+static void M_DrawResolutionOptions(void)
+{
+	M_DrawGenericMenu();
+	M_DrawResolutionString(currentMenu->y+currentMenu->menuitems[1].alphaKey);
+}
+#endif
+
 static void M_VideoModeMenu(INT32 choice)
 {
 	INT32 i, j, vdup, nummodes, width, height;
@@ -9190,7 +9255,12 @@ static void M_HandleVideoMode(INT32 ch)
 				vidm_testingmode = 15*TICRATE;
 				vidm_previousmode = vid.modenum;
 				if (!setmodeneeded) // in case the previous setmode was not finished
+				{
+#ifdef NATIVESCREENRES
+					CV_StealthSetValue(&cv_nativeres, false);
+#endif
 					setmodeneeded = modedescs[vidm_selected].modenum + 1;
+				}
 			}
 			break;
 

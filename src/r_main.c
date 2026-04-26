@@ -979,6 +979,7 @@ void R_ExecuteSetViewSize(void)
 
 	am_recalc = true;
 }
+
 fixed_t R_GetPlayerFov(player_t *player)
 {
 	fixed_t fov = cv_fov.value + player->fovadd;
@@ -991,6 +992,17 @@ static void R_SetFov(fixed_t playerfov)
 	fovtan = FixedMul(FINETANGENT(fov >> ANGLETOFINESHIFT), viewmorph.zoomneeded);
 	if (splitscreen == 1) // Splitscreen FOV should be adjusted to maintain expected vertical view
 		fovtan = 17*fovtan/10;
+		
+		
+#ifdef NATIVESCREENRES
+	if (cv_nativeres.value && cv_nativeresfov.value)
+	{
+		fixed_t resmul = FixedDiv(vid.width * FRACUNIT, vid.height * FRACUNIT);
+		if (resmul > FRACUNIT)
+			fovtan = FixedMul(fovtan, (7*resmul/10));
+	}
+#endif
+
 
 	// this is only used for planes rendering in software mode
 	INT32 j = viewheight*16;

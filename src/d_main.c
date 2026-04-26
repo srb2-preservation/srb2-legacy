@@ -1066,6 +1066,79 @@ static void IdentifyVersion(void)
 #endif
 }
 
+//
+// Center the title string, then add the date and time of compilation.
+//
+static inline void D_MakeTitleString(char *s)
+{
+	char temp[82];
+	char *t;
+	const char *u;
+	INT32 i;
+
+	for (i = 0, t = temp; i < 82; i++)
+		*t++=' ';
+
+	for (t = temp + (80-strlen(s))/2, u = s; *u != '\0' ;)
+		*t++ = *u++;
+
+	u = compdate;
+	for (t = temp + 1, i = 11; i-- ;)
+		*t++ = *u++;
+	u = comptime;
+	for (t = temp + 71, i = 8; i-- ;)
+		*t++ = *u++;
+
+	temp[80] = '\0';
+	strcpy(s, temp);
+}
+
+#if defined(__ANDROID__)
+static void FindUsableStorageLocation(char *dest, size_t destsize, char *path, const char **homelist, char *defpath)
+{
+    for (INT32 i = 0; homelist[i]; i++)
+    {
+        snprintf(dest, destsize, "%s" PATHSEP "%s", homelist[i], path);
+        if (FIL_ReadFileOK(dest))
+            return;
+    }
+
+    snprintf(dest, destsize, "%s" PATHSEP "%s", defpath, path);
+}
+
+static void D_AndroidSetupHome(const char *userhome)
+{
+    const char *homelist[3] = { NULL, NULL, NULL };
+    INT32 next = 0;
+
+    strlcpy(srb2home, userhome, sizeof(srb2home));
+
+#define ListAdd(path) \
+	homelist[next] = path; \
+	if (homelist[next]) \
+		next++;
+
+    ListAdd(srb2home);
+    ListAdd(I_SharedStorageLocation());
+
+#define SetupLocation(loc, path) FindUsableStorageLocation(loc, sizeof(loc), path, homelist, srb2home)
+
+    SetupLocation(downloaddir, "DOWNLOAD");
+
+    if (dedicated)
+        SetupLocation(configfile, "d" CONFIGFILENAME);
+    else
+        SetupLocation(configfile, CONFIGFILENAME);
+
+#ifdef TOUCHINPUTS
+    SetupLocation(touchlayoutfolder, "touchlayouts");
+#endif
+
+
+#undef SetupLocation
+#undef ListAdd
+}
+#endif
 
 //
 // D_SRB2Main
@@ -1145,6 +1218,9 @@ void D_SRB2Main(void)
 
 	{
 		const char *userhome = D_Home(); //Alam: path to home
+#if defined(__ANDROID__)
+		strlcpy(srb2path, I_SharedStorageLocation(), sizeof(srb2path));
+#endif
 
 		if (!userhome)
 		{
@@ -1163,7 +1239,9 @@ void D_SRB2Main(void)
 			if (M_CheckParm("-workdir") && M_IsNextParm())
 				snprintf(srb2home, sizeof srb2home, "%s", M_GetNextParm());
 			else
-#ifdef DEFAULTDIR
+#if defined(__ANDROID__)
+				D_AndroidSetupHome(userhome);
+#elif defined(DEFAULTDIR)
 				snprintf(srb2home, sizeof srb2home, "%s" PATHSEP DEFAULTDIR, userhome);
 #else // DEFAULTDIR
 				snprintf(srb2home, sizeof srb2home, "%s", userhome);
@@ -1585,8 +1663,9 @@ const char *D_Home(void)
 {
 	const char *userhome = NULL;
 
-#ifdef ANDROID
-	return "/data/data/org.srb2/";
+#if defined(ANDROID)
+    userhome = I_SharedStorageLocation();
+    return userhome;
 #endif
 
 	if (M_CheckParm("-home") && M_IsNextParm())

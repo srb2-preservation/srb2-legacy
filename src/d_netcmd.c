@@ -828,6 +828,13 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_scr_width_w);
 	CV_RegisterVar(&cv_scr_height_w);
 
+#ifdef NATIVESCREENRES
+	CV_RegisterVar(&cv_nativeres);
+	CV_RegisterVar(&cv_nativeresdiv);
+	CV_RegisterVar(&cv_nativeresfov);
+	CV_RegisterVar(&cv_nativerescompare);
+#endif
+
 	CV_RegisterVar(&cv_soundtest);
 
 	CV_RegisterVar(&cv_perfstats);
