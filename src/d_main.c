@@ -1190,7 +1190,7 @@ void D_SRB2Main(void)
 
 		if (!userhome)
 		{
-#if (defined (__unix__) || defined (__APPLE__) || defined (UNIXCOMMON)) && !defined (__CYGWIN__)
+#if (defined (__unix__) || defined (__APPLE__) || defined (UNIXCOMMON)) && !defined (__CYGWIN__) && !defined (__SWITCH__)
 			I_Error("Please set $HOME to your home directory\n");
 #else
 			if (dedicated)
@@ -1628,6 +1628,10 @@ void D_SRB2Main(void)
 const char *D_Home(void)
 {
 	const char *userhome = NULL;
+
+#if defined(__SWITCH__)
+	return "sdmc:/switch/srb2legacy";
+#endif
 
 #if defined(ANDROID)
     userhome = I_SharedStorageLocation();

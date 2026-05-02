@@ -2814,7 +2814,7 @@ char *I_GetUserName(void)
 INT32 I_mkdir(const char *dirname, INT32 unixright)
 {
 //[segabor]
-#if defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON) || defined (__CYGWIN__)
+#if defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON) || defined (__CYGWIN__) || defined (__SWITCH__)
 	return mkdir(dirname, unixright);
 #elif defined (_WIN32)
 	UNREFERENCED_PARAMETER(unixright); /// \todo should implement ntright under nt...
@@ -3003,6 +3003,12 @@ static const char *locateWad(void)
 {
 	const char *envstr;
 	const char *WadPath;
+#ifdef __SWITCH__
+	WadPath = "sdmc:/switch/srb2legacy";
+	strcpy(returnWadPath, WadPath);
+	if (isWadPathOk(returnWadPath))
+		return returnWadPath;
+#endif
 #if defined(__ANDROID__)
 	// Access the shared storage location
 	WadPath = I_SharedStorageLocation();

@@ -48,14 +48,14 @@
 
 /* Strings and some misc platform specific stuff */
 
-#if defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON)
+#if defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON) || defined (__SWITCH__)
 	#undef stricmp
 	#define stricmp(x,y) strcasecmp(x,y)
 	#undef strnicmp
 	#define strnicmp(x,y,n) strncasecmp(x,y,n)
 #endif
 
-#if defined (_WIN32) || defined (__HAIKU__)
+#if defined (_WIN32) || defined (__HAIKU__) || defined (__SWITCH__)
 #define HAVE_DOSSTR_FUNCS
 #endif
 

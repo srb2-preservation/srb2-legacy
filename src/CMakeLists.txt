@@ -286,3 +286,44 @@ if((CMAKE_COMPILER_IS_GNUCC) AND NOT ("${CMAKE_SYSTEM_NAME}" MATCHES Darwin))
 		)
 	endif()
 endif()
+
+# NS stuff, i dont know if this is a bad place but it has to be with add_executable()
+if (CMAKE_SYSTEM MATCHES NintendoSwitch)
+	add_definitions(-DNO_IPV6)
+	find_package(SDL2)
+	find_package(SDL2_mixer)
+	find_package(ZLIB)
+	target_include_directories(SRB2SDL2 PRIVATE ${SDL2_INCLUDE_DIRS} ${ZLIB_INCLUDE_DIRS})
+
+	target_link_libraries(SRB2SDL2
+		nx
+		nxd
+		SDL2_mixer
+		opusfile
+		opus
+		vorbisfile
+		vorbis
+		modplug
+		ogg
+		mpg123
+		png
+		z
+		SDL2
+		EGL
+		GLESv2
+		glapi
+		drm_nouveau
+		stdc++
+	)
+
+	nx_generate_nacp(srb2legacy.nacp
+        NAME "SRB2 Legacy"
+        AUTHOR "STJr"
+        VERSION "2.1.30"
+		TITLE_ID "0100000000001000"
+	)
+	nx_create_nro(SRB2SDL2
+		ICON ${CMAKE_SOURCE_DIR}/switch/icon.jpg
+		NACP srb2legacy.nacp
+	)
+endif()
