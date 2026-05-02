@@ -78,12 +78,6 @@ consvar_t sndserver_arg = CVAR_INIT ("sndserver_arg", "-quiet", NULL, CV_SAVE, N
 #define SURROUND
 #endif
 
-#ifdef _WINDOWS
-consvar_t cv_samplerate = CVAR_INIT ("samplerate", "44100", NULL, 0, CV_Unsigned, NULL); //Alam: For easy hacking?
-#else
-consvar_t cv_samplerate = CVAR_INIT ("samplerate", "22050", NULL, 0, CV_Unsigned, NULL); //Alam: For easy hacking?
-#endif
-
 // stereo reverse
 consvar_t stereoreverse = CVAR_INIT ("stereoreverse", "Off", NULL, CV_SAVE, CV_OnOff, NULL);
 
@@ -277,7 +271,6 @@ void S_RegisterSoundStuff(void)
 	CV_RegisterVar(&musserver_arg);
 #endif
 	CV_RegisterVar(&surround);
-	CV_RegisterVar(&cv_samplerate);
 	CV_RegisterVar(&cv_resetmusic);
 	CV_RegisterVar(&cv_playsoundsifunfocused);
 	CV_RegisterVar(&cv_playmusicifunfocused);

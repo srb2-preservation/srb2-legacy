@@ -313,7 +313,7 @@ consvar_t cv_teamscramble = CVAR_INIT ("teamscramble", "Off", "Reassign player t
 consvar_t cv_scrambleonchange = CVAR_INIT ("scrambleonchange", "Off", "If enabled, reassign player teams between maps", CV_NETVAR, teamscramble_cons_t, NULL);
 
 consvar_t cv_friendlyfire = CVAR_INIT ("friendlyfire", "Off", "Allow players to hit each other, regardless of their team", CV_NETVAR, CV_OnOff, NULL);
-consvar_t cv_itemfinder = CVAR_INIT ("itemfinder", "Off", "Enables the Emblem Radar, notifying you when there in an emblem nearby", CV_CALL, CV_OnOff, ItemFinder_OnChange);
+consvar_t cv_itemfinder = CVAR_INIT ("itemfinder", "Off", "Enables the Emblem Radar, notifying you when there is an emblem nearby", CV_CALL, CV_OnOff, ItemFinder_OnChange);
 
 // Scoring type options
 consvar_t cv_match_scoring = CVAR_INIT ("matchscoring", "Normal", NULL, CV_NETVAR|CV_CHEAT, match_scoring_cons_t, NULL);

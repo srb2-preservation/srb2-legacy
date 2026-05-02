@@ -35,6 +35,8 @@ set(SRB2_CONFIG_EXECINFO ON CACHE BOOL
 	"Enable stack trace dump support.")
 set(SRB2_CONFIG_LTO ON CACHE BOOL
 	"Enable link time optimizations, improves performance at the cost of longer link times.")
+set(SRB2_CONFIG_NATIVESCREENRES OFF CACHE BOOL
+	"Additional resolution options menu from the Android port.")
 
 if(${SRB2_CONFIG_DEDICATED})
 	set(SRB2_CONFIG_HAVE_GME NO)
@@ -57,6 +59,7 @@ if(${CMAKE_SYSTEM} MATCHES "Android")
 	set(SRB2_CONFIG_USE_INTERNAL_LIBRARIES ON)
 	set(SRB2_CONFIG_HWRENDER OFF)
 	set(SRB2_CONFIG_LTO OFF)
+	set(SRB2_CONFIG_NATIVESCREENRES ON)
 endif()
 
 add_subdirectory(blua)
@@ -218,6 +221,10 @@ endif()
 
 if(SRB2_CONFIG_LTO AND NOT SRB2_CONFIG_DEBUGMODE)
 	set_property(TARGET SRB2SDL2 PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+endif()
+
+if(${SRB2_CONFIG_NATIVESCREENRES})
+	target_compile_definitions(SRB2SDL2 PRIVATE -DNATIVESCREENRES)
 endif()
 
 # Targets

@@ -1190,14 +1190,14 @@ void I_StartupSound(void)
 	if (M_CheckParm ("-freq") && M_IsNextParm())
 	{
 		audio.freq = atoi(M_GetNextParm());
-		if (!audio.freq) audio.freq = cv_samplerate.value;
+		if (!audio.freq) audio.freq = 44100;
 		audio.samples = (Uint16)((samplecount/2)*(INT32)(audio.freq/11025)); //Alam: to keep it around the same XX ms
 		CONS_Printf (M_GetText(" requested frequency of %d hz\n"), audio.freq);
 	}
 	else
 	{
 		audio.samples = samplecount;
-		audio.freq = cv_samplerate.value;
+		audio.freq = 44100;
 	}
 
 	if (M_CheckParm ("-mono"))
@@ -1290,7 +1290,6 @@ void I_StartupSound(void)
 		//CONS_Printf(M_GetText(" Starting up with audio driver : %s\n"), SDL_AudioDriverName(ad, (int)sizeof ad));
 	}
 	samplecount = audio.samples;
-	CV_SetValue(&cv_samplerate, audio.freq);
 	CONS_Printf(M_GetText(" configured audio device with %d samples/slice at %ikhz(%dms buffer)\n"), samplecount, audio.freq/1000, (INT32) (((float)audio.samples * 1000.0f) / audio.freq));
 	// Finished initialization.
 	CONS_Printf("%s", M_GetText(" Sound module ready\n"));
