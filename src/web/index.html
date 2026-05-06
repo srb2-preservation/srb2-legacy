@@ -72,6 +72,7 @@
       <br>                                                                          
       <input type="file" id="wadInput" accept=".wad, .pk3, .soc, .lua">
       <div id="wadList">Loaded: none</div>
+      <textarea id="userArguments" rows="2" placeholder="Custom Arguments"></textarea>
     </div>
 
     <hr/>
@@ -120,6 +121,7 @@
         fullscreenElement.hidden = false;
         startElement.style.display = "none";
         outputElement.style.display = "block";
+        document.getElementById('userArguments').hidden = true;
       }
 
       function setStatus(text) {
@@ -156,6 +158,15 @@
     });
 }
 
+      var userArguments = [];
+
+      var buildUserArguments = () => {
+        let argString = document.getElementById('userArguments').value;
+        let args = [];
+        if (argString.trim().length > 0)
+          args = argString.split(' ');
+        userArguments = args;
+      };
 
       var Module = {
         print(...args) {
@@ -172,6 +183,11 @@
           }
         },
         canvas: canvasElement,
+        arguments: [],
+        preRun: [() => {
+           buildUserArguments();
+           Module['arguments'].push(...userArguments);
+        }],
         setStatus: setStatus,
         totalDependencies: 0,
         monitorRunDependencies(left) {
