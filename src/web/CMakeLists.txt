@@ -1,23 +1,7 @@
 file(COPY
-	package.json
-	index.html
-	style.css
-	js
-	elm
-	elm.json
-	webpack.config.js
-	postcss.config.js
-	tailwind.config.js
-	DESTINATION .
-)
-set(NODE_ENV "$<$<STREQUAL:${CMAKE_BUILD_TYPE},Release>:production>")
-
-add_custom_target(
-	WEB ALL
-	COMMAND npm install && OUTPUT_PATH="${CMAKE_BINARY_DIR}/bin"
-		NODE_ENV="${NODE_ENV}" npx webpack
-		DEPENDS webpack.config.js package.json elm.json
-		BYPRODUCTS dist/*
+	${PROJECT_SOURCE_DIR}/src/web/index.html
+	${PROJECT_SOURCE_DIR}/src/web/favicon.ico
+	DESTINATION ${PROJECT_BINARY_DIR}/bin
 )
 
 target_compile_definitions(SRB2SDL2 PRIVATE -DHAVE_MIXER -DSOUND=SOUND_MIXER)
@@ -38,6 +22,6 @@ target_link_options(SRB2SDL2 PRIVATE
 	--preload-file=${PROJECT_SOURCE_DIR}/assets/installer@/
 	--use-preload-plugins
 	--use-preload-cache
-	#--shell-file ${PROJECT_SOURCE_DIR}/src/sdl/emscripten/srb2legacy.html
+	--pre-js ${PROJECT_SOURCE_DIR}/src/web/js/requestfullscreen.js
 )
 target_compile_options(SRB2SDL2 PRIVATE --use-port=sdl2 --use-port=sdl2_mixer --use-port=zlib --use-port=libpng)

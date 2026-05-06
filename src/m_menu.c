@@ -1206,7 +1206,7 @@ static menuitem_t OP_VideoOptionsMenu[] =
 #endif
 
 
-#if defined (__unix__) || defined (UNIXCOMMON) || defined (HAVE_SDL)
+#if (defined (__unix__) || defined (UNIXCOMMON) || defined (HAVE_SDL)) && !defined(__EMSCRIPTEN__)
 	{IT_STRING|IT_CVAR,    NULL,   "Fullscreen (F11)",  NULL,        &cv_fullscreen,      15},
 #endif
 
