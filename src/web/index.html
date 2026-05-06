@@ -196,10 +196,11 @@
 
         wadInput.onchange = async (e) => {
           for (const file of e.target.files) {
-            const path = '/home/web_user/.srb2_21/addons/' + file.name;
+            const path = '/' + file.name;
             const data = new Uint8Array(await file.arrayBuffer());
 
             FS.writeFile(path, data);
+            Module.ccall('P_AddWadFile', 0, ['string'], [path]);
 
             loaded.push(file.name);
           }
