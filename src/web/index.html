@@ -67,7 +67,7 @@
     <div class="emscripten">
       <span><input type="button" value="Start" id="start" onclick="SRB2_Init()"></span><br>
       &nbsp;&nbsp;&nbsp;
-      <input type="button" value="Fullscreen" onclick="Module.requestFullscreen(true,
+      <input type="button" value="Fullscreen" id="fullscreen" onclick="Module.requestFullscreen(true,
                                                                                 true)">
       <br>                                                                          
       <input type="file" id="wadInput" accept=".wad">
@@ -84,12 +84,18 @@
       var canvasElement = document.getElementById('canvas');
       var outputElement = document.getElementById('output');
       var startElement = document.getElementById('start');
+      var wadinputElement = document.getElementById('wadInput');
+      var wadlistElement = document.getElementById('wadList');
+      var fullscreenElement =  document.getElementById('fullscreen');
       
       statusElement.style.display = "none";
       progressElement.hidden = true;
       spinnerElement.hidden = true;
       canvasElement.style.display = "none";
-      outputElement.hidden = true;
+      outputElement.style.display = "none";
+      wadlistElement.hidden = true;
+      wadinputElement.hidden = true;
+      fullscreenElement.hidden = true;
 
       if (outputElement) outputElement.value = ''; // clear browser cache
 
@@ -109,7 +115,11 @@
         SRB2Script.setAttribute("async", true);
         document.body.appendChild(SRB2Script);
         canvasElement.style.display = "block";
+        wadlistElement.hidden = false;
+        wadinputElement.hidden = false;
+        fullscreenElement.hidden = false;
         startElement.style.display = "none";
+        outputElement.style.display = "block";
       }
 
       function setStatus(text) {
