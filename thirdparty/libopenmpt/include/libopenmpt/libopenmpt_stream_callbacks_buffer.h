@@ -71,7 +71,9 @@ static LIBOPENMPT_C_INLINE size_t openmpt_stream_buffer_read_func( void * stream
 	} else {
 		valid_bytes = bytes;
 	}
-	memcpy( dst, (const char*)s->file_data + s->file_pos, valid_bytes );
+	if ( valid_bytes > 0 && s->file_pos + (int64_t)valid_bytes <= s->prefix_size ) {
+		memcpy( dst, (const char*)s->file_data + s->file_pos, valid_bytes );
+	}
 	s->file_pos = s->file_pos + bytes;
 	return bytes;
 }
@@ -211,7 +213,9 @@ static size_t openmpt_stream_buffer_read_func2( void * stream, void * dst, size_
 		bytes = bytes - (size_t)( endpos - s->file_size );
 		endpos = endpos - ( endpos - s->file_size );
 	}
-	memcpy( dst, (const char*)s->file_data + s->file_pos, bytes );
+	if ( bytes > 0 && s->file_pos + (int64_t)bytes <= s->file_size ) {
+		memcpy( dst, (const char*)s->file_data + s->file_pos, bytes );
+	}
 	s->file_pos = s->file_pos + bytes;
 	return bytes;
 }
