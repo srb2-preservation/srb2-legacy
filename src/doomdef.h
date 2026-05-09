@@ -541,9 +541,4 @@ extern const char *compdate, *comptime, *comprevision, *compbranch, *compnote;
 
 // Here once lied the corpse of ALAM_LIGHTING
 
-/// Android Port: Native Resolution support
-#if defined(__ANDROID__)
-#define NATIVESCREENRES
-#endif
-
 #endif // __DOOMDEF__

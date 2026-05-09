@@ -434,7 +434,8 @@ void I_GetConsoleEvents(void)
 			ev.data1 = tty_con.buffer[tty_con.cursor] = key;
 			tty_con.cursor++;
 			// print the current line (this is differential)
-			write(STDOUT_FILENO, &key, 1);
+			ssize_t written = write(STDOUT_FILENO, &key, 1);
+			(void)written;
 		}
 		if (ev.data1) D_PostEvent(&ev);
 		//tty_FlushIn();
@@ -1897,7 +1898,7 @@ const char *I_LocateWad(void)
 static long get_entry(const char* name, const char* buf)
 {
 	long val;
-	char* hit = strstr(buf, name);
+	gconst char* hit = strstr(buf, name);
 	if (hit == NULL) {
 		return -1;
 	}

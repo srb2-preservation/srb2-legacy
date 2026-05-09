@@ -3255,7 +3255,7 @@ const char *I_RemovableStorageLocation(void)
 static long get_entry(const char* name, const char* buf)
 {
 	long val;
-	char* hit = strstr(buf, name);
+	gconst char* hit = strstr(buf, name);
 	if (hit == NULL) {
 		return -1;
 	}

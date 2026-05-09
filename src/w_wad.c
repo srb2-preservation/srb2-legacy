@@ -545,11 +545,11 @@ static lumpinfo_t* ResGetLumpsZip (FILE* handle, UINT16* nlmp)
 		CONS_Alert(CONS_ERROR, "Corrupt central directory (%s)\n", M_FileError(handle));
 		return NULL;
 	}
-	numlumps = SHORT(zend.entries);
+	numlumps = zend.entries;
 
 	lump_p = lumpinfo = Z_Malloc(numlumps * sizeof (*lumpinfo), PU_STATIC, NULL);
 
-	fseek(handle, LONG(zend.cdiroffset), SEEK_SET);
+	fseek(handle, zend.cdiroffset, SEEK_SET);
 	for (i = 0; i < numlumps; i++, lump_p++)
 	{
 		char* fullname;
@@ -569,12 +569,12 @@ static lumpinfo_t* ResGetLumpsZip (FILE* handle, UINT16* nlmp)
 			return NULL;
 		}
 
-		lump_p->position = LONG(zentry.offset); // NOT ACCURATE YET: we still need to read the local entry to find our true position
-		lump_p->disksize = LONG(zentry.compsize);
-		lump_p->size = LONG(zentry.size);
+		lump_p->position = zentry.offset; // NOT ACCURATE YET: we still need to read the local entry to find our true position
+		lump_p->disksize = zentry.compsize;
+		lump_p->size = zentry.size;
 
-		fullname = malloc(SHORT(zentry.namelen) + 1);
-		if (fgets(fullname, SHORT(zentry.namelen) + 1, handle) != fullname)
+		fullname = malloc(zentry.namelen + 1);
+		if (fgets(fullname, zentry.namelen + 1, handle) != fullname)
 		{
 			CONS_Alert(CONS_ERROR, "Unable to read lumpname (%s)\n", M_FileError(handle));
 			Z_Free(lumpinfo);
@@ -597,10 +597,10 @@ static lumpinfo_t* ResGetLumpsZip (FILE* handle, UINT16* nlmp)
 		lump_p->longname = Z_Calloc(dotpos - trimname + 1, PU_STATIC, NULL);
 		strlcpy(lump_p->longname, trimname, dotpos - trimname + 1);
 
-		lump_p->fullname = Z_Calloc(SHORT(zentry.namelen) + 1, PU_STATIC, NULL);
-		strncpy(lump_p->fullname, fullname, SHORT(zentry.namelen));
+		lump_p->fullname = Z_Calloc(zentry.namelen + 1, PU_STATIC, NULL);
+		strncpy(lump_p->fullname, fullname, zentry.namelen);
 
-		switch(SHORT(zentry.compression))
+		switch(zentry.compression)
 		{
 		case 0:
 			lump_p->compression = CM_NOCOMPRESSION;
@@ -622,7 +622,7 @@ static lumpinfo_t* ResGetLumpsZip (FILE* handle, UINT16* nlmp)
 		free(fullname);
 
 		// skip and ignore comments/extra fields
-		if (fseek(handle, SHORT(zentry.xtralen) + SHORT(zentry.commlen), SEEK_CUR) != 0)
+		if (fseek(handle, zentry.xtralen + zentry.commlen, SEEK_CUR) != 0)
 		{
 			CONS_Alert(CONS_ERROR, "Central directory is corrupt\n");
 			Z_Free(lumpinfo);
@@ -641,7 +641,7 @@ static lumpinfo_t* ResGetLumpsZip (FILE* handle, UINT16* nlmp)
 			return NULL;
 		}
 
-		lump_p->position += sizeof(zlentry_t) + SHORT(zlentry.namelen) + SHORT(zlentry.xtralen);
+		lump_p->position += sizeof(zlentry_t) + zlentry.namelen + zlentry.xtralen;
 	}
 
 	*nlmp = numlumps;
@@ -1897,9 +1897,9 @@ W_VerifyPK3 (FILE *fp, lumpchecklist_t *checklist, boolean status)
 
 	data_size = sizeof zend;
 
-	numlumps = SHORT(zend.entries);
+	numlumps = zend.entries;
 
-	fseek(fp, LONG(zend.cdiroffset), SEEK_SET);
+	fseek(fp, zend.cdiroffset, SEEK_SET);
 	for (i = 0; i < numlumps; i++)
 	{
 		char* fullname;
@@ -1913,8 +1913,8 @@ W_VerifyPK3 (FILE *fp, lumpchecklist_t *checklist, boolean status)
 
 		if (verified == true)
 		{
-			fullname = malloc(SHORT(zentry.namelen) + 1);
-			if (fgets(fullname, SHORT(zentry.namelen) + 1, fp) != fullname)
+			fullname = malloc(zentry.namelen + 1);
+			if (fgets(fullname, zentry.namelen + 1, fp) != fullname)
 			{
 				free(fullname);
 				return true;
@@ -1959,7 +1959,7 @@ W_VerifyPK3 (FILE *fp, lumpchecklist_t *checklist, boolean status)
 
 		old_position = ftell(fp);
 
-		if (fseek(fp, SHORT(zentry.offset), SEEK_SET) != 0)
+		if (fseek(fp, zentry.offset, SEEK_SET) != 0)
 			return true;
 
 		if (fread(&zlentry, 1, sizeof(zlentry_t), fp) < sizeof (zlentry_t))
