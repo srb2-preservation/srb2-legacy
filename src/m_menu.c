@@ -7778,7 +7778,7 @@ static void M_HandleConnectIP(INT32 choice)
 
 			if ( ctrldown ) {
 				switch (choice) {
-					case 'V': // ctrl+v, pasting
+					case 'v': // ctrl+v, pasting
 					{
 						const char *paste = I_ClipboardPaste();
 
