@@ -27,7 +27,7 @@ jobs:
     - uses: ilharp/sign-android-release@v2
       name: Sign app APK
       id: sign_app
-      if: ${{ github.repository_owner == 'srb2-preservation' }}
+      if: ${{ github.event_name == 'push' }}
       with:
         releaseDir: android/app/build/outputs/apk/release
         signingKey: ${{ secrets.ANDROID_SIGNING_KEY }}
