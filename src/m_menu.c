@@ -7578,7 +7578,8 @@ static void M_StartServerMenu(INT32 choice)
 // CONNECT VIA IP
 // ==============
 
-static char setupm_ip[128];
+#define CONNIP_LEN 128
+static char setupm_ip[CONNIP_LEN];
 
 // Draw the funky Connect IP menu. Tails 11-19-2002
 // So much work for such a little thing!
@@ -7594,8 +7595,8 @@ static void M_DrawMPMainMenu(void)
 
 		char left_arrow[1+1] = "\x1C"; // Left arrow
 
-		char new_setupm_ip[21]; // Last 21 characters of setupm_ip
-		strcat(new_setupm_ip, setupm_ip+(strlen(setupm_ip)-21));
+		char new_setupm_ip[22]; // Last 21 characters of setupm_ip + \0
+		strcpy(new_setupm_ip, setupm_ip+(strlen(setupm_ip)-21));
 
 		if (itemOn == 2)
 			V_DrawThinString(53 + (skullAnimCounter % 8) / 4,98, V_ALLOWLOWERCASE|V_MONOSPACE|V_YELLOWMAP, left_arrow); // Draw the left arrow
@@ -7773,7 +7774,7 @@ static void M_HandleConnectIP(INT32 choice)
 			skullAnimCounter = 4; // For a nice looking cursor
 
 			l = strlen(setupm_ip);
-			if (l >= 127)
+			if (l >= CONNIP_LEN-1)
 				break;
 
 			if ( ctrldown ) {
@@ -7783,7 +7784,7 @@ static void M_HandleConnectIP(INT32 choice)
 						const char *paste = I_ClipboardPaste();
 
 						if (paste != NULL) {
-							strncat(setupm_ip, paste, 28-1 - l); // Concat the ip field with clipboard
+							strncat(setupm_ip, paste, CONNIP_LEN-1 - l); // Concat the ip field with clipboard
 							if (strlen(paste) != 0) // Don't play sound if nothing was pasted
 								S_StartSound(NULL,sfx_menu1); // Tails
 						}
@@ -7815,7 +7816,7 @@ static void M_HandleConnectIP(INT32 choice)
 							const char *paste = I_ClipboardPaste();
 
 							if (paste != NULL) {
-								strncat(setupm_ip, paste, 28-1 - l); // Concat the ip field with clipboard
+								strncat(setupm_ip, paste, CONNIP_LEN-1 - l); // Concat the ip field with clipboard
 								if (strlen(paste) != 0) // Don't play sound if nothing was pasted
 									S_StartSound(NULL,sfx_menu1); // Tails
 							}
