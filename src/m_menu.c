@@ -6979,8 +6979,8 @@ void M_DrawMarathon(void)
 			y -= height;
 		while (y-2-dupz < maxy)
 		{
-			V_DrawFixedPatch(((BASEVIDWIDTH-190)<<(FRACBITS-1)), (y-2-dupz)<<FRACBITS, FRACUNIT/2, trans, fg, NULL);
-			V_DrawFixedPatch(((BASEVIDWIDTH+190)<<(FRACBITS-1)), (y+dupz)<<FRACBITS, FRACUNIT/2, trans|V_FLIP, fg, NULL);
+			/*V_DrawFixedPatch(((BASEVIDWIDTH-190)<<(FRACBITS-1)), (y-2-dupz)<<FRACBITS, FRACUNIT/2, trans, fg, NULL);
+			V_DrawFixedPatch(((BASEVIDWIDTH+190)<<(FRACBITS-1)), (y+dupz)<<FRACBITS, FRACUNIT/2, trans|V_FLIP, fg, NULL);*/
 			y += height;
 		}
 
