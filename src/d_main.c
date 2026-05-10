@@ -1266,7 +1266,27 @@ void D_SRB2Main(void)
 	I_mkdir(srb2home, 0755);
 
 	// Create addons dir
+	// But remove it first on Emscripten
 	snprintf(addonsdir, sizeof addonsdir, "%s%s%s", srb2home, PATHSEP, "addons");
+#ifdef __EMSCRIPTEN__
+	EM_ASM(
+	function force_rmdir(path) {
+  		FS.readdir(path).forEach(function(f) {
+   		if (f === '.' || f === '..') return;
+
+    	fpath = path + '/' + f;
+
+		if (FS.analyzePath(fpath).object.isFolder) {
+      		force_rmdir(fpath);
+      		FS.rmdir(fpath);
+    	} else {
+      		FS.unlink(fpath);
+    	}
+  	})
+	}
+	if (FS.analyzePath('/home/web_user/.srb2_21/addons').exists) force_rmdir('/home/web_user/.srb2_21/addons');
+	);
+#endif 
 	I_mkdir(addonsdir, 0755);
 
 	// seed M_Random because it is necessary; seed P_Random for scripts that
