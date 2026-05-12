@@ -40,7 +40,7 @@ if("${SRB2_CPACK_GENERATOR}" STREQUAL "")
 endif()
 
 set(CPACK_GENERATOR ${SRB2_CPACK_GENERATOR})
-set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Sonic Robo Blast 2 Legacy" CACHE STRING "Program name for display purposes")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "SRB2 Legacy" CACHE STRING "Program name for display purposes")
 set(CPACK_PACKAGE_VENDOR "Sonic Team Jr." CACHE STRING "Vendor name for display purposes")
 #set(CPACK_PACKAGE_DESCRIPTION_FILE )
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
