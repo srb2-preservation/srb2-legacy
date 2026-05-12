@@ -430,7 +430,7 @@ static void I_ReportSignal(int num, int coredumped)
 	SDL_ShowMessageBox(&messageboxdata, &buttonid);
 
 	if (buttonid == 1)
-		I_OpenURL("https://github.com/P-AS/srb2-legacy/issues");
+		I_OpenURL("https://github.com/srb2-preservation/srb2-legacy/issues");
 }
 
 #ifndef NEWSIGNALHANDLER

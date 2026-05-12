@@ -8273,10 +8273,10 @@ static void M_ScreenshotOptions(INT32 choice)
 
 static void M_LegacyReportIssue(void)
 {
-	int url = I_OpenURL("https://github.com/P-AS/srb2-legacy/issues");
+	int url = I_OpenURL("https://github.com/srb2-preservation/srb2-legacy/issues");
 
 	if (url == -1) // SDL_OpenURL unsupported or failed
-		M_StartMessage(M_GetText("Open the following in your web browser:\ngithub.com/P-AS/srb2-legacy/issues\n\n(Press a key)\n"), NULL, MM_NOTHING);
+		M_StartMessage(M_GetText("Open the following in your web browser:\n\nhttps://github.com/srb2-preservation\n/srb2-legacy/issues\n\n(Press a key)\n"), NULL, MM_NOTHING);
 }
 
 // =============
