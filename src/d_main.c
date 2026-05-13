@@ -1059,53 +1059,6 @@ static inline void D_MakeTitleString(char *s)
 	strcpy(s, temp);
 }
 
-#if defined(__ANDROID__)
-static void FindUsableStorageLocation(char *dest, size_t destsize, char *path, const char **homelist, char *defpath)
-{
-    for (INT32 i = 0; homelist[i]; i++)
-    {
-        snprintf(dest, destsize, "%s" PATHSEP "%s", homelist[i], path);
-        if (FIL_ReadFileOK(dest))
-            return;
-    }
-
-    snprintf(dest, destsize, "%s" PATHSEP "%s", defpath, path);
-}
-
-static void D_AndroidSetupHome(const char *userhome)
-{
-    const char *homelist[3] = { NULL, NULL, NULL };
-    INT32 next = 0;
-
-    strlcpy(srb2home, userhome, sizeof(srb2home));
-
-#define ListAdd(path) \
-	homelist[next] = path; \
-	if (homelist[next]) \
-		next++;
-
-    ListAdd(srb2home);
-    ListAdd(I_SharedStorageLocation());
-
-#define SetupLocation(loc, path) FindUsableStorageLocation(loc, sizeof(loc), path, homelist, srb2home)
-
-    SetupLocation(downloaddir, "DOWNLOAD");
-
-    if (dedicated)
-        SetupLocation(configfile, "d" CONFIGFILENAME);
-    else
-        SetupLocation(configfile, CONFIGFILENAME);
-
-#ifdef TOUCHINPUTS
-    SetupLocation(touchlayoutfolder, "touchlayouts");
-#endif
-
-
-#undef SetupLocation
-#undef ListAdd
-}
-#endif
-
 //
 // D_SRB2Main
 //
@@ -1205,9 +1158,7 @@ void D_SRB2Main(void)
 			if (M_CheckParm("-workdir") && M_IsNextParm())
 				snprintf(srb2home, sizeof srb2home, "%s", M_GetNextParm());
 			else
-#if defined(__ANDROID__)
-				D_AndroidSetupHome(userhome);
-#elif defined(DEFAULTDIR)
+#if defined(DEFAULTDIR) && !defined(__ANDROID__)
 				snprintf(srb2home, sizeof srb2home, "%s" PATHSEP DEFAULTDIR, userhome);
 #else // DEFAULTDIR
 				snprintf(srb2home, sizeof srb2home, "%s", userhome);
@@ -1629,14 +1580,14 @@ const char *D_Home(void)
 {
 	const char *userhome = NULL;
 
-#if defined(ANDROID)
-    userhome = I_SharedStorageLocation();
-    return userhome;
-#endif
-
 	if (M_CheckParm("-home") && M_IsNextParm())
 		userhome = M_GetNextParm();
 	else
+#ifdef ANDROID
+	if (I_SharedStorageLocation())
+		userhome = I_SharedStorageLocation();
+	else
+#endif
 	{
 #if !(defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON))
 		if (FIL_FileOK(CONFIGFILENAME))
