@@ -100,7 +100,7 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #endif
 #endif
 
-#if defined (__unix__) || (defined (UNIXCOMMON) && !defined(__APPLE__))
+#if (defined (__unix__) || (defined (UNIXCOMMON) && !defined(__APPLE__))) && !defined(__ANDROID__)
 #include <errno.h>
 #include <sys/wait.h>
 #ifndef __HAIKU__ // haiku's crash dialog is just objectively better
