@@ -1610,6 +1610,18 @@ void I_InitJoystick(void)
 	if (M_CheckParm("-nojoy"))
 		return;
 
+	{
+		char dbpath[1024];
+		sprintf(dbpath, "%s" PATHSEP "gamecontrollerdb.txt", srb2path);
+		SDL_GameControllerAddMappingsFromFile(dbpath);
+	}
+
+	{
+		char dbpath[1024];
+		sprintf(dbpath, "%s" PATHSEP "gamecontrollerdb_user.txt", srb2home);
+		SDL_GameControllerAddMappingsFromFile(dbpath);
+	}
+
 	if (SDL_WasInit(SDL_INIT_JOYSTICK) == 0)
 	{
 		CONS_Printf("I_InitJoystick()...\n");
