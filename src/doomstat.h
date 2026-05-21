@@ -429,6 +429,7 @@ extern UINT16 extralifetics;
 
 extern UINT8 introtoplay;
 extern UINT8 creditscutscene;
+extern UINT8 useBlackRock;
 
 extern UINT8 use1upSound;
 extern UINT8 maxXtraLife; // Max extra lives from rings
