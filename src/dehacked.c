@@ -2951,6 +2951,10 @@ static void readmaincfg(MYFILE *f)
 				if (creditscutscene > 128)
 					creditscutscene = 128;
 			}
+			else if (fastcmp(word, "USEBLACKROCK"))
+			{
+				useBlackRock = (UINT8)(value || word2[0] == 'T' || word2[0] == 'Y');
+			}
 			else if (fastcmp(word, "LOOPTITLE"))
 			{
 
