@@ -8458,7 +8458,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		thiscam->angle = R_PointToAngle2(thiscam->x, thiscam->y, viewpointx, viewpointy);
 
 	// romoney5: roblox-style camera clipping
-	if (camclipping == 2)
+	if (camclipping == 2 && !(twodlevel || (mo->flags2 & MF2_TWOD)))
 	{
 		INT32 targetx = thiscam->x, targety = thiscam->y, targetz = thiscam->z;
 
