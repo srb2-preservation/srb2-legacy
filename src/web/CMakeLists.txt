@@ -23,5 +23,6 @@ target_link_options(SRB2SDL2 PRIVATE
 	--use-preload-plugins
 	--use-preload-cache
 	--pre-js ${PROJECT_SOURCE_DIR}/src/web/js/requestfullscreen.js
+	-sNO_DISABLE_EXCEPTION_CATCHING
 )
 target_compile_options(SRB2SDL2 PRIVATE --use-port=sdl2 --use-port=sdl2_mixer --use-port=zlib --use-port=libpng)
