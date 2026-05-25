@@ -20,9 +20,11 @@ target_link_options(SRB2SDL2 PRIVATE
 	-sINITIAL_MEMORY=983040000
 	-sSTACK_SIZE=655360000
 	--preload-file=${PROJECT_SOURCE_DIR}/assets/installer@/
+	--preload-file=${PROJECT_SOURCE_DIR}/src/web/timidity@/
 	--use-preload-plugins
 	--use-preload-cache
 	--pre-js ${PROJECT_SOURCE_DIR}/src/web/js/requestfullscreen.js
 	-sNO_DISABLE_EXCEPTION_CATCHING
+	-sFORCE_FILESYSTEM
 )
 target_compile_options(SRB2SDL2 PRIVATE --use-port=sdl2 --use-port=sdl2_mixer --use-port=zlib --use-port=libpng)
