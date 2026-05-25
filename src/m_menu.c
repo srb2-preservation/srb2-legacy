@@ -298,7 +298,7 @@ static patch_t *addonsp[NUM_EXT+5];
 // Legacy
 menu_t OP_LegacyOptionsDef;
 menu_t OP_LegacyCreditsDef;
-static void M_LegacyReportIssue(void);
+static void M_LegacyReportIssue(INT32 choice);
 
 #define numaddonsshown 4
 
@@ -353,7 +353,7 @@ static void M_ConnectLastServer(INT32 choice);
 static void M_HandleSetupMultiPlayer(INT32 choice);
 static void M_HandleVideoMode(INT32 choice);
 
-static void M_ResetCvars(void);
+static void M_ResetCvars(INT32 choice);
 
 // Consvar onchange functions
 static void Nextmap_OnChange(void);
@@ -1206,7 +1206,7 @@ static menuitem_t OP_VideoOptionsMenu[] =
 #endif
 
 
-#if defined (__unix__) || defined (UNIXCOMMON) || defined (HAVE_SDL)
+#if (defined (__unix__) || defined (UNIXCOMMON) || defined (HAVE_SDL)) && !defined(__EMSCRIPTEN__)
 	{IT_STRING|IT_CVAR,    NULL,   "Fullscreen (F11)",  NULL,        &cv_fullscreen,      15},
 #endif
 
@@ -2307,8 +2307,9 @@ static boolean M_ChangeStringCvar(INT32 choice)
 }
 
 // resets all cvars on a menu - assumes that all that have itemactions are cvars
-static void M_ResetCvars(void)
+static void M_ResetCvars(INT32 choice)
 {
+	(void)choice;
 	INT32 i;
 	consvar_t *cv;
 	for (i = 0; i < currentMenu->numitems; i++)
@@ -8271,8 +8272,9 @@ static void M_ScreenshotOptions(INT32 choice)
 // LEGACY MENU
 // ===========
 
-static void M_LegacyReportIssue(void)
+static void M_LegacyReportIssue(INT32 choice)
 {
+	(void)choice;
 	int url = I_OpenURL("https://github.com/srb2-preservation/srb2-legacy/issues");
 
 	if (url == -1) // SDL_OpenURL unsupported or failed
