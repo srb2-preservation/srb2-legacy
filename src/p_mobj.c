@@ -3506,7 +3506,7 @@ boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled
 		// adjust height
 		thiscam->z += thiscam->momz + player->mo->pmomz;
 
-		if (!itsatwodlevel && !(player->pflags & PF_NOCLIP))
+		if (!itsatwodlevel && !(player->pflags & PF_NOCLIP) && !P_IsCameraNoclip(thiscam))
 		{
 			// clip movement
 			if (thiscam->z <= thiscam->floorz) // hit the floor

@@ -7740,6 +7740,16 @@ consvar_t cv_quakeiiiarena = CVAR_INIT ("earthquake", "On", "Roll camera up and 
 consvar_t cv_quakeiv = CVAR_INIT ("quakeroll", "Off", "Tilt camera when moving side to side, resembling Quake", CV_SAVE, CV_OnOff, NULL);
 consvar_t cv_quakelive = CVAR_INIT ("windowquake", "Off", "Shake the game window during earthquakes", CV_SAVE, CV_OnOff, NULL);
 
+// romoney5: noclip camera
+static CV_PossibleValue_t clipping_cons_t[] = { {0, "Off"}, {1, "Vanilla"}, {2, "Exact"}, {0, NULL} };
+
+consvar_t cv_cam_clipping = CVAR_INIT ("cam_clipping", "Vanilla", "The way that the camera clips through walls", CV_SAVE, clipping_cons_t, NULL);
+consvar_t cv_cam2_clipping = CVAR_INIT ("cam2_clipping", "Vanilla", "The way that the camera clips through walls", CV_SAVE, clipping_cons_t, NULL);
+
+// romoney5: exact camera aiming
+consvar_t cv_cam_exact = CVAR_INIT ("cam_exact", "Off", "More precise camera movement", CV_SAVE, CV_OnOff, NULL);
+consvar_t cv_cam2_exact = CVAR_INIT ("cam2_exact", "Off", "More precise camera movement", CV_SAVE, CV_OnOff, NULL);
+
 fixed_t t_cam_dist = -42;
 fixed_t t_cam_height = -42;
 fixed_t t_cam_rotate = -42;
@@ -7795,7 +7805,8 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	angle_t angle = 0, focusangle = 0, focusaiming = 0;
 	fixed_t x, y, z, dist, distxy, distz, checkdist, viewpointx, viewpointy, camspeed, camdist, camheight, pviewheight, slopez = 0;
 	INT32 camrotate;
-	boolean camstill, cameranoclip, camorbit;
+	boolean camstill, cameranoclip, camorbit, cameraexact;
+	INT32 camclipping;
 	mobj_t *mo;
 	subsector_t *newsubsec;
 	fixed_t f1, f2;
@@ -7806,7 +7817,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 
 	mo = player->mo;
 
-	cameranoclip = (player->pflags & (PF_NOCLIP|PF_NIGHTSMODE)) || (mo->flags & (MF_NOCLIP|MF_NOCLIPHEIGHT)); // Noclipping player camera noclips too!!
+	cameranoclip = (P_IsCameraNoclip(thiscam) || player->pflags & (PF_NOCLIP|PF_NIGHTSMODE)) || (mo->flags & (MF_NOCLIP|MF_NOCLIPHEIGHT)); // Noclipping player camera noclips too!!
 
 	if (!(player->climbing || (player->pflags & PF_NIGHTSMODE) || player->playerstate == PST_DEAD))
 	{
@@ -7868,8 +7879,6 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		focusaiming = player->aiming;
 	}
 
-	if (P_CameraThinker(player, thiscam, resetcalled))
-		return true;
 
 	if (thiscam == &camera)
 	{
@@ -7879,6 +7888,9 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		camrotate = cv_cam_rotate.value;
 		camdist = FixedMul(cv_cam_dist.value, mo->scale);
 		camheight = FixedMul(cv_cam_height.value, mo->scale);
+
+		cameraexact = cv_cam_exact.value;
+		camclipping = cv_cam_clipping.value;
 	}
 	else // Camera 2
 	{
@@ -7888,7 +7900,13 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		camrotate = cv_cam2_rotate.value;
 		camdist = FixedMul(cv_cam2_dist.value, mo->scale);
 		camheight = FixedMul(cv_cam2_height.value, mo->scale);
+
+		cameraexact = cv_cam2_exact.value;
+		camclipping = cv_cam2_clipping.value;
 	}
+
+	if (!cameraexact && P_CameraThinker(player, thiscam, resetcalled))
+		return true;
 
 #ifdef REDSANALOG
 	if (P_AnalogMove(player) && (player->cmd.buttons & (BT_CAMLEFT|BT_CAMRIGHT)) == (BT_CAMLEFT|BT_CAMRIGHT)) {
@@ -8018,7 +8036,8 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		if ((thiscam == &camera && cv_cam_adjust.value) || (thiscam == &camera2 && cv_cam2_adjust.value))
 		{
 			if (!(mo->eflags & MFE_JUSTHITFLOOR) && (P_IsObjectOnGround(mo)) // Check that player is grounded
-			&& thiscam->ceilingz - thiscam->floorz >= P_GetPlayerHeight(player)) // Check that camera's sector is large enough for the player to fit into, at least
+			&& thiscam->ceilingz - thiscam->floorz >= P_GetPlayerHeight(player) // Check that camera's sector is large enough for the player to fit into, at least
+			&& thiscam->z >= thiscam->floorz && thiscam->z <= thiscam->ceilingz) // romoney5: if the camera is out of bounds, don't snap
 			{
 				if (mo->eflags & MFE_VERTICALFLIP) // if player is upside-down
 				{
@@ -8246,7 +8265,8 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 
 		// camera fit?
 		if (myceilingz != myfloorz
-			&& myceilingz - thiscam->height < z)
+			&& myceilingz - thiscam->height < z
+			&& !cameranoclip)
 		{
 /*			// no fit
 			if (!resetcalled && !cameranoclip)
@@ -8305,7 +8325,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	viewpointx = mo->x + FixedMul(FINECOSINE((angle>>ANGLETOFINESHIFT) & FINEMASK), dist);
 	viewpointy = mo->y + FixedMul(FINESINE((angle>>ANGLETOFINESHIFT) & FINEMASK), dist);
 
-	if (!camstill && !resetcalled && !paused)
+	if (!camstill && !resetcalled && !paused && !cameraexact)
 		thiscam->angle = R_PointToAngle2(thiscam->x, thiscam->y, viewpointx, viewpointy);
 
 	viewpointx = mo->x + FixedMul(FINECOSINE((angle>>ANGLETOFINESHIFT) & FINEMASK), dist);
@@ -8327,6 +8347,43 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		}
 	}*/
 
+	// compute aming to look the viewed point
+	f1 = viewpointx-thiscam->x;
+	f2 = viewpointy-thiscam->y;
+	dist = FixedHypot(f1, f2);
+
+	if (mo->eflags & MFE_VERTICALFLIP)
+		angle = R_PointToAngle2(0, thiscam->z + thiscam->height, dist, mo->z + mo->height - P_GetPlayerHeight(player));
+	else
+		angle = R_PointToAngle2(0, thiscam->z, dist, mo->z + P_GetPlayerHeight(player));
+
+	if (player->playerstate != PST_DEAD)
+		angle += (focusaiming < ANGLE_180 ? focusaiming/2 : InvAngle(InvAngle(focusaiming)/2)); // overcomplicated version of '((signed)focusaiming)/2;'
+
+	if (twodlevel || (mo->flags2 & MF2_TWOD) || !camstill) // Keep the view still...
+	{
+
+		if (cameraexact)
+		{
+			angle = focusaiming;
+			if (mo->eflags & MFE_VERTICALFLIP)
+				z = z + camheight / 2;
+			else
+				z = z - camheight / 2;
+
+			G_ClipAimingPitch((INT32 *)&angle);
+			dist = thiscam->aiming - angle;
+			thiscam->aiming -= FixedMul(dist, camspeed);
+		}
+		else
+		{
+			G_ClipAimingPitch((INT32 *)&angle);
+			dist = thiscam->aiming - angle;
+			thiscam->aiming -= (dist>>3);
+		}
+	}
+
+
 	if (twodlevel || (mo->flags2 & MF2_TWOD))
 	{
 		thiscam->momx = x-thiscam->x;
@@ -8346,25 +8403,6 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		}
 		else
 			thiscam->momz = FixedMul(z - thiscam->z, camspeed);
-	}
-
-	// compute aming to look the viewed point
-	f1 = viewpointx-thiscam->x;
-	f2 = viewpointy-thiscam->y;
-	dist = FixedHypot(f1, f2);
-
-	if (mo->eflags & MFE_VERTICALFLIP)
-		angle = R_PointToAngle2(0, thiscam->z + thiscam->height, dist, mo->z + mo->height - P_GetPlayerHeight(player));
-	else
-		angle = R_PointToAngle2(0, thiscam->z, dist, mo->z + P_GetPlayerHeight(player));
-	if (player->playerstate != PST_DEAD && !(player->pflags & PF_NIGHTSMODE && player->exiting))
-		angle += (focusaiming < ANGLE_180 ? focusaiming/2 : InvAngle(InvAngle(focusaiming)/2)); // overcomplicated version of '((signed)focusaiming)/2;'
-
-	if (twodlevel || (mo->flags2 & MF2_TWOD) || !camstill) // Keep the view still...
-	{
-		G_ClipAimingPitch((INT32 *)&angle);
-		dist = thiscam->aiming - angle;
-		thiscam->aiming -= (dist>>3);
 	}
 
 	// Make player translucent if camera is too close (only in single player).
@@ -8410,6 +8448,68 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 			thiscam->aiming = ANGLE_337h;
 		else if (mo->eflags & MFE_VERTICALFLIP && thiscam->aiming > ANGLE_22h && thiscam->aiming < ANGLE_180)
 			thiscam->aiming = ANGLE_22h;
+	}
+
+	// romoney5: move after setting momentum
+	if (cameraexact && P_CameraThinker(player, thiscam, resetcalled))
+		return true;
+
+	if (!camstill && !resetcalled && !paused && cameraexact)
+		thiscam->angle = R_PointToAngle2(thiscam->x, thiscam->y, viewpointx, viewpointy);
+
+	// romoney5: roblox-style camera clipping
+	if (camclipping == 2)
+	{
+		INT32 targetx = thiscam->x, targety = thiscam->y, targetz = thiscam->z;
+
+		thiscam->x = mo->x;
+		thiscam->y = mo->y;
+		if (mo->eflags & MFE_VERTICALFLIP)
+			thiscam->z = mo->z + mo->height - pviewheight - camheight / 2; // romoney5: reverse height is very slightly inaccurate
+		else
+			thiscam->z = mo->z + pviewheight;
+
+		INT32 tryangle = R_PointToAngle2(thiscam->x, thiscam->y, targetx, targety);
+		INT32 trydist = R_PointToDist2(targetx, targety, thiscam->x, thiscam->y);
+		INT32 tryzangle = R_PointToAngle2(0, 0, trydist, -(thiscam->z - targetz));
+		trydist = R_PointToDist2(0, 0, trydist, thiscam->z - targetz);
+		
+		INT32 MAXTRYMOVE = FRACUNIT / 2;
+		INT32 movex = FixedMul(FINECOSINE((tryangle >> ANGLETOFINESHIFT) & FINEMASK), MAXTRYMOVE);
+		INT32 movey = FixedMul(FINESINE((tryangle >> ANGLETOFINESHIFT) & FINEMASK), MAXTRYMOVE);
+		INT32 movez = FixedMul(FINESINE((tryzangle >> ANGLETOFINESHIFT) & FINEMASK), MAXTRYMOVE);
+		movex = FixedMul(movex, FINECOSINE((tryzangle >> ANGLETOFINESHIFT) & FINEMASK));
+		movey = FixedMul(movey, FINECOSINE((tryzangle >> ANGLETOFINESHIFT) & FINEMASK));
+
+		// hack; decrease the camera's radius
+		INT32 radius = thiscam->radius;
+		thiscam->radius = radius / 3;
+
+		for (INT32 moved = 0; moved < trydist; moved += MAXTRYMOVE) {
+			thiscam->x += movex;
+			thiscam->y += movey;
+			thiscam->z += movez;
+
+			// reached max distance
+			if (moved >= trydist)
+				break;
+
+			// one-side wall
+			if (!P_CheckCameraPosition(thiscam->x, thiscam->y, thiscam))
+				break; // solid wall or thing
+
+			if (tmceilingz - tmfloorz < thiscam->height)
+				break; // doesn't fit
+
+			if (tmceilingz - thiscam->z < thiscam->height)
+				break;
+
+			// floor
+			if ((tmfloorz - thiscam->z > 0))
+				break; // too big a step up
+		}
+
+		thiscam->radius = radius;
 	}
 
 	return (x == thiscam->x && y == thiscam->y && z == thiscam->z && angle == thiscam->aiming);

@@ -124,6 +124,9 @@ extern fixed_t t_cam2_dist, t_cam2_height, t_cam2_rotate;
 
 extern consvar_t cv_viewroll, cv_quakeiiiarena, cv_quakeiv, cv_quakelive;
 
+extern consvar_t cv_cam_clipping, cv_cam2_clipping;
+extern consvar_t cv_cam_exact, cv_cam2_exact;
+
 fixed_t P_GetPlayerHeight(player_t *player);
 fixed_t P_GetPlayerSpinHeight(player_t *player);
 INT32 P_GetPlayerControlDirection(player_t *player);
@@ -330,6 +333,8 @@ void P_SetThingPosition(mobj_t *thing);
 void P_SetUnderlayPosition(mobj_t *thing);
 
 boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y);
+boolean P_TryCameraMove(fixed_t x, fixed_t y, camera_t *thiscam); // romoney5: why is this defined twice?
+boolean P_IsCameraNoclip(camera_t *thiscam);
 boolean P_CheckCameraPosition(fixed_t x, fixed_t y, camera_t *thiscam);
 boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff);
 boolean P_Move(void *thing, fixed_t speed);
