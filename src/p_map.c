@@ -1605,6 +1605,23 @@ void P_CheckHoopPosition(mobj_t *hoopthing, fixed_t x, fixed_t y, fixed_t z, fix
 	return;
 }
 
+// romoney5: noclip camera
+boolean P_IsCameraNoclip(camera_t *thiscam)
+{
+	if (thiscam == &camera)
+	{
+		if (cv_cam_clipping.value != 1)
+			return true;
+	}
+	else // Camera 2
+	{
+		if (cv_cam2_clipping.value != 1)
+			return true;
+	}
+
+	return false;
+}
+
 //
 // P_CheckCameraPosition
 //
@@ -1802,7 +1819,7 @@ boolean P_TryCameraMove(fixed_t x, fixed_t y, camera_t *thiscam)
 		|| (thiscam == &camera2 && players[secondarydisplayplayer].mo && (players[secondarydisplayplayer].mo->flags2 & MF2_TWOD)))
 		itsatwodlevel = true;
 
-	if (!itsatwodlevel && players[displayplayer].mo)
+	if (!itsatwodlevel && players[displayplayer].mo && !P_IsCameraNoclip(thiscam))
 	{
 		fixed_t tryx = thiscam->x;
 		fixed_t tryy = thiscam->y;
