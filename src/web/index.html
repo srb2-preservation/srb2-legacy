@@ -88,6 +88,7 @@
       var wadinputElement = document.getElementById('wadInput');
       var wadlistElement = document.getElementById('wadList');
       var fullscreenElement =  document.getElementById('fullscreen');
+      var userargElement = document.getElementById('userArguments');
       
       statusElement.style.display = "none";
       progressElement.hidden = true;
@@ -121,7 +122,7 @@
         fullscreenElement.hidden = false;
         startElement.style.display = "none";
         outputElement.style.display = "block";
-        document.getElementById('userArguments').hidden = true;
+        userargElement.hidden = true;
       }
 
       function setStatus(text) {
@@ -158,15 +159,22 @@
     });
 }
 
+      if(localStorage.getItem("argtext") != null && localStorage.getItem("argtext").trim().length > 0)
+          userargElement.value = localStorage.getItem("argtext");
+
       var userArguments = [];
 
       var buildUserArguments = () => {
-        let argString = document.getElementById('userArguments').value;
+        let argString = userargElement.value;
         let args = [];
         if (argString.trim().length > 0)
           args = argString.split(' ');
         userArguments = args;
       };
+
+      userargElement.addEventListener("selectionchange", () =>
+          localStorage.setItem("argtext", userargElement.value)
+      );
 
       var Module = {
         print(...args) {

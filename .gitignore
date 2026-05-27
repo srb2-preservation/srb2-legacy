@@ -32,3 +32,4 @@ flatpak/.flatpak-builder
 flatpak/repo
 flatpak/build
 *.flatpak
+.vscode/settings.json
