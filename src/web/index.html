@@ -159,8 +159,8 @@
     });
 }
 
-      if(localStorage.getItem("argtext") != null && localStorage.getItem("argtext").trim().length > 0)
-          userargElement.value = localStorage.getItem("argtext");
+      if(localStorage.getItem("legacyargtext") != null && localStorage.getItem("legacyargtext").trim().length > 0)
+          userargElement.value = localStorage.getItem("legacyargtext");
 
       var userArguments = [];
 
@@ -173,7 +173,7 @@
       };
 
       userargElement.addEventListener("selectionchange", () =>
-          localStorage.setItem("argtext", userargElement.value)
+          localStorage.setItem("legacyargtext", userargElement.value)
       );
 
       var Module = {
