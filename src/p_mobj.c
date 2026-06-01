@@ -8728,10 +8728,11 @@ void P_SpawnMapThing(mapthing_t *mthing)
 
 	/// Weapons/panels are shooter gametype-only.
 	if (!G_RingSlingerGametype() || !cv_specialrings.value)
-	{
 		if (P_WeaponOrPanel(i))
 			return;
 
+	if (i == MT_EMERHUNT)
+	{
 		if (numhuntemeralds < MAXHUNTEMERALDS)
 			huntemeralds[numhuntemeralds++] = mthing;
 		return;
