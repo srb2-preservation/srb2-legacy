@@ -15,10 +15,12 @@
 ///        Pending weapon.
 
 #include "doomdef.h"
+#include "doomstat.h"
 #include "i_system.h"
 #include "d_event.h"
 #include "d_net.h"
 #include "g_game.h"
+#include "info.h"
 #include "p_local.h"
 #include "r_main.h"
 #include "s_sound.h"
@@ -2261,14 +2263,25 @@ static void P_DoPlayerHeadSigns(player_t *player)
 	if (G_TagGametype())
 	{
 		// If you're "IT", show a big "IT" over your head for others to see.
-		if (player->pflags & PF_TAGIT)
+		if (player->pflags & PF_TAGIT || true)
 		{
-			if (!(player == &players[consoleplayer] || player == &players[secondarydisplayplayer] || player == &players[displayplayer])) // Don't display it on your own view.
+			mobj_t* it = P_SpawnMobj(player->mo->x,  player->mo->y, player->mo->z, MT_TAG);
+			it->x = player->mo->x;
+			it->y = player->mo->y;
+			it->z = player->mo->z;
+			it->old_x = player->mo->old_x;
+			it->old_y = player->mo->old_y;
+			it->old_z = player->mo->old_z;
+
+			if (!(player->mo->eflags & MFE_VERTICALFLIP))
 			{
-				if (!(player->mo->eflags & MFE_VERTICALFLIP))
-					P_SpawnMobj(player->mo->x, player->mo->y, player->mo->z + player->mo->height, MT_TAG);
-				else
-					P_SpawnMobj(player->mo->x, player->mo->y, player->mo->z - mobjinfo[MT_TAG].height, MT_TAG)->eflags |= MFE_VERTICALFLIP;
+				it->z += player->mo->height;
+				it->old_z += player->mo->height;
+			}
+			else
+			{
+				it->z -= mobjinfo[MT_TAG].height;
+				it->old_z -= mobjinfo[MT_TAG].height;
 			}
 		}
 	}
@@ -9197,7 +9210,6 @@ void P_PlayerThink(player_t *player)
 	P_DoBubbleBreath(player); // Spawn Sonic's bubbles
 	P_CheckUnderwaterAndSpaceTimer(player); // Display the countdown drown numbers!
 	P_CheckInvincibilityTimer(player); // Spawn Invincibility Sparkles
-	P_DoPlayerHeadSigns(player); // Spawn Tag/CTF signs over player's head
 
 #if 1
 	// "Blur" a bit when you have speed shoes and are going fast enough
@@ -9733,6 +9745,8 @@ void P_PlayerAfterThink(player_t *player)
 
 	if (P_IsObjectOnGround(player->mo))
 		player->mo->pmomz = 0;
+
+	P_DoPlayerHeadSigns(player); // Spawn Tag/CTF signs over player's head
 }
 
 void P_ForceLocalAngle(player_t *player, angle_t angle)
