@@ -73,6 +73,8 @@ ifeq ($(DEDICATED), 1)
 include Makefile.d/dedicated.mk
 else ifdef DUMMY
 include Makefile.d/dummy.mk
+else ifdef OPENGL
+include Makefile.d/opengl.mk
 else ifdef SDL
 include Makefile.d/sdl.mk
 endif
