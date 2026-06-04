@@ -2263,7 +2263,7 @@ static void P_DoPlayerHeadSigns(player_t *player)
 	if (G_TagGametype())
 	{
 		// If you're "IT", show a big "IT" over your head for others to see.
-		if (player->pflags & PF_TAGIT || true)
+		if (player->pflags & PF_TAGIT)
 		{
 			mobj_t* it = P_SpawnMobj(player->mo->x,  player->mo->y, player->mo->z, MT_TAG);
 			it->x = player->mo->x;
