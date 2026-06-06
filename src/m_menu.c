@@ -4386,6 +4386,22 @@ static void M_DrawLevelPlatterRow(UINT8 row, INT32 y)
 
 		V_DrawSmallScaledPatch(x, y, 0, patch);
 
+		if ((y+50) < 200)
+		{
+			INT32 topy = (y+50), h = 8;
+
+			if (topy < 0)
+			{
+				h += topy;
+				topy = 0;
+			}
+			else if (topy + h >= 200)
+				h = 200 - y;
+			if (h > 0)
+				V_DrawFill(x, topy, 80, h, 239);
+		}
+
+
 		if (strlen(levelselect.rows[row].mapnames[col]) > 6) // "AERIAL GARDEN" vs "ACT 18" - "THE ACT" intentionally compressed
 			V_DrawThinString(x, y+50, ((rowhighlight && col == lscol) ? V_YELLOWMAP : 0), levelselect.rows[row].mapnames[col]);
 		else
