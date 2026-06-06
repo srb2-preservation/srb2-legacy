@@ -4037,7 +4037,7 @@ static void M_PatchSkinNameTable(void)
 static levelselect_t levelselect = {0, NULL};
 static UINT8 levelselectselect[3];
 static patch_t *levselp[4];
-static INT32 lsoffs[2];
+static fixed_t lsoffs[2];
 
 #define lsrow levelselectselect[0]
 #define lscol levelselectselect[1]
@@ -4295,7 +4295,7 @@ static void M_HandleNewLevelSelect(INT32 choice)
 			lsrow++;
 			if (lsrow == levelselect.numrows)
 				lsrow = 0;
-			lsoffs[0] = vseperation;
+			lsoffs[0] = vseperation * FRACUNIT;
 			S_StartSound(NULL,sfx_s3kb7);
 			break;
 
@@ -4303,7 +4303,7 @@ static void M_HandleNewLevelSelect(INT32 choice)
 			lsrow--;
 			if (lsrow == UINT8_MAX)
 				lsrow = levelselect.numrows-1;
-			lsoffs[0] = -vseperation;
+			lsoffs[0] = -vseperation * FRACUNIT;
 			S_StartSound(NULL,sfx_s3kb7);
 			break;
 
@@ -4311,7 +4311,7 @@ static void M_HandleNewLevelSelect(INT32 choice)
 			if (lscol > 0)
 			{
 				lscol--;
-				lsoffs[1] = hseperation;
+				lsoffs[1] = hseperation * FRACUNIT;
 				S_StartSound(NULL,sfx_s3kb7);
 			}
 			break;
@@ -4320,7 +4320,7 @@ static void M_HandleNewLevelSelect(INT32 choice)
 			if (lscol < 2)
 			{
 				lscol++;
-				lsoffs[1] = -hseperation;
+				lsoffs[1] = -hseperation * FRACUNIT;
 				S_StartSound(NULL,sfx_s3kb7);
 			}
 			break;
@@ -4335,7 +4335,7 @@ static void M_HandleNewLevelSelect(INT32 choice)
 			}
 			else
 			{
-				lsoffs[0] = -8;
+				lsoffs[0] = -8 * FRACUNIT;
 				S_StartSound(NULL,sfx_s3kb2);
 			}
 			break;
@@ -4410,27 +4410,39 @@ static void M_DrawLevelSelectMenu(void)
 	if (++lstic == 32)
 		lstic = 0;
 
-	M_DrawLevelSelectRow(prev, lsoffs[0]);
-	M_DrawLevelSelectRow(lsrow, vseperation + lsoffs[0]);
-	M_DrawLevelSelectRow(next, 2*vseperation + lsoffs[0]);
+	M_DrawLevelSelectRow(prev, (lsoffs[0] / FRACUNIT));
+	M_DrawLevelSelectRow(lsrow, vseperation + (lsoffs[0] / FRACUNIT));
+	M_DrawLevelSelectRow(next, 2*vseperation + (lsoffs[0] / FRACUNIT));
 
-	if (lsoffs[0] > vseperation/3)
-		M_DrawLevelSelectRow( ((prev == 0) ? levelselect.numrows-1 : prev-1), -vseperation + lsoffs[0]);
-	else if (lsoffs[0] < -vseperation/3)
-		M_DrawLevelSelectRow( ((next == levelselect.numrows-1) ? 0 : next+1), 3*vseperation + lsoffs[0]);
+	if (lsoffs[0] > (vseperation*FRACUNIT)/3)
+		M_DrawLevelSelectRow( ((prev == 0) ? levelselect.numrows-1 : prev-1), -vseperation + (lsoffs[0] / FRACUNIT));
+	else if (lsoffs[0] < -(vseperation*FRACUNIT)/3)
+		M_DrawLevelSelectRow( ((next == levelselect.numrows-1) ? 0 : next+1), 3*vseperation + (lsoffs[0] / FRACUNIT));
 
-	if (abs(lsoffs[0]) > 1)
-		lsoffs[0] = 2*lsoffs[0]/3;
+	fixed_t cursormovefrac = FixedDiv(2, 3);
+	if (abs(lsoffs[0]) > FRACUNIT)
+	{
+		fixed_t offs = lsoffs[0];
+		fixed_t newoffs = FixedMul(offs, cursormovefrac);
+		fixed_t deltaoffs = newoffs - offs;
+		newoffs = offs + FixedMul(deltaoffs, renderdeltatics);
+		lsoffs[0] = newoffs;
+	}
 	else
 		lsoffs[0] = 0;
 
-	if (abs(lsoffs[1]) > 1)
-		lsoffs[1] >>= 2;
+	if (abs(lsoffs[1]) > FRACUNIT)
+	{
+		fixed_t offs = lsoffs[1];
+		fixed_t newoffs = FixedMul(offs, cursormovefrac);
+		fixed_t deltaoffs = newoffs - offs;
+		newoffs = offs + FixedMul(deltaoffs, renderdeltatics);
+		lsoffs[1] = newoffs;
+	}
 	else
 		lsoffs[1] = 0;
 
-	if (levelselect.rows[lsrow].maplist[lscol] > 0)
-		V_DrawScaledPatch(10+(lscol*hseperation) + lsoffs[1], vseperation-8, 0, patch);
+	V_DrawScaledPatch((lscol*hseperation) + FixedInt(lsoffs[1]), vseperation+40, 0, patch);
 		
 	W_UnlockCachedPatch(patch);
 }
