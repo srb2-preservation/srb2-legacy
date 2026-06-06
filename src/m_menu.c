@@ -4199,6 +4199,20 @@ static INT32 M_CountRowsToShowInNewList(INT32 gt)
 	return rows;
 }
 
+
+//
+// M_CacheLevelPlatter
+//
+// Cache every patch used by the level platter.
+//
+static void M_CacheLevelPlatter(void)
+{
+	levselp[0] = W_CachePatchName("SLCT1LVL", PU_STATIC);
+	levselp[1] = W_CachePatchName("SLCT2LVL", PU_STATIC);
+	levselp[2] = W_CachePatchName("BLANKLVL", PU_STATIC);
+	levselp[3] = W_CachePatchName("STATCLVL", PU_STATIC);
+}
+
 static boolean M_PrepareNewLevelSelect(INT32 gt)
 {
 	INT32 numrows = M_CountRowsToShowInNewList(gt);
@@ -4267,18 +4281,7 @@ static boolean M_PrepareNewLevelSelect(INT32 gt)
 
 	lsrow = lscol = lstic = lsoffs[0] = lsoffs[1] = 0;
 
-	if (levselp[0]) // never going to have some provided but not all, saves individually checking
-	{
-		W_UnlockCachedPatch(levselp[0]);
-		W_UnlockCachedPatch(levselp[1]);
-		W_UnlockCachedPatch(levselp[2]);
-		W_UnlockCachedPatch(levselp[3]);
-	}
-
-	levselp[0] = W_CachePatchName("SLCT1LVL", PU_STATIC);
-	levselp[1] = W_CachePatchName("SLCT2LVL", PU_STATIC);
-	levselp[2] = W_CachePatchName("BLANKLVL", PU_STATIC);
-	levselp[3] = W_CachePatchName("STATCLVL", PU_STATIC);
+	M_CacheLevelPlatter();
 
 	return true;
 }
@@ -4381,6 +4384,9 @@ static void M_DrawLevelSelectRow(UINT8 row, INT32 y)
 		if (!map)
 			continue;
 
+		if (needpatchrecache)
+			M_CacheLevelPlatter();
+
 		//  A 160x100 image of the level as entry MAPxxP
 		if (!(levelselect.rows[row].mapavailable[col]))
 			patch = ((lstic & 1) ? levselp[2] : levselp[3]); // static - make secret maps look ENTICING
@@ -4390,7 +4396,6 @@ static void M_DrawLevelSelectRow(UINT8 row, INT32 y)
 			patch = levselp[2]; // don't flash to indicate that it's just a normal level
 
 		V_DrawSmallScaledPatch(x, y, 0, patch);
-		W_UnlockCachedPatch(patch);
 
 		if (strlen(levelselect.rows[row].mapnames[col]) > 6) // "EGG ROCK CORE"
 			V_DrawThinString(x, y+50, ((highlight && col == lscol) ? V_YELLOWMAP : 0), levelselect.rows[row].mapnames[col]);
@@ -4405,7 +4410,7 @@ static void M_DrawLevelSelectMenu(void)
 	UINT8 next = ((lsrow == levelselect.numrows-1) ? 0 : lsrow+1);
 	patch_t *patch;
 
-	patch = W_CachePatchName("M_CURSOR", PU_CACHE);
+	patch = W_CachePatchName("M_CURSOR", PU_PATCH);
 
 	if (++lstic == 32)
 		lstic = 0;
@@ -4443,8 +4448,6 @@ static void M_DrawLevelSelectMenu(void)
 		lsoffs[1] = 0;
 
 	V_DrawScaledPatch((lscol*hseperation) + FixedInt(lsoffs[1]), vseperation+40, 0, patch);
-		
-	W_UnlockCachedPatch(patch);
 }
 
 #undef hseperation
@@ -4779,7 +4782,7 @@ static void M_StopMessage(INT32 choice)
 // You can even put multiple images in one menu!
 static void M_DrawImageDef(void)
 {
-	patch_t *patch = W_CachePatchName(currentMenu->menuitems[itemOn].text, PU_CACHE);
+	patch_t *patch = W_CachePatchName(currentMenu->menuitems[itemOn].text, PU_PATCH);
 	if (patch->width <= BASEVIDWIDTH)
 		V_DrawScaledPatch(0,0,0,patch);
 	else
