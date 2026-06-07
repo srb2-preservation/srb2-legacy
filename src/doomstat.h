@@ -337,7 +337,7 @@ enum GameType
 
 	NUMGAMETYPES
 };
-// If you alter this list, update dehacked.c, and Gametype_Names in g_game.c
+// If you alter this list, update dehacked.c, and gametype_cons_t and MISC_ChangeGameTypeMenu in m_menu.c
 
 // String names for gametypes
 extern const char *Gametype_Names[NUMGAMETYPES];
