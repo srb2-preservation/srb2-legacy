@@ -2788,7 +2788,7 @@ boolean M_Responder(event_t *ev)
 					multiplayer = false;
 				}
 
-				if ((currentMenu->prevMenu == &MainDef) && (currentMenu == &SP_TimeAttackDef || currentMenu == &SP_NightsAttackDef) || currentMenu == &SP_MarathonDef)
+				if ((currentMenu->prevMenu == &MainDef) && ((currentMenu == &SP_TimeAttackDef || currentMenu == &SP_NightsAttackDef) || currentMenu == &SP_MarathonDef))
 				{
 					// D_StartTitle does its own wipe, since GS_TIMEATTACK is now a complete gamestate.
 					menuactive = false;
