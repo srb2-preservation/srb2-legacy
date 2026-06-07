@@ -4243,7 +4243,7 @@ static void M_CacheLevelPlatter(void)
 	levselp[0] = W_CachePatchName("SLCT1LVL", PU_STATIC);
 	levselp[1] = W_CachePatchName("SLCT2LVL", PU_STATIC);
 	levselp[2] = W_CachePatchName("BLANKLVL", PU_STATIC);
-	levselp[3] = W_CachePatchName("STATCLVL", PU_STATIC);
+	levselp[3] = W_CachePatchName("BLANKLVL", PU_STATIC);
 }
 
 static boolean M_SetNextMapOnPlatter(void)
