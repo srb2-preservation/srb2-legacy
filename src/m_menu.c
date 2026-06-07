@@ -170,6 +170,8 @@ static tic_t recatkdrawtimer = 0;
 // PROTOTYPES
 //
 
+
+static void M_GoBack(INT32 choice);
 static void M_StopMessage(INT32 choice);
 static boolean stopstopmessage = false;
 
@@ -187,6 +189,23 @@ static void M_RoomMenu(INT32 choice);
 menu_t MessageDef;
 
 menu_t SPauseDef;
+
+// Level Select
+static levelselect_t levelselect = {0, NULL};
+static UINT8 levelselectselect[4];
+static patch_t *levselp[4];
+static INT32 lsoffs[2];
+
+#define lsrow levelselectselect[0]
+#define lscol levelselectselect[1]
+#define lstic levelselectselect[2]
+#define lshli levelselectselect[3]
+
+#define lshseperation 101
+#define lsbasevseperation 62
+#define lsheadingheight 16
+#define getheadingoffset(row) (levelselect.rows[row].header[0] ? lsheadingheight : 0)
+#define lsvseperation(row) (lsbasevseperation + getheadingoffset(row))
 
 #define lsheadingheight 16
 
@@ -362,7 +381,6 @@ static void M_HandleVideoMode(INT32 choice);
 static void M_ResetCvars(INT32 choice);
 
 // Consvar onchange functions
-static boolean M_SetNextMapOnPlatter(void);
 static void Nextmap_OnChange(void);
 static void Newgametype_OnChange(void);
 static void Dummymares_OnChange(void);
@@ -723,8 +741,8 @@ static menuitem_t SP_TimeAttackLevelSelectMenu[] =
 // Single Player Time Attack
 static menuitem_t SP_TimeAttackMenu[] =
 {
-	{IT_STRING|IT_CVAR,        NULL, "Level", NULL,       &cv_nextmap,          52},
-	{IT_STRING|IT_CVAR,        NULL, "Player", NULL,    &cv_chooseskin,       62},
+	{IT_STRING|IT_CALL,        NULL, "Back to Level Select", NULL,       &M_GoBack,          52},
+	{IT_STRING|IT_CVAR,        NULL, "Character", NULL,    &cv_chooseskin,       62},
 
 	{IT_DISABLED,              NULL, "Guest Option...", NULL,  &SP_GuestReplayDef, 100},
 	{IT_DISABLED,              NULL, "Replay...", NULL,     &SP_ReplayDef,        110},
@@ -734,7 +752,7 @@ static menuitem_t SP_TimeAttackMenu[] =
 
 enum
 {
-	talevel,
+	talevelback,
 	taplayer,
 
 	taguest,
@@ -822,18 +840,18 @@ static menuitem_t SP_NightsAttackLevelSelectMenu[] =
 // Single Player Nights Attack
 static menuitem_t SP_NightsAttackMenu[] =
 {
-	{IT_STRING|IT_CVAR,        NULL, "Level",      NULL,       &cv_nextmap,          44},
-	{IT_STRING|IT_CVAR,        NULL, "Show Records For",  NULL, &cv_dummymares,       54},
+	{IT_STRING|IT_CALL,        NULL, "Back to Level Select",      NULL,       &M_GoBack,          52},
+	{IT_STRING|IT_CVAR,        NULL, "Show Records For",  NULL, &cv_dummymares,       62},
 
-	{IT_DISABLED,              NULL, "Guest Option...", NULL,   &SP_NightsGuestReplayDef,   108},
-	{IT_DISABLED,              NULL, "Replay...",   NULL,      &SP_NightsReplayDef,        118},
-	{IT_DISABLED,              NULL, "Ghosts...",    NULL,     &SP_NightsGhostDef,         128},
-	{IT_WHITESTRING|IT_CALL|IT_CALL_NOTMODIFIED,   NULL, "Start", NULL,            M_ChooseNightsAttack, 138},
+	{IT_DISABLED,              NULL, "Guest Option...", NULL,   &SP_NightsGuestReplayDef,   100},
+	{IT_DISABLED,              NULL, "Replay...",   NULL,      &SP_NightsReplayDef,        110},
+	{IT_DISABLED,              NULL, "Ghosts...",    NULL,     &SP_NightsGhostDef,         120},
+	{IT_WHITESTRING|IT_CALL|IT_CALL_NOTMODIFIED,   NULL, "Start", NULL,            M_ChooseNightsAttack, 130},
 };
 
 enum
 {
-	nalevel,
+	nalevelback,
 	narecords,
 
 	naguest,
@@ -1802,7 +1820,7 @@ static menu_t SP_TimeAttackDef =
 	M_DrawTimeAttackMenu,
 	32, 40,
 	0,
-	M_SetNextMapOnPlatter
+	NULL
 };
 static menu_t SP_ReplayDef =
 {
@@ -1858,7 +1876,7 @@ static menu_t SP_NightsAttackDef =
 	M_DrawNightsAttackMenu,
 	32, 40,
 	0,
-	M_SetNextMapOnPlatter
+	NULL
 };
 static menu_t SP_NightsReplayDef =
 {
@@ -2101,7 +2119,6 @@ static void Nextmap_OnChange(void)
 
 	if (currentMenu == &SP_NightsAttackDef)
 	{
-		M_SetNextMapOnPlatter();
 		CV_StealthSetValue(&cv_dummymares, 0);
 		// Hide the record changing CVAR if only one mare is available.
 		if (!nightsrecords[cv_nextmap.value-1] || nightsrecords[cv_nextmap.value-1]->nummares < 2)
@@ -2324,6 +2341,33 @@ menu_t *currentMenu = &MainDef;
 // =========================================================================
 // BASIC MENU HANDLING
 // =========================================================================
+
+static void M_GoBack(INT32 choice)
+{
+	(void)choice;
+
+	if (currentMenu->prevMenu)
+	{
+		//If we entered the game search menu, but didn't enter a game,
+		//make sure the game doesn't still think we're in a netgame.
+		if (!Playing() && netgame && multiplayer)
+		{
+			netgame = false;
+			multiplayer = false;
+		}
+
+		if ((currentMenu->prevMenu == &MainDef) && (currentMenu == &SP_TimeAttackDef || currentMenu == &SP_NightsAttackDef || currentMenu == &SP_MarathonDef))
+		{
+			// D_StartTitle does its own wipe, since GS_TIMEATTACK is now a complete gamestate.
+			menuactive = false;
+			D_StartTitle();
+		}
+		else
+			M_SetupNextMenu(currentMenu->prevMenu);
+	}
+	else
+		M_ClearMenus(true);
+}
 
 static void M_UpdateItemOn(void)
 {
@@ -2833,37 +2877,9 @@ boolean M_Responder(event_t *ev)
 		case KEY_ESCAPE:
 			noFurtherInput = true;
 			currentMenu->lastOn = itemOn;
-			if (currentMenu->prevMenu)
-			{
-				//If we entered the game search menu, but didn't enter a game,
-				//make sure the game doesn't still think we're in a netgame.
-				if (!Playing() && netgame && multiplayer)
-				{
-					netgame = false;
-					multiplayer = false;
-				}
 
-				if ((currentMenu->prevMenu == &MainDef) && ((currentMenu == &SP_TimeAttackDef || currentMenu == &SP_NightsAttackDef) || currentMenu == &SP_MarathonDef))
-				{
-					// D_StartTitle does its own wipe, since GS_TIMEATTACK is now a complete gamestate.
-					menuactive = false;
-					I_UpdateMouseGrab();
-					D_StartTitle();
-				}
-				else if (currentMenu == &SP_PlayerDef)
-				{
-					if (!Playing())
-					{
-						S_StopMusic();
-						S_ChangeMusicInternal("titles", looptitle);
-					}
-					M_SetupNextMenu(currentMenu->prevMenu);
-				}
-				else
-					M_SetupNextMenu(currentMenu->prevMenu);
-			}
-			else
-				M_ClearMenus(true);
+			M_GoBack(0);
+
 			return true;
 
 		case KEY_BACKSPACE:
@@ -4078,23 +4094,6 @@ static void M_PatchSkinNameTable(void)
 	return;
 }
 
-// Handle Level Select
-static levelselect_t levelselect = {0, NULL};
-static UINT8 levelselectselect[4];
-static patch_t *levselp[4];
-static fixed_t lsoffs[2];
-
-#define lsrow levelselectselect[0]
-#define lscol levelselectselect[1]
-#define lstic levelselectselect[2]
-#define lshli levelselectselect[3]
-
-#define hseperation 101
-#define basevseperation  ((62*vid.height)/(BASEVIDHEIGHT*vid.dupy))
-#define headingheight 16
-#define getheadingoffset(row) (levelselect.rows[row].header[0] ? headingheight : 0)
-#define vseperation(row) (basevseperation + getheadingoffset(row))
-
 //
 // M_LevelAvailableOnPlatter
 //
@@ -4231,7 +4230,7 @@ static INT32 M_CountRowsToShowOnPlatter(INT32 gt)
 	return rows;
 }
 
-static boolean M_SetNextMapOnPlatter(void)
+/*static boolean M_SetNextMapOnPlatter(void)
 {
 	INT32 row, col = 0;
 	while (col < 3)
@@ -4250,7 +4249,7 @@ static boolean M_SetNextMapOnPlatter(void)
 		col++;
 	}
 	return true;
-}
+}*/
 
 //
 // M_CacheLevelPlatter
@@ -4403,7 +4402,7 @@ static void M_HandleLevelPlatter(INT32 choice)
 			}
 			lsrow++;
 
-			lsoffs[0] = vseperation(lsrow) * FRACUNIT;
+			lsoffs[0] = lsvseperation(lsrow) * FRACUNIT;
 
 			if (levelselect.rows[lsrow].header[0])
 				lshli = lsrow;
@@ -4431,7 +4430,7 @@ static void M_HandleLevelPlatter(INT32 choice)
 			}
 			lsrow--;
 
-			lsoffs[0] = -vseperation(iter) * FRACUNIT;
+			lsoffs[0] = -lsvseperation(iter) * FRACUNIT;
 
 			if (levelselect.rows[lsrow].header[0])
 				lshli = lsrow;
@@ -4453,7 +4452,7 @@ static void M_HandleLevelPlatter(INT32 choice)
 			if (lscol > 0)
 			{
 				lscol--;
-				lsoffs[1] = hseperation * FRACUNIT;
+				lsoffs[1] = lshseperation * FRACUNIT;
 				S_StartSound(NULL,sfx_s3kb7);
 			}
 			else if (!lsoffs[1]) //  prevent sound spam
@@ -4468,7 +4467,7 @@ static void M_HandleLevelPlatter(INT32 choice)
 			{
 				lscol++;
 
-				lsoffs[1] = -hseperation * FRACUNIT;
+				lsoffs[1] = -lshseperation * FRACUNIT;
 				S_StartSound(NULL,sfx_s3kb7);
 				selectvalnextmap(lscol) else selectvalnextmap(0)
 			}
@@ -4528,16 +4527,13 @@ static void M_HandleLevelPlatter(INT32 choice)
 	}
 }
 
-static void M_DrawLevelPlatterRow(UINT8 row, INT32 y)
-{
-	UINT8 col;
-	const boolean rowhighlight = (row == lsrow);
-	if (levelselect.rows[row].header[0])
-	{
-		const boolean headerhighlight = (rowhighlight || (row == lshli));
 
-		y += headingheight - 12;
-		V_DrawString(19, y, (headerhighlight ? V_YELLOWMAP : 0), levelselect.rows[row].header);
+
+static void M_DrawLevelPlatterHeader(INT32 y, const char *header, boolean headerhighlight)
+{
+
+		y += lsheadingheight - 12;
+		V_DrawString(19, y, (headerhighlight ? V_YELLOWMAP : 0), header);
 		y += 9;
 		if ((y >= 0) && (y < 200))
 		{
@@ -4550,15 +4546,15 @@ static void M_DrawLevelPlatterRow(UINT8 row, INT32 y)
 			V_DrawFill(19, y, 282, 1, 26);
 		}
 		y += 2;
-	}
-	for (col = 0; col < 3; col++)
-	{
-		INT32 x = 19+(col*hseperation);
+}
+
+static void M_DrawLevelPlatterMap(UINT8 row, UINT8 col, INT32 x, INT32 y, boolean highlight)
+{
 		patch_t *patch;
 
 		INT32 map = levelselect.rows[row].maplist[col];
 		if (!map)
-			continue;
+			return;
 
 		if (needpatchrecache)
 			M_CacheLevelPlatter();
@@ -4592,19 +4588,33 @@ static void M_DrawLevelPlatterRow(UINT8 row, INT32 y)
 
 
 		if (strlen(levelselect.rows[row].mapnames[col]) > 6) // "AERIAL GARDEN" vs "ACT 18" - "THE ACT" intentionally compressed
-			V_DrawThinString(x, y+50, ((rowhighlight && col == lscol) ? V_YELLOWMAP : 0), levelselect.rows[row].mapnames[col]);
+			V_DrawThinString(x, y+50, (highlight ? V_YELLOWMAP : 0), levelselect.rows[row].mapnames[col]);
 		else
-			V_DrawString(x, y+50, ((rowhighlight && col == lscol) ? V_YELLOWMAP : 0), levelselect.rows[row].mapnames[col]);
-	}
+			V_DrawString(x, y+50, (highlight ? V_YELLOWMAP : 0), levelselect.rows[row].mapnames[col]);
 }
 
-#define basey 59+headingheight
+static void M_DrawLevelPlatterRow(UINT8 row, INT32 y)
+{
+	UINT8 col;
+	const boolean rowhighlight = (row == lsrow);
+	if (levelselect.rows[row].header[0])
+	{
+		M_DrawLevelPlatterHeader(y, levelselect.rows[row].header, (rowhighlight || (row == lshli)));
+		y += lsheadingheight;
+	}
+
+	for (col = 0; col < 3; col++)
+		M_DrawLevelPlatterMap(row, col, 19+(col*lshseperation), y, (rowhighlight && col == lscol));
+}
+
+
+
+#define lsbasey 59+lsheadingheight
 
 static void M_DrawLevelPlatterMenu(void)
 {
-
 	UINT8 iter = lsrow;
-	INT32 y = basey + FixedInt(lsoffs[0]) - getheadingoffset(lsrow);
+	INT32 y = lsbasey + FixedInt(lsoffs[0]) - getheadingoffset(lsrow);
 	patch_t *patch;
 
 	patch = W_CachePatchName("M_CURSOR", PU_PATCH);
@@ -4619,7 +4629,7 @@ static void M_DrawLevelPlatterMenu(void)
 	while (y > 0)
 	{
 		iter = ((iter == 0) ? levelselect.numrows-1 : iter-1);
-		y -= vseperation(iter);
+		y -= lsvseperation(iter);
 	}
 
 
@@ -4627,7 +4637,7 @@ static void M_DrawLevelPlatterMenu(void)
 	while (y < 200)
 	{
 		M_DrawLevelPlatterRow(iter, y);
-		y += vseperation(iter);
+		y += lsvseperation(iter);
 		iter = ((iter == levelselect.numrows-1) ? 0 : iter+1);
 	}
 
@@ -4656,21 +4666,10 @@ static void M_DrawLevelPlatterMenu(void)
 		lsoffs[1] = 0;
 
 	M_DrawMenuTitle();
-	V_DrawScaledPatch((lscol*hseperation) + FixedInt(lsoffs[1]), vseperation(iter)+40, 0, patch);
+	V_DrawScaledPatch((lscol*lshseperation) + FixedInt(lsoffs[1]), lsvseperation(iter)+40, 0, patch);
 }
 
-#undef basey
-
-#undef lsrow
-#undef lscol
-#undef lstic
-#undef lshli
-
-#undef hseperation
-#undef basevseperation
-#undef headingheight
-#undef getheadingoffset
-#undef vseperation
+#undef lsbasey
 
 
 // Call before showing any level-select menus (Not necessary for platter-based ones)
@@ -6913,9 +6912,8 @@ void M_DrawTimeAttackMenu(void)
 {
 	INT32 i, x, y, cursory = 0;
 	UINT16 dispstatus;
-	patch_t *PictureOfLevel, *PictureOfUrFace;
-	lumpnum_t lumpnum;
-	char beststr[40];
+	patch_t *PictureOfUrFace;
+
 
 	S_ChangeMusicInternal("racent", true); // Eww, but needed for when user hits escape during demo playback
 
@@ -6966,16 +6964,6 @@ void M_DrawTimeAttackMenu(void)
 	V_DrawScaledPatch(currentMenu->x - 24, cursory, 0, W_CachePatchName("M_CURSOR", PU_PATCH));
 	V_DrawString(currentMenu->x, cursory, V_YELLOWMAP, currentMenu->menuitems[itemOn].text);
 
-	//  A 160x100 image of the level as entry MAPxxP
-	lumpnum = W_CheckNumForName(va("%sP", G_BuildMapName(cv_nextmap.value)));
-
-	if (lumpnum != LUMPERROR)
-		PictureOfLevel = W_CachePatchName(va("%sP", G_BuildMapName(cv_nextmap.value)), PU_PATCH);
-	else
-		PictureOfLevel = W_CachePatchName("BLANKLVL", PU_PATCH);
-
-	V_DrawSmallScaledPatch(208, 32, 0, PictureOfLevel);
-
 	// Character face!
 	if (W_CheckNumForName(skins[cv_chooseskin.value-1].charsel) != LUMPERROR)
 	{
@@ -6991,16 +6979,32 @@ void M_DrawTimeAttackMenu(void)
 	{
 		emblem_t *em;
 		INT32 yHeight;
+		patch_t *PictureOfLevel;
+		lumpnum_t lumpnum;
+		char beststr[40];
 
-		V_DrawCenteredString(104, 32, 0, "* LEVEL RECORDS *");
+		M_DrawLevelPlatterHeader(32-lsheadingheight/2, cv_nextmap.string, true);
 
+		//  A 160x100 image of the level as entry MAPxxP
+		lumpnum = W_CheckNumForName(va("%sP", G_BuildMapName(cv_nextmap.value)));
+
+		if (lumpnum != LUMPERROR)
+			PictureOfLevel = W_CachePatchName(va("%sP", G_BuildMapName(cv_nextmap.value)), PU_PATCH);
+		else
+			PictureOfLevel = W_CachePatchName("BLANKLVL", PU_PATCH);
+
+		V_DrawSmallScaledPatch(208, 32+lsheadingheight, 0, PictureOfLevel);
+
+
+		V_DrawString(104 - 72, 32+lsheadingheight/2, 0, "* LEVEL RECORDS *");
+		
 		if (!mainrecords[cv_nextmap.value-1] || !mainrecords[cv_nextmap.value-1]->score)
 			sprintf(beststr, "(none)");
 		else
 			sprintf(beststr, "%u", mainrecords[cv_nextmap.value-1]->score);
 
-		V_DrawString(104-72, 48, V_YELLOWMAP, "SCORE:");
-		V_DrawRightAlignedString(104+72, 48, V_ALLOWLOWERCASE, beststr);
+		V_DrawString(104-72, 48+lsheadingheight/2, V_YELLOWMAP, "SCORE:");
+		V_DrawRightAlignedString(104+72, 48+lsheadingheight/2, V_ALLOWLOWERCASE, beststr);
 
 		if (!mainrecords[cv_nextmap.value-1] || !mainrecords[cv_nextmap.value-1]->time)
 			sprintf(beststr, "(none)");
@@ -7009,16 +7013,16 @@ void M_DrawTimeAttackMenu(void)
 			                                 G_TicsToSeconds(mainrecords[cv_nextmap.value-1]->time),
 			                                 G_TicsToCentiseconds(mainrecords[cv_nextmap.value-1]->time));
 
-		V_DrawString(104-72, 58, V_YELLOWMAP, "TIME:");
-		V_DrawRightAlignedString(104+72, 58, V_ALLOWLOWERCASE, beststr);
+		V_DrawString(104-72, 58+lsheadingheight/2, V_YELLOWMAP, "TIME:");
+		V_DrawRightAlignedString(104+72, 58+lsheadingheight/2, V_ALLOWLOWERCASE, beststr);
 
 		if (!mainrecords[cv_nextmap.value-1] || !mainrecords[cv_nextmap.value-1]->rings)
 			sprintf(beststr, "(none)");
 		else
 			sprintf(beststr, "%hu", mainrecords[cv_nextmap.value-1]->rings);
 
-		V_DrawString(104-72, 68, V_YELLOWMAP, "RINGS:");
-		V_DrawRightAlignedString(104+72, 68, V_ALLOWLOWERCASE, beststr);
+		V_DrawString(104-72, 68+lsheadingheight/2, V_YELLOWMAP, "RINGS:");
+		V_DrawRightAlignedString(104+72, 68+lsheadingheight/2, V_ALLOWLOWERCASE, beststr);
 
 		// Draw record emblems.
 		em = M_GetLevelEmblems(cv_nextmap.value);
@@ -7034,17 +7038,17 @@ void M_DrawTimeAttackMenu(void)
 			}
 
 			if (em->collected)
-				V_DrawSmallMappedPatch(104+76, yHeight, 0, W_CachePatchName(M_GetEmblemPatch(em), PU_PATCH),
+				V_DrawSmallMappedPatch(104+76, yHeight+lsheadingheight/2, 0, W_CachePatchName(M_GetEmblemPatch(em), PU_PATCH),
 				                       R_GetTranslationColormap(TC_DEFAULT, M_GetEmblemColor(em), GTC_CACHE));
 			else
-				V_DrawSmallScaledPatch(104+76, yHeight, 0, W_CachePatchName("NEEDIT", PU_PATCH));
+				V_DrawSmallScaledPatch(104+76, yHeight+lsheadingheight/2, 0, W_CachePatchName("NEEDIT", PU_PATCH));
 
 			skipThisOne:
 			em = M_GetLevelEmblems(-1);
 		}
 	}
 
-	// ALWAYS DRAW level name and skin even when not on this menu!
+	// ALWAYS DRAW level and skin even when not on this menu!
 	if (currentMenu != &SP_TimeAttackDef)
 	{
 		consvar_t *ncv;
@@ -7052,14 +7056,12 @@ void M_DrawTimeAttackMenu(void)
 		x = SP_TimeAttackDef.x;
 		y = SP_TimeAttackDef.y;
 
-		for (i = 0; i < 2; ++i)
-		{
-			ncv = (consvar_t *)SP_TimeAttackMenu[i].itemaction;
+		V_DrawString(x, y + SP_TimeAttackMenu[talevelback].alphaKey, V_TRANSLUCENT, SP_TimeAttackMenu[talevelback].text);
 
-			V_DrawString(x, y + SP_TimeAttackMenu[i].alphaKey, V_TRANSLUCENT, SP_TimeAttackMenu[i].text);
-			V_DrawString(BASEVIDWIDTH - x - V_StringWidth(ncv->string, 0),
-			             y + SP_TimeAttackMenu[i].alphaKey, V_YELLOWMAP|V_TRANSLUCENT, ncv->string);
-		}
+		ncv = (consvar_t *)SP_TimeAttackMenu[taplayer].itemaction;
+		V_DrawString(x, y + SP_TimeAttackMenu[taplayer].alphaKey, V_TRANSLUCENT, SP_TimeAttackMenu[taplayer].text);
+		V_DrawString(BASEVIDWIDTH - x - V_StringWidth(ncv->string, 0), y + SP_TimeAttackMenu[taplayer].alphaKey, V_YELLOWMAP|V_TRANSLUCENT, ncv->string);
+
 	}
 }
 
@@ -7074,7 +7076,6 @@ static void M_TimeAttackLevelSelect(INT32 choice)
 		return;
 	}
 
-	memset(skins_cons_t, 0, sizeof (skins_cons_t));
 	M_PatchSkinNameTable();
 
 	M_SetupNextMenu(&SP_TimeAttackLevelSelectDef);
@@ -7099,7 +7100,6 @@ static void M_TimeAttack(INT32 choice)
 			return;
 		}
 
-		memset(skins_cons_t, 0, sizeof (skins_cons_t));
 		M_PatchSkinNameTable();
 
 		M_PrepareLevelSelect();
@@ -7109,12 +7109,12 @@ static void M_TimeAttack(INT32 choice)
 
 	M_SetupNextMenu(&SP_TimeAttackDef);
 
+	Nextmap_OnChange();
+
 	if (direct)
 	{
-		Nextmap_OnChange();
-
 		G_SetGamestate(GS_TIMEATTACK);
-		S_ChangeMusicInternal("_inter", true);
+		S_ChangeMusicInternal("racent", true);
 	}
 
 	itemOn = tastart; // "Start" is selected.
@@ -7124,49 +7124,94 @@ static void M_TimeAttack(INT32 choice)
 // Drawing function for Nights Attack
 void M_DrawNightsAttackMenu(void)
 {
-	patch_t *PictureOfLevel;
-	lumpnum_t lumpnum;
-	char beststr[40];
+	INT32 i, x, y, cursory = 0;
+	UINT16 dispstatus;
 
 	S_ChangeMusicInternal("racent", true); // Eww, but needed for when user hits escape during demo playback
 
 	V_DrawPatchFill(W_CachePatchName("SRB2BACK", PU_PATCH));
 
+	M_DrawMenuTitle();
+
 	// draw menu (everything else goes on top of it)
-	M_DrawGenericMenu();
+	// Sadly we can't just use generic mode menus because we need some extra hacks
+	x = currentMenu->x;
+	y = currentMenu->y;
 
-	//  A 160x100 image of the level as entry MAPxxP
-	lumpnum = W_CheckNumForName(va("%sP", G_BuildMapName(cv_nextmap.value)));
+	for (i = 0; i < currentMenu->numitems; ++i)
+	{
+		dispstatus = (currentMenu->menuitems[i].status & IT_DISPLAY);
+		if (dispstatus != IT_STRING && dispstatus != IT_WHITESTRING)
+			continue;
 
-	if (lumpnum != LUMPERROR)
-		PictureOfLevel = W_CachePatchName(va("%sP", G_BuildMapName(cv_nextmap.value)), PU_PATCH);
-	else
-		PictureOfLevel = W_CachePatchName("BLANKLVL", PU_PATCH);
+		y = currentMenu->y+currentMenu->menuitems[i].alphaKey;
+		if (i == itemOn)
+			cursory = y;
 
-	V_DrawSmallScaledPatch(90, 28, 0, PictureOfLevel);
+		V_DrawString(x, y, (dispstatus == IT_WHITESTRING) ? V_YELLOWMAP : 0 , currentMenu->menuitems[i].text);
+
+		// Cvar specific handling
+		if ((currentMenu->menuitems[i].status & IT_TYPE) == IT_CVAR)
+		{
+			consvar_t *cv = (consvar_t *)currentMenu->menuitems[i].itemaction;
+			INT32 soffset = 0;
+
+			// hack to keep the menu from overlapping the overall grade icon
+			if (currentMenu != &SP_NightsAttackDef)
+				soffset = 80;
+
+			// Should see nothing but strings
+			V_DrawString(BASEVIDWIDTH - x - soffset - V_StringWidth(cv->string, 0), y, V_YELLOWMAP, cv->string);
+		}
+	}
+
+	// DRAW THE SKULL CURSOR
+	V_DrawScaledPatch(currentMenu->x - 24, cursory, 0, W_CachePatchName("M_CURSOR", PU_PATCH));
+	V_DrawString(currentMenu->x, cursory, V_YELLOWMAP, currentMenu->menuitems[itemOn].text);
+
 
 	// Level record list
 	if (cv_nextmap.value)
 	{
 		emblem_t *em;
 		INT32 yHeight;
+		patch_t *PictureOfLevel;
+		lumpnum_t lumpnum;
+		char beststr[40];
+
 
 		UINT8 bestoverall	= G_GetBestNightsGrade(cv_nextmap.value, 0);
 		UINT8 bestgrade		= G_GetBestNightsGrade(cv_nextmap.value, cv_dummymares.value);
 		UINT32 bestscore	= G_GetBestNightsScore(cv_nextmap.value, cv_dummymares.value);
 		tic_t besttime		= G_GetBestNightsTime(cv_nextmap.value, cv_dummymares.value);
 
-		if (P_HasGrades(cv_nextmap.value, 0))
-			V_DrawScaledPatch(200, 28 + 8, 0, ngradeletters[bestoverall]);
+		M_DrawLevelPlatterHeader(32-lsheadingheight/2, cv_nextmap.string, true);
 
-		if (currentMenu == &SP_NightsAttackDef)
+		//  A 160x100 image of the level as entry MAPxxP
+		lumpnum = W_CheckNumForName(va("%sP", G_BuildMapName(cv_nextmap.value)));
+
+		if (lumpnum != LUMPERROR)
+			PictureOfLevel = W_CachePatchName(va("%sP", G_BuildMapName(cv_nextmap.value)), PU_PATCH);
+		else
+			PictureOfLevel = W_CachePatchName("BLANKLVL", PU_PATCH);
+
+		V_DrawSmallScaledPatch(208, 32+lsheadingheight, 0, PictureOfLevel);
+
+		V_DrawString(104 - 72, 32+lsheadingheight/2, 0, "* LEVEL RECORDS *");
+
+
+		if (P_HasGrades(cv_nextmap.value, 0))
+			V_DrawScaledPatch(235, 135, 0, ngradeletters[bestoverall]);
+
+		//if (currentMenu == &SP_NightsAttackDef)
 		{
 			if (P_HasGrades(cv_nextmap.value, cv_dummymares.value))
 			{
-				V_DrawString(160-88, 112, V_YELLOWMAP, "BEST GRADE:");
-				V_DrawSmallScaledPatch(160 + 86 - (ngradeletters[bestgrade]->width/2),
-					112 + 8 - (ngradeletters[bestgrade]->height/2),
-					0, ngradeletters[bestgrade]);
+				V_DrawString(104 - 72, 48+lsheadingheight/2, V_YELLOWMAP, "BEST GRADE:");
+				V_DrawSmallScaledPatch(104 + 72 - (ngradeletters[bestgrade]->width/2),
+				48+lsheadingheight/2 + 8 - (ngradeletters[bestgrade]->height/2),
+				0, ngradeletters[bestgrade]);
+
 			}
 
 			if (!bestscore)
@@ -7174,8 +7219,9 @@ void M_DrawNightsAttackMenu(void)
 			else
 				sprintf(beststr, "%u", bestscore);
 
-			V_DrawString(160 - 88, 122, V_YELLOWMAP, "BEST SCORE:");
-			V_DrawRightAlignedString(160 + 88, 122, V_ALLOWLOWERCASE, beststr);
+
+			V_DrawString(104 - 72, 58+lsheadingheight/2, V_YELLOWMAP, "BEST SCORE:");
+			V_DrawRightAlignedString(104 + 72, 58+lsheadingheight/2, V_ALLOWLOWERCASE, beststr);
 
 			if (besttime == UINT32_MAX)
 				sprintf(beststr, "(none)");
@@ -7184,8 +7230,8 @@ void M_DrawNightsAttackMenu(void)
 																				 G_TicsToSeconds(besttime),
 																				 G_TicsToCentiseconds(besttime));
 
-			V_DrawString(160-88, 132, V_YELLOWMAP, "BEST TIME:");
-			V_DrawRightAlignedString(160+88, 132, V_ALLOWLOWERCASE, beststr);
+			V_DrawString(104 - 72, 68+lsheadingheight/2, V_YELLOWMAP, "BEST TIME:");
+			V_DrawRightAlignedString(104 + 72, 68+lsheadingheight/2, V_ALLOWLOWERCASE, beststr);
 
 			if (cv_dummymares.value == 0) {
 				// Draw record emblems.
@@ -7194,36 +7240,28 @@ void M_DrawNightsAttackMenu(void)
 				{
 					switch (em->type)
 					{
-						case ET_NGRADE: yHeight = 112; break;
-						case ET_NTIME:  yHeight = 132; break;
+						case ET_NGRADE: yHeight = 48; break;
+						case ET_NTIME:  yHeight = 68; break;
 						default:
 							goto skipThisOne;
 					}
 
 					if (em->collected)
-						V_DrawSmallMappedPatch(160+88, yHeight, 0, W_CachePatchName(M_GetEmblemPatch(em), PU_PATCH),
+						V_DrawSmallMappedPatch(104+76, yHeight+lsheadingheight/2, 0, W_CachePatchName(M_GetEmblemPatch(em), PU_PATCH),
 																	 R_GetTranslationColormap(TC_DEFAULT, M_GetEmblemColor(em), GTC_CACHE));
 					else
-						V_DrawSmallScaledPatch(160+88, yHeight, 0, W_CachePatchName("NEEDIT", PU_PATCH));
+						V_DrawSmallScaledPatch(104+76, yHeight+lsheadingheight/2, 0, W_CachePatchName("NEEDIT", PU_PATCH));
 
 					skipThisOne:
 					em = M_GetLevelEmblems(-1);
 				}
 			}
 		}
-		// ALWAYS DRAW level name even when not on this menu!
-		else
-		{
-			consvar_t *ncv;
-			INT32 x = SP_NightsAttackDef.x;
-			INT32 y = SP_NightsAttackDef.y;
-
-			ncv = (consvar_t *)SP_NightsAttackMenu[0].itemaction;
-			V_DrawString(x, y + SP_NightsAttackMenu[0].alphaKey, V_TRANSLUCENT, SP_NightsAttackMenu[0].text);
-			V_DrawString(BASEVIDWIDTH - x - V_StringWidth(ncv->string, 0),
-									 y + SP_NightsAttackMenu[0].alphaKey, V_YELLOWMAP|V_TRANSLUCENT, ncv->string);
-		}
 	}
+
+	// ALWAYS DRAW level even when not on this menu!
+	if (currentMenu != &SP_NightsAttackDef)
+		V_DrawString(SP_NightsAttackDef.x, SP_NightsAttackDef.y + SP_TimeAttackMenu[nalevelback].alphaKey, V_TRANSLUCENT, SP_NightsAttackMenu[nalevelback].text);
 }
 
 
@@ -7238,7 +7276,6 @@ static void M_NightsAttackLevelSelect(INT32 choice)
 		return;
 	}
 
-	memset(skins_cons_t, 0, sizeof (skins_cons_t));
 	M_PatchSkinNameTable();
 
 	M_SetupNextMenu(&SP_NightsAttackLevelSelectDef);
@@ -7263,7 +7300,6 @@ static void M_NightsAttack(INT32 choice)
 			return;
 		}
 
-		// This is really just to make sure Sonic is the played character, just in case
 		memset(skins_cons_t, 0, sizeof (skins_cons_t));
 		M_PatchSkinNameTable();
 
@@ -7273,13 +7309,13 @@ static void M_NightsAttack(INT32 choice)
 		SP_NightsAttackDef.prevMenu = currentMenu;
 
 	M_SetupNextMenu(&SP_NightsAttackDef);
+	Nextmap_OnChange();
 
 	if (direct)
 	{
-		Nextmap_OnChange();
 
 		G_SetGamestate(GS_TIMEATTACK);
-		S_ChangeMusicInternal("_inter", true);
+		S_ChangeMusicInternal("racent", true);
 	}
 
 	itemOn = nastart; // "Start" is selected.
