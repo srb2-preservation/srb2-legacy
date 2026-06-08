@@ -1922,7 +1922,7 @@ static menu_t SP_NightsGhostDef =
 
 static menu_t SP_MarathonDef =
 {
-	"M_ATTACK", // temporary
+	"M_ATTACK", // temporary, or is it?
 	sizeof(SP_MarathonMenu)/sizeof(menuitem_t),
 	&MainDef,  // Doesn't matter.
 	SP_MarathonMenu,
@@ -3207,6 +3207,16 @@ void M_Ticker(void)
 	}
 }
 
+static void M_ReplaceMenuGraphics(void)
+{
+	if(legacypk3_loaded)
+	{
+		OP_LegacyOptionsDef.menutitlepic = "M_LEGACY";
+		OP_ScreenshotOptionsDef.menutitlepic = "M_SCREEN";
+		SP_MarathonDef.menutitlepic = "M_MARAT";
+	}
+}
+
 //
 // M_Init
 //
@@ -3268,6 +3278,8 @@ void M_Init(void)
 
 	//todo put this somewhere better...
 	CV_RegisterVar(&cv_allcaps);
+
+	M_ReplaceMenuGraphics();
 }
 
 void M_InitCharacterTables(void)
@@ -7595,15 +7607,17 @@ void M_DrawMarathon(void)
 	soffset = cnt = ((recatkdrawtimer >> FRACBITS) % 50);
 	if (cnt > 8)
 		cnt = 8;
-	if (cnt > 8)
+	if (!useBlackRock && legacypk3_loaded)
+	{
+		V_DrawFixedPatch(x+(6<<FRACBITS), y, FRACUNIT/2, (cnt&~1)<<(V_ALPHASHIFT-1), W_CachePatchName("RECCLOCK", PU_PATCH), NULL);
+	}
+	else if (cnt > 8)
 	{
 		cnt = 8;
 		V_DrawFixedPatch(x, y, FRACUNIT, cnt<<V_ALPHASHIFT, W_CachePatchName(ROIDPATCH, PU_PATCH), NULL);
 	}
 	else
-	{
 		V_DrawFixedPatch(x, y, FRACUNIT, cnt<<V_ALPHASHIFT, W_CachePatchName(ROIDPATCH, PU_PATCH), NULL);
-	}
 
 	{
 		UINT8 col;
@@ -7629,7 +7643,8 @@ void M_DrawMarathon(void)
 		w += FRACUNIT/10;
 
 	{
-		patch_t *fg = W_CachePatchName("CONTINS", PU_PATCH);
+		const char *fgpatch = (legacypk3_loaded ? "RECATKFG" : "CONTINS"); // uhh
+		patch_t *fg = W_CachePatchName(fgpatch, PU_PATCH);
 		INT32 trans = V_60TRANS+((cnt&~3)<<(V_ALPHASHIFT-2));
 		INT32 height = (SHORT(fg->height)/2);
 		char patchname[7] = "CEMGx0";
@@ -7641,8 +7656,11 @@ void M_DrawMarathon(void)
 			y -= height;
 		while (y-2-dupz < maxy)
 		{
-			/*V_DrawFixedPatch(((BASEVIDWIDTH-190)<<(FRACBITS-1)), (y-2-dupz)<<FRACBITS, FRACUNIT/2, trans, fg, NULL);
-			V_DrawFixedPatch(((BASEVIDWIDTH+190)<<(FRACBITS-1)), (y+dupz)<<FRACBITS, FRACUNIT/2, trans|V_FLIP, fg, NULL);*/
+			if(legacypk3_loaded)
+			{
+				V_DrawFixedPatch(((BASEVIDWIDTH-190)<<(FRACBITS-1)), (y-2-dupz)<<FRACBITS, FRACUNIT/2, trans, fg, NULL);
+				V_DrawFixedPatch(((BASEVIDWIDTH+190)<<(FRACBITS-1)), (y+dupz)<<FRACBITS, FRACUNIT/2, trans|V_FLIP, fg, NULL);
+			}
 			y += height;
 		}
 

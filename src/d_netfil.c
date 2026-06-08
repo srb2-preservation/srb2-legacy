@@ -109,7 +109,7 @@ UINT8 *PutFileNeeded(void)
 	char wadfilename[MAX_WADPATH] = "";
 	UINT8 filestatus;
 
-	for (i = 0; i < numwadfiles; i++)
+	for (i = mainwads; i < numwadfiles; i++)
 	{
 		// If it has only music/sound lumps, don't put it in the list
 		if (!wadfiles[i]->important)
@@ -979,6 +979,7 @@ void Got_Filetxpak(void)
 		&& strcmp(filename, "rings.dta")
 		&& strcmp(filename, "patch.dta")
 		&& strcmp(filename, "music.dta")
+		&& strcmp(filename, "legacy.pk3")
 		))
 		I_Error("Tried to download \"%s\"", filename);
 
