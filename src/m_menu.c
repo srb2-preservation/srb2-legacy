@@ -2128,8 +2128,8 @@ menu_t OP_LegacyCreditsDef = DEFAULTMENUSTYLE(NULL, OP_LegacyCreditsMenu, &OP_Le
 // (there's only a couple anyway)
 
 // Prototypes
-static INT32 M_FindFirstMap(INT32 gtype);
-static INT32 M_GetFirstLevelInList(void);
+static INT32 M_GetFirstLevelInList(INT32 gt);
+
 
 // Nextmap.  Used for Time Attack.
 static void Nextmap_OnChange(void)
@@ -2310,9 +2310,7 @@ static void Newgametype_OnChange(void)
 					break;
 			}
 
-			CV_SetValue(&cv_nextmap, M_FindFirstMap(value));
-			CV_AddValue(&cv_nextmap, -1);
-			CV_AddValue(&cv_nextmap, 1);
+			CV_SetValue(&cv_nextmap, M_GetFirstLevelInList(value));	
 		}
 	}
 }
@@ -4677,14 +4675,6 @@ static void M_DrawLevelPlatterMenu(void)
 #undef lsbasey
 
 
-// Call before showing any level-select menus (Not necessary for platter-based ones)
-static void M_PrepareLevelSelect(void)
-{
-	if (levellistmode != LLM_CREATESERVER)
-		CV_SetValue(&cv_nextmap, M_GetFirstLevelInList());
-	else
-		Newgametype_OnChange(); // Make sure to start on an appropriate map if wads have been added
-}
 
 //
 // M_CanShowLevelInList
@@ -4708,12 +4698,12 @@ static INT32 M_CountLevelsToShowInList(void)
 	return count;
 }
 
-static INT32 M_GetFirstLevelInList(void)
+static INT32 M_GetFirstLevelInList(INT32 gt)
 {
 	INT32 mapnum;
 
 	for (mapnum = 0; mapnum < NUMMAPS; mapnum++)
-		if (M_CanShowLevelInList(mapnum, -1))
+		if (M_CanShowLevelInList(mapnum, gt))
 			return mapnum + 1;
 
 	return 1;
@@ -7107,7 +7097,7 @@ static void M_TimeAttack(INT32 choice)
 
 		M_PatchSkinNameTable();
 
-		M_PrepareLevelSelect();
+		Newgametype_OnChange();
 	}
 	else
 		SP_TimeAttackDef.prevMenu = currentMenu;
@@ -7308,7 +7298,7 @@ static void M_NightsAttack(INT32 choice)
 		memset(skins_cons_t, 0, sizeof (skins_cons_t));
 		M_PatchSkinNameTable();
 
-		M_PrepareLevelSelect();
+		Newgametype_OnChange();
 	}
 	else
 		SP_NightsAttackDef.prevMenu = currentMenu;
@@ -8172,24 +8162,6 @@ static void M_ChooseRoom(INT32 choice)
 // Start Server Menu
 //===========================================================================
 
-//
-// FindFirstMap
-//
-// Finds the first map of a particular gametype
-// Defaults to 1 if nothing found.
-//
-static INT32 M_FindFirstMap(INT32 gtype)
-{
-	INT32 i;
-
-	for (i = 0; i < NUMMAPS; i++)
-	{
-		if (mapheaderinfo[i] && (mapheaderinfo[i]->typeoflevel & gtype))
-			return i + 1;
-	}
-
-	return 1;
-}
 
 static void M_StartServer(INT32 choice)
 {
