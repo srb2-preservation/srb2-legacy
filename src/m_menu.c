@@ -719,8 +719,8 @@ static menuitem_t SR_EmblemHintMenu[] =
 static menuitem_t SP_MainMenu[] =
 {
 	{IT_CALL | IT_STRING,                       NULL, "Start Game", NULL,    M_LoadGame,        84},
-	{IT_SECRET,                                 NULL, "Record Attack", NULL,  M_TimeAttackLevelSelect,     92},
-	{IT_SECRET,                                 NULL, "NiGHTS Mode", NULL,    M_NightsAttackLevelSelect,   100},
+	{IT_SECRET,                                 NULL, "Record Attack", NULL, M_TimeAttack,     92},
+	{IT_SECRET,                                 NULL, "NiGHTS Mode", NULL,   M_NightsAttack,  100},
 	{IT_CALL | IT_STRING | IT_CALL_NOTMODIFIED, NULL, "Marathon Run", NULL,  M_Marathon,        108},
 	{IT_CALL | IT_STRING | IT_CALL_NOTMODIFIED, NULL, "Statistics",   NULL,   M_Statistics,     116},
 };
@@ -756,7 +756,7 @@ static menuitem_t SP_TimeAttackLevelSelectMenu[] =
 // Single Player Time Attack
 static menuitem_t SP_TimeAttackMenu[] =
 {
-	{IT_STRING|IT_CALL,        NULL, "Back to Level Select", NULL,       &M_GoBack,          52},
+	{IT_STRING|IT_CALL,        NULL, "Level Select...", NULL,       &M_TimeAttackLevelSelect,          52},
 	{IT_STRING|IT_CVAR,        NULL, "Character", NULL,    &cv_chooseskin,       62},
 
 	{IT_DISABLED,              NULL, "Guest Option...", NULL,  &SP_GuestReplayDef, 100},
@@ -855,7 +855,7 @@ static menuitem_t SP_NightsAttackLevelSelectMenu[] =
 // Single Player Nights Attack
 static menuitem_t SP_NightsAttackMenu[] =
 {
-	{IT_STRING|IT_CALL,        NULL, "Back to Level Select",      NULL,       &M_GoBack,          52},
+	{IT_STRING|IT_CALL,        NULL, "Level Select...",      NULL,       &M_NightsAttackLevelSelect,    52},
 	{IT_STRING|IT_CVAR,        NULL, "Show Records For",  NULL, &cv_dummymares,       62},
 
 	{IT_DISABLED,              NULL, "Guest Option...", NULL,   &SP_NightsGuestReplayDef,   100},
@@ -2128,6 +2128,7 @@ menu_t OP_LegacyCreditsDef = DEFAULTMENUSTYLE(NULL, OP_LegacyCreditsMenu, &OP_Le
 
 // Prototypes
 static INT32 M_GetFirstLevelInList(INT32 gt);
+static boolean M_CanShowLevelOnPlatter(INT32 mapnum, INT32 gt);
 
 
 // Nextmap.  Used for Level select.
@@ -2276,12 +2277,7 @@ static void Newgametype_OnChange(void)
 		if(!mapheaderinfo[cv_nextmap.value-1])
 			P_AllocMapHeader((INT16)(cv_nextmap.value-1));
 
-		if ((cv_newgametype.value == GT_COOP && !(mapheaderinfo[cv_nextmap.value-1]->typeoflevel & TOL_COOP)) ||
-			(cv_newgametype.value == GT_COMPETITION && !(mapheaderinfo[cv_nextmap.value-1]->typeoflevel & TOL_COMPETITION)) ||
-			(cv_newgametype.value == GT_RACE && !(mapheaderinfo[cv_nextmap.value-1]->typeoflevel & TOL_RACE)) ||
-			((cv_newgametype.value == GT_MATCH || cv_newgametype.value == GT_TEAMMATCH) && !(mapheaderinfo[cv_nextmap.value-1]->typeoflevel & TOL_MATCH)) ||
-			((cv_newgametype.value == GT_TAG || cv_newgametype.value == GT_HIDEANDSEEK) && !(mapheaderinfo[cv_nextmap.value-1]->typeoflevel & TOL_TAG)) ||
-			(cv_newgametype.value == GT_CTF && !(mapheaderinfo[cv_nextmap.value-1]->typeoflevel & TOL_CTF)))
+		if (!M_CanShowLevelOnPlatter(cv_nextmap.value-1, cv_newgametype.value))
 		{
 			INT32 value = 0;
 
@@ -4080,11 +4076,10 @@ static void M_PatchSkinNameTable(void)
 		}
 	}
 
-	CV_SetValue(&cv_chooseskin, cv_chooseskin.value); // This causes crash sometimes?!
+
 
 	CV_SetValue(&cv_chooseskin, 1);
-	CV_AddValue(&cv_chooseskin, -1);
-	CV_AddValue(&cv_chooseskin, 1);
+	Nextmap_OnChange();
 
 	return;
 }
@@ -4486,12 +4481,7 @@ static void M_HandleLevelPlatter(INT32 choice)
 				lsoffs[0] = lsoffs[1] = 0;
 				S_StartSound(NULL,sfx_menu1);
 				if (gamestate == GS_TIMEATTACK)
-				{
-					if (currentMenu == &SP_TimeAttackLevelSelectDef)
-						M_TimeAttack(-1);
-					else
-						M_NightsAttack(-1);
-				}
+					M_SetupNextMenu(currentMenu->prevMenu);
 				else if (currentMenu == &MISC_ChangeLevelDef)
 				{
 					if (currentMenu->prevMenu && currentMenu->prevMenu->prevMenu != &MPauseDef)
@@ -4501,6 +4491,7 @@ static void M_HandleLevelPlatter(INT32 choice)
 				}
 				else
 					M_LevelSelectWarp(0);
+				Nextmap_OnChange();
 			}
 			else if (!lsoffs[0]) //  prevent sound spam
 			{
@@ -4522,14 +4513,8 @@ static void M_HandleLevelPlatter(INT32 choice)
 	{
 		if (currentMenu->prevMenu)
 		{
-			if (gamestate == GS_TIMEATTACK)
-			{
-				// D_StartTitle does its own wipe, since GS_TIMEATTACK is now a complete gamestate.
-				menuactive = false;
-				D_StartTitle();
-			}
-			else
-				M_SetupNextMenu (currentMenu->prevMenu);
+			M_SetupNextMenu (currentMenu->prevMenu);
+			Nextmap_OnChange();
 		}
 		else
 			M_ClearMenus(true);
@@ -4693,16 +4678,6 @@ boolean M_CanShowLevelInList(INT32 mapnum, INT32 gt)
 	return (M_CanShowLevelOnPlatter(mapnum, gt) && M_LevelAvailableOnPlatter(mapnum));
 }
 
-static INT32 M_CountLevelsToShowInList(void)
-{
-	INT32 mapnum, count = 0;
-
-	for (mapnum = 0; mapnum < NUMMAPS; mapnum++)
-		if (M_CanShowLevelInList(mapnum, -1))
-			count++;
-
-	return count;
-}
 
 static INT32 M_GetFirstLevelInList(INT32 gt)
 {
@@ -7069,50 +7044,37 @@ void M_DrawTimeAttackMenu(void)
 static void M_TimeAttackLevelSelect(INT32 choice)
 {
 	(void)choice;
-	levellistmode = LLM_RECORDATTACK;
 
-	if (!M_PrepareLevelPlatter(-1))
-	{
-		M_StartMessage(M_GetText("No record-attackable levels found.\n"),NULL,MM_NOTHING);
-		return;
-	}
-
-	M_PatchSkinNameTable();
-
+	SP_TimeAttackLevelSelectDef.prevMenu = currentMenu;
 	M_SetupNextMenu(&SP_TimeAttackLevelSelectDef);
-
-	G_SetGamestate(GS_TIMEATTACK);
-	S_ChangeMusicInternal("racent", true);
 }
 
 // Going to Time Attack menu...
 static void M_TimeAttack(INT32 choice)
 {
-	const boolean direct = (choice != -1); // Are we coming from SP_TimeAtttackLevelSelect?
+	(void)choice;
 
-	if (direct)
 	{
 		SP_TimeAttackDef.prevMenu = &MainDef;
 		levellistmode = LLM_RECORDATTACK; // Don't be dependent on cv_newgametype
 
-		if (M_CountLevelsToShowInList() == 0)
+		if (!M_PrepareLevelPlatter(-1))
 		{
 			M_StartMessage(M_GetText("No record-attackable levels found.\n"),NULL,MM_NOTHING);
 			return;
 		}
 
 		M_PatchSkinNameTable();
-
-		Newgametype_OnChange();
 	}
-	else
-		SP_TimeAttackDef.prevMenu = currentMenu;
+
 
 	M_SetupNextMenu(&SP_TimeAttackDef);
 
-	Nextmap_OnChange();
+	if (!M_CanShowLevelInList(cv_nextmap.value-1, -1) && levelselect.rows[0].maplist[0])
+		CV_SetValue(&cv_nextmap, levelselect.rows[0].maplist[0]);
+	else
+		Nextmap_OnChange();
 
-	if (direct)
 	{
 		G_SetGamestate(GS_TIMEATTACK);
 		S_ChangeMusicInternal("racent", true);
@@ -7269,15 +7231,8 @@ void M_DrawNightsAttackMenu(void)
 static void M_NightsAttackLevelSelect(INT32 choice)
 {
 	(void)choice;
-	levellistmode = LLM_NIGHTSATTACK;
 
-	if (!M_PrepareLevelPlatter(-1))
-	{
-		M_StartMessage(M_GetText("No NiGHTS-attackable levels found.\n"),NULL,MM_NOTHING);
-		return;
-	}
-
-	M_PatchSkinNameTable();
+	SP_NightsAttackLevelSelectDef.prevMenu = currentMenu;
 
 	M_SetupNextMenu(&SP_NightsAttackLevelSelectDef);
 
@@ -7288,14 +7243,13 @@ static void M_NightsAttackLevelSelect(INT32 choice)
 // Going to Nights Attack menu...
 static void M_NightsAttack(INT32 choice)
 {
-	const boolean direct = (choice != -1); // Are we coming from SP_TimeAtttackLevelSelect?
+	(void)choice;
 
-	if (direct)
 	{
 		SP_NightsAttackDef.prevMenu = &MainDef;
 		levellistmode = LLM_NIGHTSATTACK; // Don't be dependent on cv_newgametype
 
-		if (M_CountLevelsToShowInList() == 0)
+		if (!M_PrepareLevelPlatter(-1))
 		{
 			M_StartMessage(M_GetText("No NiGHTS-attackable levels found.\n"),NULL,MM_NOTHING);
 			return;
@@ -7303,16 +7257,14 @@ static void M_NightsAttack(INT32 choice)
 
 		memset(skins_cons_t, 0, sizeof (skins_cons_t));
 		M_PatchSkinNameTable();
-
-		Newgametype_OnChange();
 	}
-	else
-		SP_NightsAttackDef.prevMenu = currentMenu;
 
 	M_SetupNextMenu(&SP_NightsAttackDef);
-	Nextmap_OnChange();
+	if (!M_CanShowLevelInList(cv_nextmap.value-1, -1) && levelselect.rows[0].maplist[0])
+		CV_SetValue(&cv_nextmap, levelselect.rows[0].maplist[0]);
+	else
+		Nextmap_OnChange();
 
-	if (direct)
 	{
 
 		G_SetGamestate(GS_TIMEATTACK);
