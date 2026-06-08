@@ -4688,7 +4688,7 @@ static void M_DrawLevelPlatterWideMap(UINT8 row, UINT8 col, INT32 x, INT32 y, bo
 		if (h > 0)
 			V_DrawFill(x, topy, 282, h,
 			((mapheaderinfo[map-1]->unlockrequired < 0)
-			? 159 : 63));
+			? 239 : 95)); // Darkest shade of orange, should be close enough
 	}
 
 	V_DrawString(x, y+50, (highlight ? V_YELLOWMAP : 0), levelselect.rows[row].mapnames[col]);
