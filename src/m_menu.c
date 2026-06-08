@@ -269,6 +269,7 @@ static void M_ConnectMenu(INT32 choice);
 #endif
 static void M_StartSplitServerMenu(INT32 choice);
 static void M_StartServer(INT32 choice);
+static void M_ServerOptions(INT32 choice);
 #ifndef NONET
 static void M_Refresh(INT32 choice);
 static void M_Connect(INT32 choice);
@@ -930,29 +931,35 @@ static menuitem_t MP_ServerMenu[] =
 #ifndef NONET
 	{IT_STRING|IT_CALL,              NULL, "Room...",     NULL,           M_RoomMenu,         10},
 	{IT_STRING|IT_CVAR|IT_CV_STRING, NULL, "Server Name",    NULL,        &cv_servername,     20},
+	{IT_STRING|IT_CVAR,              NULL, "Max Players",     NULL,      &cv_maxplayers,    46},
+	{IT_STRING|IT_CVAR,              NULL, "Allow WAD Downloading", NULL, &cv_downloading,   56},
 #endif
 
-	{IT_STRING|IT_CALL,              NULL, "Select Gametype/Level", NULL, M_GameTypeChange,   90},
-
-	{IT_WHITESTRING|IT_CALL,         NULL, "Start",    NULL,              M_StartServer,     130},
+	{IT_STRING|IT_CALL,              NULL, "Select Gametype/Level", NULL, M_GameTypeChange, 100},
+	{IT_STRING|IT_CALL,              NULL, "More Options...",     NULL, M_ServerOptions,  130},
+	{IT_WHITESTRING|IT_CALL,         NULL, "Start",         NULL,        M_StartServer,    140},
 };
 
 enum
 {
-	mp_server_dummy = 0, // exists solely so numbering is consistent between NONET and not NONET
+	mp_server_dummy = 0, // exists solely so zero-indexed in both NONET and not NONET
 #ifndef NONET
 	mp_server_room,
 	mp_server_name,
+	mp_server_maxpl,
+	mp_server_waddl,
 #endif
 	mp_server_levelgt,
+	mp_server_options,
 	mp_server_start
 };
 
 // Separated splitscreen and normal servers.
 static menuitem_t MP_SplitServerMenu[] =
 {
-	{IT_STRING|IT_CALL,              NULL, "Select Gametype/Level", NULL, M_GameTypeChange,   90},
-	{IT_WHITESTRING|IT_CALL,         NULL, "Start",                 NULL,    M_StartServer,     130},
+	{IT_STRING|IT_CALL,              NULL, "Select Gametype/Level", NULL, M_GameTypeChange, 100},
+	{IT_STRING|IT_CALL,              NULL, "More Options...",    NULL,   M_ServerOptions,  130},
+	{IT_WHITESTRING|IT_CALL,         NULL, "Start",        NULL,         M_StartServer,    140},
 };
 
 #ifndef NONET
@@ -1031,7 +1038,7 @@ static menuitem_t OP_MainMenu[] =
 	{IT_SUBMENU | IT_STRING, NULL, "Legacy Options...", NULL,     &OP_LegacyOptionsDef,  70},
 
 	{IT_SUBMENU | IT_STRING, NULL, "Game Options...",  NULL,      &OP_GameOptionsDef,   90},
-	{IT_SUBMENU | IT_STRING, NULL, "Server Options...", NULL,     &OP_ServerOptionsDef, 100},
+	{IT_CALL | IT_STRING, NULL, "Server Options...", NULL,        M_ServerOptions, 100},
 	{IT_STRING  | IT_CALL,   NULL, "Add-on Options...", NULL,     M_AddonsOptions,      110},
 };
 
@@ -1992,7 +1999,11 @@ menu_t MP_ServerDef =
 	&MP_MainDef,
 	MP_ServerMenu,
 	M_DrawServerMenu,
-	27, 40,
+	27, 30
+#ifdef NONET
+	- 50
+#endif
+	,
 	0,
 	NULL
 };
@@ -2004,7 +2015,7 @@ menu_t MP_SplitServerDef =
 	&MP_MainDef,
 	MP_SplitServerMenu,
 	M_DrawServerMenu,
-	27, 40,
+	27, 30 - 50,
 	0,
 	NULL
 };
@@ -5672,7 +5683,7 @@ static void M_Options(INT32 choice)
 	(void)choice;
 
 	// if the player is not admin or server, disable server options
-	OP_MainMenu[6].status = (Playing() && !(server || IsPlayerAdmin(consoleplayer))) ? (IT_GRAYEDOUT) : (IT_STRING|IT_SUBMENU);
+	OP_MainMenu[6].status = (Playing() && !(server || IsPlayerAdmin(consoleplayer))) ? (IT_GRAYEDOUT) : (IT_STRING|IT_CALL);
 
 	// if the player is playing _at all_, disable the erase data options
 	OP_DataOptionsMenu[1].status = (Playing()) ? (IT_GRAYEDOUT) : (IT_STRING|IT_SUBMENU);
@@ -8293,12 +8304,12 @@ static void M_DrawServerMenu(void)
 {
 	M_DrawGenericMenu();
 
-	M_DrawLevelPlatterHeader(currentMenu->y - lsheadingheight/2, "Server settings", true);
 
 #ifndef NONET
 	// Room name
 	if (currentMenu == &MP_ServerDef)
 	{
+		M_DrawLevelPlatterHeader(currentMenu->y - lsheadingheight/2, "Server settings", true);
 		if (ms_RoomId < 0)
 			V_DrawRightAlignedString(BASEVIDWIDTH - currentMenu->x, currentMenu->y + MP_ServerMenu[mp_server_room].alphaKey,
 			                         V_YELLOWMAP, (itemOn == mp_server_room) ? "<Select to change>" : "<Offline Mode>");
@@ -8316,7 +8327,7 @@ static void M_DrawServerMenu(void)
 
 		sprintf(headerstr, "%s - %s", cv_newgametype.string, cv_nextmap.string);
 
-		M_DrawLevelPlatterHeader(currentMenu->y + 80 - lsheadingheight/2, (const char *)headerstr, true);
+		M_DrawLevelPlatterHeader(currentMenu->y + MP_ServerMenu[mp_server_levelgt].alphaKey - 10 - lsheadingheight/2, (const char *)headerstr, true);
 
 		//  A 160x100 image of the level as entry MAPxxP
 		lumpnum = W_CheckNumForName(va("%sP", G_BuildMapName(cv_nextmap.value)));
@@ -8326,7 +8337,7 @@ static void M_DrawServerMenu(void)
 		else
 			PictureOfLevel = W_CachePatchName("BLANKLVL", PU_PATCH);
 
-		V_DrawSmallScaledPatch(319 - (currentMenu->x + (SHORT(PictureOfLevel->width)/2)), currentMenu->y + 90, 0, PictureOfLevel);
+		V_DrawSmallScaledPatch(319 - (currentMenu->x + (SHORT(PictureOfLevel->width)/2)), currentMenu->y + MP_ServerMenu[mp_server_levelgt].alphaKey, 0, PictureOfLevel);
 	}
 }
 
@@ -8369,6 +8380,14 @@ static void M_StartSplitServerMenu(INT32 choice)
 	levellistmode = LLM_CREATESERVER;
 	Newgametype_OnChange();
 	M_SetupNextMenu(&MP_SplitServerDef);
+}
+
+static void M_ServerOptions(INT32 choice)
+{
+	(void)choice;
+
+	OP_ServerOptionsDef.prevMenu = currentMenu;
+	M_SetupNextMenu(&OP_ServerOptionsDef);
 }
 
 #ifndef NONET
