@@ -4692,6 +4692,7 @@ static void M_DrawLevelPlatterMenu(void)
 {
 	UINT8 iter = lsrow;
 	INT32 y = lsbasey + FixedInt(lsoffs[0]) - getheadingoffset(lsrow);
+	const UINT32 cursorx = 19+(lscol*lshseperation);
 	patch_t *patch;
 
 	patch = W_CachePatchName("M_CURSOR", PU_PATCH);
@@ -4709,7 +4710,6 @@ static void M_DrawLevelPlatterMenu(void)
 		y -= lsvseperation(iter);
 	}
 
-
 	// draw from top to bottom
 	while (y < 200)
 	{
@@ -4717,6 +4717,12 @@ static void M_DrawLevelPlatterMenu(void)
 		y += lsvseperation(iter);
 		iter = ((iter == levelselect.numrows-1) ? 0 : iter+1);
 	}
+
+	// draw cursor box
+	//if (levellistmode != LLM_CREATESERVER || lsrow)
+	if(legacypk3_loaded)
+		V_DrawSmallScaledPatch(cursorx + FixedInt(lsoffs[1]), lsbasey+FixedInt(lsoffs[0]), 0, (((lstic & 8) ? levselp[0] : levselp[1])));
+
 
 	// handle movement of cursor box
 	fixed_t cursormovefrac = FixedDiv(2, 3);
@@ -4743,7 +4749,8 @@ static void M_DrawLevelPlatterMenu(void)
 		lsoffs[1] = 0;
 
 	M_DrawMenuTitle();
-	V_DrawScaledPatch((lscol*lshseperation) + FixedInt(lsoffs[1]), lsvseperation(iter)+40, 0, patch);
+	if(!legacypk3_loaded)
+		V_DrawScaledPatch((lscol*lshseperation) + FixedInt(lsoffs[1]), lsvseperation(iter)+40, 0, patch);
 }
 
 #undef lsbasey
