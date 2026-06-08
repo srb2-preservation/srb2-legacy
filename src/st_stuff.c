@@ -967,6 +967,9 @@ static void ST_drawLevelTitle(void)
 	INT32 lvlttly;
 	INT32 zoney;
 
+	if (!LUA_HudEnabled(hud_stagetitle))
+		goto luahook;
+
 	if (!(timeinmap > 2 && timeinmap-3 < 110))
 		return;
 
@@ -1013,6 +1016,9 @@ static void ST_drawLevelTitle(void)
 
 	if (lvlttly+48 < 200)
 		V_DrawCenteredString(subttlxpos, lvlttly+48, V_ALLOWLOWERCASE, subttl);
+
+luahook:
+	LUAh_TitleCardHUD();
 }
 
 static void ST_drawFirstPersonHUD(void)
