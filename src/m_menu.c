@@ -4408,7 +4408,7 @@ static boolean M_PrepareLevelPlatter(INT32 gt)
 			levelselect.rows[row].maplist[col] = mapnum+1; // putting the map on the platter
 			levelselect.rows[row].mapavailable[col] = M_LevelAvailableOnPlatter(mapnum);
 
-			if ((levelselect.rows[row].mapavailable[3] = wide))
+			if ((lswide(row) = wide)) // intentionally assignment
 			{
 				levelselect.rows[row].maplist[2] = levelselect.rows[row].maplist[1] = levelselect.rows[row].maplist[0];
 				levelselect.rows[row].mapavailable[2] = levelselect.rows[row].mapavailable[1] = levelselect.rows[row].mapavailable[0];
@@ -4589,7 +4589,7 @@ static void M_HandleLevelPlatter(INT32 choice)
 			}
 			else if (!lsoffs[1]) //  prevent sound spam
 			{
-				lsoffs[1] = 8;
+				lsoffs[1] = 8 * FRACUNIT;
 				S_StartSound(NULL,sfx_s3kb7);
 			}
 			break;
@@ -4669,9 +4669,6 @@ static void M_DrawLevelPlatterWideMap(UINT8 row, UINT8 col, INT32 x, INT32 y, bo
 	if (!map)
 		return;
 
-	// V_DrawStretchyFixedPatch uses fixed point coords
-	x <<= FRACBITS;
-	y <<= FRACBITS;
 
 	//  A 160x100 image of the level as entry MAPxxP
 	if (!(levelselect.rows[row].mapavailable[col]))
@@ -4679,7 +4676,7 @@ static void M_DrawLevelPlatterWideMap(UINT8 row, UINT8 col, INT32 x, INT32 y, bo
 		if(legacypk3_loaded)
 	 		V_DrawSmallScaledPatch(x, y, /*V_STATIC*/0, levselp[1][2]); // static - make secret maps look ENTICING
 		else
-			V_DrawStretchyFixedPatch(x, y, FixedDiv(564*FRACUNIT, 160*FRACUNIT)/2, FRACUNIT/2, 0, levselp[1][2], NULL);
+			V_DrawStretchyFixedPatch(x<<FRACBITS, y<<FRACBITS, FixedDiv(564*FRACUNIT, 160*FRACUNIT)/2, FRACUNIT/2, 0, levselp[1][2], NULL);
 	}
 	else
 	{
@@ -4691,12 +4688,8 @@ static void M_DrawLevelPlatterWideMap(UINT8 row, UINT8 col, INT32 x, INT32 y, bo
 		if(legacypk3_loaded)
 			V_DrawSmallScaledPatch(x, y, 0, patch);
 		else
-			V_DrawStretchyFixedPatch(x, y, FixedDiv(564*FRACUNIT, 160*FRACUNIT)/2, FRACUNIT/2, 0, patch, NULL);
+			V_DrawStretchyFixedPatch(x<<FRACBITS, y<<FRACBITS, FixedDiv(564*FRACUNIT, 160*FRACUNIT)/2, FRACUNIT/2, 0, patch, NULL);
 	}
-
-	// V_DrawFill uses integer coords
-	x >>= FRACBITS;
-	y >>= FRACBITS;
 
 	if ((y+50) < 200)
 	{
@@ -4814,12 +4807,11 @@ static void M_DrawLevelPlatterMenu(void)
 		iter = ((iter == levelselect.numrows-1) ? 0 : iter+1);
 	}
 
-	// draw cursor box
-	//if (levellistmode != LLM_CREATESERVER || lsrow)
+	// draw cursor box, or just the cursor if legacy.pk3 is not loaded
 	if(legacypk3_loaded)
 		V_DrawSmallScaledPatch(lsbasex + cursorx + FixedInt(lsoffs[1]), lsbasey+FixedInt(lsoffs[0]), 0, (((lstic & 8) ? levselp[sizeselect][0] : levselp[sizeselect][1])));
-
-
+	else
+		V_DrawScaledPatch(/*lsbasex*/ + (lscol*lshseperation) + FixedInt(lsoffs[1]), lsvseperation(iter)+40, 0, patch);
 	// handle movement of cursor box
 	fixed_t cursormovefrac = FixedDiv(2, 3);
 	if (lsoffs[0] > FRACUNIT || lsoffs[0] < -FRACUNIT)
@@ -4845,9 +4837,6 @@ static void M_DrawLevelPlatterMenu(void)
 		lsoffs[1] = 0;
 
 	M_DrawMenuTitle();
-
-	if(!legacypk3_loaded && levelselect.rows[lsrow].maplist[lscol])
-		V_DrawScaledPatch(/*lsbasex +*/ (lscol*lshseperation) + FixedInt(lsoffs[1]), lsvseperation(iter)+40, 0, patch);
 }
 
 #undef lsbasey
