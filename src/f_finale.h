@@ -38,7 +38,7 @@ void F_TitleDemoTicker(void);
 void F_GameEndDrawer(void);
 void F_IntroDrawer(void);
 void F_TitleScreenDrawer(void);
-void F_SkyScroll(INT32 scrollxspeed, INT32 scrollyspeed, const char *patchname);
+void F_SkyScroll(const char *patchname);
 
 void F_GameEvaluationDrawer(void);
 void F_StartGameEvaluation(void);
@@ -80,7 +80,7 @@ extern boolean curbghide;
 #define TITLEBACKGROUNDACTIVE (curfadevalue >= 0 || curbgname[0])
 
 void F_InitMenuPresValues(void);
-void F_MenuPresTicker(boolean run);
+void F_MenuPresTicker(void);
 
 //
 // WIPE

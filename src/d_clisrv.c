@@ -1740,7 +1740,7 @@ static boolean CL_ServerConnectionTicker(const char *tmpsave, tic_t *oldtic, tic
 #ifdef CLIENT_LOADINGSCREEN
 		if (client && cl_mode != CL_CONNECTED && cl_mode != CL_ABORTED)
 		{
-			F_MenuPresTicker(true); // title sky
+			F_MenuPresTicker(); // title sky
 			F_TitleScreenTicker(true);
 			F_TitleScreenDrawer();
 			CL_DrawConnectionStatus();

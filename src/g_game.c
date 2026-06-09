@@ -1932,7 +1932,8 @@ void G_Ticker(boolean run)
 			break;
 
 		case GS_TIMEATTACK:
-			F_MenuPresTicker(run);
+			if (run)
+				F_MenuPresTicker();
 			break;
 
 		case GS_INTRO:
@@ -1968,14 +1969,15 @@ void G_Ticker(boolean run)
 			break;
 
 		case GS_TITLESCREEN:
-			F_MenuPresTicker(run);
+			F_MenuPresTicker();
 			F_TitleScreenTicker(run);
 			break;
 
 		case GS_WAITINGPLAYERS:
 			if (netgame)
 				F_WaitingPlayersTicker();
-			F_MenuPresTicker(run);
+			if (run)
+				F_MenuPresTicker();
 			HU_Ticker();
 			break;
 

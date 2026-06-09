@@ -4672,7 +4672,7 @@ static void M_DrawMessageMenu(void)
 		if (curbgcolor >= 0)
 			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, curbgcolor);
 		else if (!curbghide)
-			F_SkyScroll(curbgxspeed, curbgyspeed, curbgname);
+			F_SkyScroll(curbgname);
 		if (curfadevalue)
 			V_DrawFadeScreen(0xFF00, curfadevalue);
 	}
@@ -6338,7 +6338,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 	if (curbgcolor >= 0)
 		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, curbgcolor);
 	else if (!curbghide)
-		F_SkyScroll(curbgxspeed, curbgyspeed, curbgname);
+		F_SkyScroll(curbgname);
 	if (curfadevalue)
 		V_DrawFadeScreen(0xFF00, curfadevalue);
 
@@ -6766,7 +6766,7 @@ void M_DrawTimeAttackMenu(void)
 	if (curbgcolor >= 0)
 		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, curbgcolor);
 	else if (!curbghide)
-		F_SkyScroll(curbgxspeed, curbgyspeed, curbgname);
+		F_SkyScroll(curbgname);
 	if (curfadevalue)
 		V_DrawFadeScreen(0xFF00, curfadevalue);
 
@@ -6952,7 +6952,7 @@ void M_DrawNightsAttackMenu(void)
 	if (curbgcolor >= 0)
 		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, curbgcolor);
 	else if (!curbghide)
-		F_SkyScroll(curbgxspeed, curbgyspeed, curbgname);
+		F_SkyScroll(curbgname);
 	if (curfadevalue)
 		V_DrawFadeScreen(0xFF00, curfadevalue);
 
