@@ -4271,9 +4271,18 @@ static void M_CacheLevelPlatter(void)
 	levselp[0][2] = W_CachePatchName("BLANKLVL", PU_STATIC);
 	levselp[0][3] = W_CachePatchName("BLANKLVL", PU_STATIC);
 
-	levselp[1][0] = W_CachePatchName("SLCT1LVW", PU_PATCH);
-	levselp[1][1] = W_CachePatchName("SLCT2LVW", PU_PATCH);
-	levselp[1][2] = W_CachePatchName("BLANKLVW", PU_PATCH);
+	if(legacypk3_loaded)
+	{
+		levselp[1][0] = W_CachePatchName("SLCT1LVW", PU_PATCH);
+		levselp[1][1] = W_CachePatchName("SLCT2LVW", PU_PATCH);
+		levselp[1][2] = W_CachePatchName("BLANKLVW", PU_PATCH);
+	}
+	else 
+	{
+		levselp[1][0] = levselp[0][0];
+		levselp[1][1] = levselp[0][1];
+		levselp[1][2] = levselp[0][2];
+	}
 }
 
 
@@ -4590,9 +4599,18 @@ static void M_DrawLevelPlatterWideMap(UINT8 row, UINT8 col, INT32 x, INT32 y, bo
 	if (!map)
 		return;
 
+	// V_DrawStretchyFixedPatch uses fixed point coords
+	x <<= FRACBITS;
+	y <<= FRACBITS;
+
 	//  A 160x100 image of the level as entry MAPxxP
 	if (!(levelselect.rows[row].mapavailable[col]))
-		V_DrawSmallScaledPatch(x, y, /*V_STATIC*/0, levselp[1][2]); // static - make secret maps look ENTICING
+	{
+		if(legacypk3_loaded)
+	 		V_DrawSmallScaledPatch(x, y, /*V_STATIC*/0, levselp[1][2]); // static - make secret maps look ENTICING
+		else
+			V_DrawStretchyFixedPatch(x, y, FixedDiv(564*FRACUNIT, 160*FRACUNIT)/2, FRACUNIT/2, 0, levselp[1][2], NULL);
+	}
 	else
 	{
 		if (W_CheckNumForName(va("%sW", G_BuildMapName(map))) != LUMPERROR)
@@ -4600,8 +4618,15 @@ static void M_DrawLevelPlatterWideMap(UINT8 row, UINT8 col, INT32 x, INT32 y, bo
 		else
 			patch = levselp[1][2]; // don't static to indicate that it's just a normal level
 
-		V_DrawSmallScaledPatch(x, y, 0, patch);
+		if(legacypk3_loaded)
+			V_DrawSmallScaledPatch(x, y, 0, patch);
+		else
+			V_DrawStretchyFixedPatch(x, y, FixedDiv(564*FRACUNIT, 160*FRACUNIT)/2, FRACUNIT/2, 0, patch, NULL);
 	}
+
+	// V_DrawFill uses integer coords
+	x >>= FRACBITS;
+	y >>= FRACBITS;
 
 	if ((y+50) < 200)
 	{
@@ -4752,7 +4777,7 @@ static void M_DrawLevelPlatterMenu(void)
 	M_DrawMenuTitle();
 
 	if(!legacypk3_loaded && levelselect.rows[lsrow].maplist[lscol])
-		V_DrawScaledPatch(lsbasex + (lscol*lshseperation) + FixedInt(lsoffs[1]), lsvseperation(iter)+40, 0, patch);
+		V_DrawScaledPatch(/*lsbasex +*/ (lscol*lshseperation) + FixedInt(lsoffs[1]), lsvseperation(iter)+40, 0, patch);
 }
 
 #undef lsbasey
