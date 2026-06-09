@@ -51,8 +51,6 @@ static tic_t stoptimer;
 static boolean keypressed = false;
 
 // (no longer) De-Demo'd Title Screen
-static tic_t xscrolltimer;
-static tic_t yscrolltimer;
 static INT32 menuanimtimer; // Title screen: background animation timing
 
 // menu presentation state
@@ -1432,6 +1430,7 @@ void F_SkyScroll(INT32 scrollxspeed, INT32 scrollyspeed, const char *patchname)
 	INT32 pw, ph; // scaled by dupz
 	patch_t *pat;
 	INT32 i, j;
+	fixed_t fracmenuanimtimer, xscrolltimer, yscrolltimer;
 
 	if (rendermode == render_none)
 		return;
@@ -1444,26 +1443,27 @@ void F_SkyScroll(INT32 scrollxspeed, INT32 scrollyspeed, const char *patchname)
 
 	if (!scrollxspeed && !scrollyspeed)
 	{
-		V_DrawPatchFill(W_CachePatchName(patchname, PU_CACHE));
+		V_DrawPatchFill(W_CachePatchName(patchname, PU_PATCH));
 		return;
 	}
 
-	pat = W_CachePatchName(patchname, PU_CACHE);
+	pat = W_CachePatchName(patchname, PU_PATCH);
 
-	patwidth = SHORT(pat->width);
-	patheight = SHORT(pat->height);
+	patwidth = pat->width;
+	patheight = pat->height;
 	pw = patwidth * dupz;
 	ph = patheight * dupz;
 
 	tilex = max(FixedCeil(FixedDiv(vid.width, pw)) >> FRACBITS, 1)+2; // one tile on both sides of center
 	tiley = max(FixedCeil(FixedDiv(vid.height, ph)) >> FRACBITS, 1)+2;
 
-	xscrolltimer = ((menuanimtimer*scrollxspeed)/16 + patwidth*xneg) % (patwidth);
-	yscrolltimer = ((menuanimtimer*scrollyspeed)/16 + patheight*yneg) % (patheight);
+	fracmenuanimtimer = (menuanimtimer * FRACUNIT) - (FRACUNIT - rendertimefrac);
+	xscrolltimer = ((fracmenuanimtimer*scrollxspeed)/16 + patwidth*xneg*FRACUNIT) % (patwidth * FRACUNIT);
+	yscrolltimer = ((fracmenuanimtimer*scrollyspeed)/16 + patheight*yneg*FRACUNIT) % (patheight * FRACUNIT);
 
 	// coordinate offsets
-	xscrolled = xscrolltimer * dupz;
-	yscrolled = yscrolltimer * dupz;
+	xscrolled = FixedInt(xscrolltimer * dupz);
+	yscrolled = FixedInt(yscrolltimer * dupz);
 
 	for (x = (xispos) ? -pw*(tilex-1)+pw : 0, i = 0;
 		i < tilex;
