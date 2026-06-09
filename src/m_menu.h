@@ -210,6 +210,13 @@ typedef struct
 } levelselect_t;
 // experimental level select end
 
+// descriptions for gametype select screen
+typedef struct
+{
+	char notes[441];
+} gtdesc_t;
+
+
 // mode descriptions for video mode menu
 typedef struct
 {
