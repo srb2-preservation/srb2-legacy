@@ -193,7 +193,7 @@ menu_t SPauseDef;
 // Level Select
 static levelselect_t levelselect = {0, NULL};
 static UINT8 levelselectselect[4];
-static patch_t *levselp[2][4];
+static patch_t *levselp[2][3];
 static INT32 lsoffs[2];
 
 #define lsrow levelselectselect[0]
@@ -4269,13 +4269,12 @@ static void M_CacheLevelPlatter(void)
 	levselp[0][0] = W_CachePatchName("SLCT1LVL", PU_STATIC);
 	levselp[0][1] = W_CachePatchName("SLCT2LVL", PU_STATIC);
 	levselp[0][2] = W_CachePatchName("BLANKLVL", PU_STATIC);
-	levselp[0][3] = W_CachePatchName("BLANKLVL", PU_STATIC);
 
 	if(legacypk3_loaded)
 	{
-		levselp[1][0] = W_CachePatchName("SLCT1LVW", PU_PATCH);
-		levselp[1][1] = W_CachePatchName("SLCT2LVW", PU_PATCH);
-		levselp[1][2] = W_CachePatchName("BLANKLVW", PU_PATCH);
+		levselp[1][0] = W_CachePatchName("SLCT1LVW", PU_STATIC);
+		levselp[1][1] = W_CachePatchName("SLCT2LVW", PU_STATIC);
+		levselp[1][2] = W_CachePatchName("BLANKLVW", PU_STATIC);
 	}
 	else 
 	{
