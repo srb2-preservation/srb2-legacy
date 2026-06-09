@@ -194,7 +194,7 @@ typedef struct
 	char skinname[SKINNAMESIZE*2+2]; // skin&skin\0
 } description_t;
 
-// experimental level select -- remember to use M_HandleSetupMultiPlayer
+// level select platter
 typedef struct
 {
 	char header[22+5]; // mapheader_t lvltttl max length + " ZONE"

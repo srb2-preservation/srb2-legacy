@@ -627,7 +627,7 @@ static menuitem_t MISC_ChangeGameTypeMenu[] =
 static const gtdesc_t gametypedesc[] =
 {
 	{"Play through the single-player campaign with your friends, teaming up to beat Dr. Eggman's nefarious challenges!"},
-	{"Speed your way through the main acts, competing to get as much stuff as possible in the fastest time to see who's the best."},
+	{"Speed your way through the main acts, competing in several different categories to see who's the best."},
 	{"There's not much to it - zoom through the level faster than everyone else."},
 	{"Sling rings at your foes in a free-for-all battle. Use the special weapon rings to your advantage!"},
 	{"Sling rings at your foes in a color-coded battle. Use the special weapon rings to your advantage!"},
@@ -4614,7 +4614,7 @@ static void M_DrawLevelPlatterWideMap(UINT8 row, UINT8 col, INT32 x, INT32 y, bo
 		return;
 
 
-	//  A 160x100 image of the level as entry MAPxxP
+	//  A 564x100 image of the level as entry MAPxxW
 	if (!(levelselect.rows[row].mapavailable[col]))
 	{
 		if(legacypk3_loaded)
@@ -4668,7 +4668,7 @@ static void M_DrawLevelPlatterMap(UINT8 row, UINT8 col, INT32 x, INT32 y, boolea
 
 		//  A 160x100 image of the level as entry MAPxxP
 		if (!(levelselect.rows[row].mapavailable[col]))
-			patch = ((lstic & 1) ? levselp[0][2] : levselp[0][3]); // static - make secret maps look ENTICING
+			patch = ((lstic & 1) ? levselp[0][2] : levselp[0][2]); // static - make secret maps look ENTICING
 		else if (W_CheckNumForName(va("%sP", G_BuildMapName(map))) != LUMPERROR)
 			patch = W_CachePatchName(va("%sP", G_BuildMapName(map)), PU_PATCH);
 		else
@@ -10013,7 +10013,7 @@ static void M_DrawColorMenu(void)
 
 	// DRAW THE SKULL CURSOR
 	V_DrawScaledPatch(currentMenu->x - 24, cursory, 0,
-		W_CachePatchName("M_CURSOR", PU_CACHE));
+		W_CachePatchName("M_CURSOR", PU_PATCH));
 }
 
 // special menuitem key handler for video mode list
