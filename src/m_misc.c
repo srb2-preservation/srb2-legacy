@@ -1181,7 +1181,7 @@ void M_SaveFrame(void)
 				float cur_size = GIF_GetSizeMB();
 				float diff = (cur_size - old_size) * 8;
 
-				if (cur_size >= (cv_gif_maxsize.value * 1024 * 1024) - diff)
+				if (cur_size >= (cv_gif_maxsize.value) - diff)
 				{
 					M_StopMovie();
 
