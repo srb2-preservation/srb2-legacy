@@ -202,7 +202,7 @@ static INT32 lsoffs[2];
 #define lshli levelselectselect[3]
 
 #define lshseperation 101
-#define lsbasevseperation 62
+#define lsbasevseperation ((62*vid.height)/(BASEVIDHEIGHT*vid.dupy)) //62
 #define lsheadingheight 16
 #define getheadingoffset(row) (levelselect.rows[row].header[0] ? lsheadingheight : 0)
 #define lsvseperation(row) (lsbasevseperation + getheadingoffset(row))
@@ -4685,16 +4685,10 @@ static void M_DrawLevelPlatterHeader(INT32 y, const char *header, boolean header
 		y += lsheadingheight - 12;
 		V_DrawString(19, y, (headerhighlight ? V_YELLOWMAP : 0), header);
 		y += 9;
-		if ((y >= 0) && (y < 200))
-		{
-			V_DrawFill(19, y, 281, 1, (headerhighlight ? yellowmap[3] : 3));
-			V_DrawFill(300, y, 1, 1, 26);
-		}
+		V_DrawFill(19, y, 281, 1, (headerhighlight ? yellowmap[3] : 3));
+		V_DrawFill(300, y, 1, 1, 26);
 		y++;
-		if ((y >= 0) && (y < 200))
-		{
 			V_DrawFill(19, y, 282, 1, 26);
-		}
 		y += 2;
 }
 
@@ -4733,22 +4727,10 @@ static void M_DrawLevelPlatterWideMap(UINT8 row, UINT8 col, INT32 x, INT32 y, bo
 			V_DrawSmallScaledPatch(x, y, 0, patch);
 	}
 
-	if ((y+50) < 200)
-	{
-		INT32 topy = (y+50), h = 8;
-
-		if (topy < 0)
-		{
-			h += topy;
-			topy = 0;
-		}
-		else if (topy + h >= 200)
-			h = 200 - y;
-		if (h > 0)
-			V_DrawFill(x, topy, 282, h,
+		V_DrawFill(x, y+50, 282, 8,
 			((mapheaderinfo[map-1]->unlockrequired < 0)
 			? 239 : 95)); // Darkest shade of orange, should be close enough
-	}
+	
 
 	V_DrawString(x, y+50, (highlight ? V_YELLOWMAP : 0), levelselect.rows[row].mapnames[col]);
 }
