@@ -4727,10 +4727,10 @@ static void M_DrawLevelPlatterWideMap(UINT8 row, UINT8 col, INT32 x, INT32 y, bo
 		else
 			patch = levselp[1][2]; // don't static to indicate that it's just a normal level
 
-		if(legacypk3_loaded)
-			V_DrawSmallScaledPatch(x, y, 0, patch);
-		else
+		if(!legacypk3_loaded && patch == levselp[1][2])
 			V_DrawStretchyFixedPatch(x<<FRACBITS, y<<FRACBITS, FixedDiv(564*FRACUNIT, 160*FRACUNIT)/2, FRACUNIT/2, 0, patch, NULL);
+		else
+			V_DrawSmallScaledPatch(x, y, 0, patch);
 	}
 
 	if ((y+50) < 200)
@@ -4881,8 +4881,8 @@ static void M_DrawLevelPlatterMenu(void)
 	if ((levellistmode != LLM_CREATESERVER || lsrow) && legacypk3_loaded)
 		V_DrawSmallScaledPatch(lsbasex + cursorx + FixedInt(lsoffs[1]), lsbasey+FixedInt(lsoffs[0]), 0, (levselp[sizeselect][((skullAnimCounter/4) ? 1 : 0)]));
 
-	if(!legacypk3_loaded && levelselect.rows[lsrow].maplist[lscol] > 0)
-		V_DrawScaledPatch(/*lsbasex*/ + (lscol*lshseperation) + FixedInt(lsoffs[1]), lsvseperation(iter)+40, 0, patch);
+	if(!legacypk3_loaded)
+		V_DrawScaledPatch(/*lsbasex*/ + cursorx + FixedInt(lsoffs[1]), lsvseperation(iter)+40, 0, patch);
 
 	// handle movement of cursor box
 	fixed_t cursormovefrac = FixedDiv(2, 3);
