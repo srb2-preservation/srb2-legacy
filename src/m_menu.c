@@ -232,7 +232,6 @@ static void M_Options(INT32 choice);
 static void M_SelectableClearMenus(INT32 choice);
 static void M_Retry(INT32 choice);
 static void M_EndGame(INT32 choice);
-static void M_GameTypeChange(INT32 choice);
 static void M_MapChange(INT32 choice);
 static void M_ChangeLevel(INT32 choice);
 static void M_ConfirmSpectate(INT32 choice);
@@ -340,7 +339,6 @@ static void M_DrawSkyRoom(void);
 static void M_DrawChecklist(void);
 static void M_DrawEmblemHints(void);
 static void M_DrawPauseMenu(void);
-static void M_DrawGameTypeMenu(void);
 static void M_DrawServerMenu(void);
 static void M_DrawLevelPlatterMenu(void);
 static void M_DrawImageDef(void);
@@ -526,7 +524,7 @@ static menuitem_t MPauseMenu[] =
 {
 	{IT_STRING | IT_CALL,     NULL, "Add-ons...", NULL,         M_Addons,               8},
 	{IT_STRING  | IT_SUBMENU, NULL, "Scramble Teams...", NULL,  &MISC_ScrambleTeamDef, 16},
-	{IT_STRING  | IT_CALL,    NULL, "Switch Gametype/Level..."    , NULL,  M_GameTypeChange,      24},
+	{IT_STRING  | IT_CALL,    NULL, "Switch Gametype/Level...", NULL,  M_MapChange,      24},
 
 	{IT_CALL | IT_STRING,    NULL, "Continue",     NULL,         M_SelectableClearMenus,40},
 	{IT_CALL | IT_STRING,    NULL, "Player 1 Setup",  NULL,       M_SetupMultiPlayer,    48}, // splitscreen
@@ -608,32 +606,16 @@ static menuitem_t MISC_ChangeTeamMenu[] =
 	{IT_WHITESTRING|IT_CALL,         NULL, "Confirm",      NULL,      M_ConfirmTeamChange,    90},
 };
 
-static menuitem_t MISC_ChangeGameTypeMenu[] =
-{
-	{IT_STRING|IT_CALL,              NULL, "Co-op",  NULL,  M_MapChange,  0},
-
-	{IT_STRING|IT_CALL,              NULL, "Competition", NULL, M_MapChange, 12},
-	{IT_STRING|IT_CALL,              NULL, "Race",    NULL,   M_MapChange, 20},
-
-	{IT_STRING|IT_CALL,              NULL, "Match",  NULL,   	M_MapChange, 32},
-	{IT_STRING|IT_CALL,              NULL, "Team Match",  NULL,     M_MapChange, 40},
-
-	{IT_STRING|IT_CALL,              NULL, "Tag",        NULL,        M_MapChange, 52},
-	{IT_STRING|IT_CALL,              NULL, "Hide & Seek",  NULL,    M_MapChange, 60},
-
-	{IT_STRING|IT_CALL,              NULL, "Capture the Flag", NULL,  M_MapChange, 72},
-};
-
 static const gtdesc_t gametypedesc[] =
 {
-	{"Play through the single-player campaign with your friends, teaming up to beat Dr. Eggman's nefarious challenges!"},
-	{"Speed your way through the main acts, competing in several different categories to see who's the best."},
-	{"There's not much to it - zoom through the level faster than everyone else."},
-	{"Sling rings at your foes in a free-for-all battle. Use the special weapon rings to your advantage!"},
-	{"Sling rings at your foes in a color-coded battle. Use the special weapon rings to your advantage!"},
-	{"Whoever's IT has to hunt down everyone else. If you get caught, you have to turn on your former friends!"},
-	{"Try and find a good hiding place in these maps - we dare you."},
-	{"Steal the flag from the enemy's base and bring it back to your own, but watch out - they could just as easily steal yours!"},
+	{{ 87,  87}, "Play through the single-player campaign with your friends, teaming up to beat Dr. Eggman's nefarious challenges!"},
+	{{167, 167}, "Speed your way through the main acts, competing in several different categories to see who's the best."},
+	{{106, 106}, "There's not much to it - zoom through the level faster than everyone else."},
+	{{ 115,  115}, "Sling rings at your foes in a free-for-all battle. Use the special weapon rings to your advantage!"},
+	{{232,  130}, "Sling rings at your foes in a color-coded battle. Use the special weapon rings to your advantage!"},
+	{{220, 220}, "Whoever's IT has to hunt down everyone else. If you get caught, you have to turn on your former friends!"},
+	{{230, 230}, "Try and find a good hiding place in these maps - we dare you."},
+	{{ 130, 232}, "Steal the flag from the enemy's base and bring it back to your own, but watch out - they could just as easily steal yours!"},
 };
 
 
@@ -950,7 +932,7 @@ static menuitem_t MP_ServerMenu[] =
 	{IT_STRING|IT_CVAR,              NULL, "Allow WAD Downloading", NULL, &cv_downloading,   56},
 #endif
 
-	{IT_STRING|IT_CALL,              NULL, "Select Gametype/Level", NULL, M_GameTypeChange, 100},
+	{IT_STRING|IT_CALL,              NULL, "Select Gametype/Level", NULL, M_MapChange, 100},
 	{IT_STRING|IT_CALL,              NULL, "More Options...",     NULL, M_ServerOptions,  130},
 	{IT_WHITESTRING|IT_CALL,         NULL, "Start",         NULL,        M_StartServer,    140},
 };
@@ -972,7 +954,7 @@ enum
 // Separated splitscreen and normal servers.
 static menuitem_t MP_SplitServerMenu[] =
 {
-	{IT_STRING|IT_CALL,              NULL, "Select Gametype/Level", NULL, M_GameTypeChange, 100},
+	{IT_STRING|IT_CALL,              NULL, "Select Gametype/Level", NULL, M_MapChange, 100},
 	{IT_STRING|IT_CALL,              NULL, "More Options...",    NULL,   M_ServerOptions,  130},
 	{IT_WHITESTRING|IT_CALL,         NULL, "Start",        NULL,         M_StartServer,    140},
 };
@@ -1705,22 +1687,11 @@ menu_t MPauseDef = PAUSEMENUSTYLE(MPauseMenu, 40, 72);
 menu_t MISC_ScrambleTeamDef = DEFAULTMENUSTYLE(NULL, MISC_ScrambleTeamMenu, &MPauseDef, 27, 40);
 menu_t MISC_ChangeTeamDef = DEFAULTMENUSTYLE(NULL, MISC_ChangeTeamMenu, &MPauseDef, 27, 40);
 // MP Gametype and map change menu
-menu_t MISC_ChangeGameTypeDef =
-{
-	NULL,
-	sizeof (MISC_ChangeGameTypeMenu)/sizeof (menuitem_t),
-	&MainDef,  // Doesn't matter.
-	MISC_ChangeGameTypeMenu,
-	M_DrawGameTypeMenu,
-	30, (200 - (72+8))/2, // vertically centering
-	0,
-	NULL
-};
 menu_t MISC_ChangeLevelDef =
 {
 	NULL,
 	sizeof (MISC_ChangeLevelMenu)/sizeof (menuitem_t),
-	&MISC_ChangeGameTypeDef,
+	&MainDef,  // Doesn't matter.
 	MISC_ChangeLevelMenu,
 	M_DrawLevelPlatterMenu,
 	0, 0,
@@ -2825,24 +2796,12 @@ boolean M_Responder(event_t *ev)
 		case KEY_DOWNARROW:
 			M_NextOpt();
 			S_StartSound(NULL, sfx_menu1);
-			if (currentMenu == &SP_PlayerDef
-			|| currentMenu == &MISC_ChangeGameTypeDef)
-			{
-				Z_Free(char_notes);
-				char_notes = NULL;
-			}
 			coolalphatimer = 9;
 			return true;
 
 		case KEY_UPARROW:
 			M_PrevOpt();
 			S_StartSound(NULL, sfx_menu1);
-			if (currentMenu == &SP_PlayerDef
-			|| currentMenu == &MISC_ChangeGameTypeDef)
-			{
-				Z_Free(char_notes);
-				char_notes = NULL;
-			}
 			coolalphatimer = 9;
 			return true;
 
@@ -4249,6 +4208,8 @@ static INT32 M_CountRowsToShowOnPlatter(INT32 gt)
 		}
 		mapnum++;
 	}
+	if (levellistmode == LLM_CREATESERVER)
+		rows++;
 
 	return rows;
 }
@@ -4306,10 +4267,10 @@ static void M_CacheLevelPlatter(void)
 // Prepares a tasty dish of zones and acts!
 // Call before any attempt to access a level platter.
 //
-static boolean M_PrepareLevelPlatter(INT32 gt)
+static boolean M_PrepareLevelPlatter(INT32 gt, boolean nextmappick)
 {
 	INT32 numrows = M_CountRowsToShowOnPlatter(gt);
-	INT32 mapnum = 0, prevmapnum = 0, col = 0, row = 0;
+	INT32 mapnum = 0, prevmapnum = 0, col = 0, row = 0, startrow = 0;
 
 	if (!numrows)
 		return false;
@@ -4322,9 +4283,20 @@ static boolean M_PrepareLevelPlatter(INT32 gt)
 	levelselect.rows = Z_Realloc(levelselect.rows, numrows*sizeof(levelselectrow_t), PU_STATIC, NULL);
 	if (!levelselect.rows)
 		I_Error("Insufficient memory to prepare level platter");
-
-		// done here so lsrow and lscol can be set if cv_nextmap is on the platter
+	
+	// done here so lsrow and lscol can be set if cv_nextmap is on the platter
 	lsrow = lscol = lstic = lshli = lsoffs[0] = lsoffs[1] = 0;
+
+	if (levellistmode == LLM_CREATESERVER)
+	{
+		sprintf(levelselect.rows[0].header, "Gametype");
+		lswide(0) = true;
+		levelselect.rows[row].mapavailable[2] = levelselect.rows[row].mapavailable[1] = levelselect.rows[row].mapavailable[0] = false;
+		startrow = row = 1;
+
+		Z_Free(char_notes);
+		char_notes = NULL;
+	}
 
 	while (mapnum < NUMMAPS)
 	{
@@ -4335,7 +4307,7 @@ static boolean M_PrepareLevelPlatter(INT32 gt)
 			const boolean wide = (mapheaderinfo[mapnum]->menuflags & LF2_WIDEICON);
 
 			// preparing next position to drop mapnum into
-			if (levelselect.rows[0].maplist[0])
+			if (levelselect.rows[startrow].maplist[0])
 			{
 				if (col == 2 // no more space on the row?
 				|| wide
@@ -4358,7 +4330,7 @@ static boolean M_PrepareLevelPlatter(INT32 gt)
 				levelselect.rows[row].mapavailable[2] = levelselect.rows[row].mapavailable[1] = levelselect.rows[row].mapavailable[0];
 			}
 
-			if (cv_nextmap.value == mapnum+1) // A little quality of life improvement.
+			if (nextmappick && cv_nextmap.value == mapnum+1) // A little quality of life improvement.
 			{
 				lsrow = row;
 				lscol = col;
@@ -4401,7 +4373,7 @@ static boolean M_PrepareLevelPlatter(INT32 gt)
 				sprintf(levelselect.rows[row].mapnames[col], "???");
 
 			// creating header text
-			if (!col && (!row || !(fastcmp(mapheaderinfo[mapnum]->selectheading, mapheaderinfo[levelselect.rows[row-1].maplist[0]-1]->selectheading))))
+			if (!col && ((row == startrow) || !(fastcmp(mapheaderinfo[mapnum]->selectheading, mapheaderinfo[levelselect.rows[row-1].maplist[0]-1]->selectheading))))
 			{
 				if (!levelselect.rows[row].mapavailable[col])
 					sprintf(levelselect.rows[row].header, "???");
@@ -4425,12 +4397,12 @@ static boolean M_PrepareLevelPlatter(INT32 gt)
 }
 
 
-#define selectvalnextmapnobrace(column) if ((selectval = levelselect.rows[lsrow].maplist[column]) && levelselect.rows[lsrow].mapavailable[column])\
+#define ifselectvalnextmapnobrace(column) if ((selectval = levelselect.rows[lsrow].maplist[column]) && levelselect.rows[lsrow].mapavailable[column])\
 			{\
 				CV_SetValue(&cv_nextmap, selectval);
 
 
-#define selectvalnextmap(column) selectvalnextmapnobrace(column)}
+#define ifselectvalnextmap(column) ifselectvalnextmapnobrace(column)}
 
 
 //
@@ -4470,7 +4442,7 @@ static void M_HandleLevelPlatter(INT32 choice)
 
 			S_StartSound(NULL,sfx_s3kb7);
 
-			selectvalnextmap(lscol) else selectvalnextmap(0)
+			ifselectvalnextmap(lscol) else ifselectvalnextmap(0)
 			break;
 
 		case KEY_UPARROW:
@@ -4489,8 +4461,9 @@ static void M_HandleLevelPlatter(INT32 choice)
 				lsrow = levelselect.numrows;
 			}
 			lsrow--;
-
 			lsoffs[0] = -lsvseperation(iter) * FRACUNIT;
+
+
 
 			if (levelselect.rows[lsrow].header[0])
 				lshli = lsrow;
@@ -4505,31 +4478,60 @@ static void M_HandleLevelPlatter(INT32 choice)
 
 			S_StartSound(NULL,sfx_s3kb7);
 
-			selectvalnextmap(lscol) else selectvalnextmap(0)
+			ifselectvalnextmap(lscol) else ifselectvalnextmap(0)
 			break;
 
-		case KEY_LEFTARROW:
-			if (lscol > 0)
-			{
-				lscol--;
-				lsoffs[1] = (lswide(lsrow) ? -8 : lshseperation) * FRACUNIT;
-				S_StartSound(NULL,sfx_s3kb7);
-			}
-			else if (!lsoffs[1]) //  prevent sound spam
-			{
-				lsoffs[1] = -8;
-				S_StartSound(NULL,sfx_s3kb7);
-			}
-			break;
 
+		case KEY_ENTER:
+			if (!(levellistmode == LLM_CREATESERVER && !lsrow))
+			{
+				ifselectvalnextmapnobrace(lscol)
+					lsoffs[0] = lsoffs[1] = 0;
+					S_StartSound(NULL,sfx_menu1);
+					if (gamestate == GS_TIMEATTACK)
+						M_SetupNextMenu(currentMenu->prevMenu);
+					else if (currentMenu == &MISC_ChangeLevelDef)
+					{
+						if (currentMenu->prevMenu && currentMenu->prevMenu != &MPauseDef)
+							M_SetupNextMenu(currentMenu->prevMenu);
+						else
+							M_ChangeLevel(0);
+						Z_Free(levelselect.rows);
+						levelselect.rows = NULL;
+					}
+					else
+						M_LevelSelectWarp(0);
+					Nextmap_OnChange();
+				}
+				else if (!lsoffs[0]) //  prevent sound spam
+				{
+					lsoffs[0] = -8 * FRACUNIT;
+					S_StartSound(NULL,sfx_s3kb2);
+				}
+				break;
+			}
+			/* FALLTHRU */
 		case KEY_RIGHTARROW:
-			if (lscol < 2)
+			if (levellistmode == LLM_CREATESERVER && !lsrow)
+			{
+				CV_AddValue(&cv_newgametype, 1);
+				S_StartSound(NULL,sfx_menu1);
+				lscol = 0;
+
+				Z_Free(char_notes);
+				char_notes = NULL;
+
+				if (!M_PrepareLevelPlatter(cv_newgametype.value, false))
+					I_Error("Unidentified level platter failure!");
+			}
+			else if (lscol < 2)
 			{
 				lscol++;
 
 				lsoffs[1] = (lswide(lsrow) ? 8 : -lshseperation) * FRACUNIT;
 				S_StartSound(NULL,sfx_s3kb7);
-				selectvalnextmap(lscol) else selectvalnextmap(0)
+
+				ifselectvalnextmap(lscol) else ifselectvalnextmap(0)
 			}
 			else if (!lsoffs[1]) //  prevent sound spam
 			{
@@ -4538,33 +4540,34 @@ static void M_HandleLevelPlatter(INT32 choice)
 			}
 			break;
 
-		case KEY_ENTER:
-			selectvalnextmapnobrace(lscol)
-
-				lsoffs[0] = lsoffs[1] = 0;
-				S_StartSound(NULL,sfx_menu1);
-				if (gamestate == GS_TIMEATTACK)
-					M_SetupNextMenu(currentMenu->prevMenu);
-				else if (currentMenu == &MISC_ChangeLevelDef)
-				{
-					if (currentMenu->prevMenu && currentMenu->prevMenu->prevMenu != &MPauseDef)
-						M_SetupNextMenu(currentMenu->prevMenu->prevMenu);
-					else
-						M_ChangeLevel(0);
-					Z_Free(levelselect.rows);
-					levelselect.rows = NULL;
-				}
-				else
-					M_LevelSelectWarp(0);
-				Nextmap_OnChange();
-			}
-			else if (!lsoffs[0]) //  prevent sound spam
+		case KEY_LEFTARROW:
+			if (levellistmode == LLM_CREATESERVER && !lsrow)
 			{
-				lsoffs[0] = -8 * FRACUNIT;
-				S_StartSound(NULL,sfx_s3kb2);
+				CV_AddValue(&cv_newgametype, -1);
+				S_StartSound(NULL,sfx_menu1);
+				lscol = 0;
+
+				Z_Free(char_notes);
+				char_notes = NULL;
+
+				if (!M_PrepareLevelPlatter(cv_newgametype.value, false))
+					I_Error("Unidentified level platter failure!");
+			}
+			else if (lscol > 0)
+			{
+				lscol--;
+
+				lsoffs[1] = (lswide(lsrow) ? -8 : lshseperation) * FRACUNIT;
+				S_StartSound(NULL,sfx_s3kb7);
+
+				ifselectvalnextmap(lscol) else ifselectvalnextmap(0)
+			}
+			else if (!lsoffs[1]) //  prevent sound spam
+			{
+				lsoffs[1] = -8 * FRACUNIT;
+				S_StartSound(NULL,sfx_s3kb7);
 			}
 			break;
-
 
 		case KEY_ESCAPE:
 			exitmenu = true;
@@ -4715,7 +4718,28 @@ static void M_DrawLevelPlatterRow(UINT8 row, INT32 y)
 	}
 
 
-	if (lswide(row))
+	if (levellistmode == LLM_CREATESERVER && !row)
+	{
+		if (!char_notes)
+			char_notes = V_WordWrap(0, 282 - 8, V_ALLOWLOWERCASE, gametypedesc[cv_newgametype.value].notes);
+
+		V_DrawFill(lsbasex, y, 282, 50, 27);
+		V_DrawString(lsbasex + 4, y + 4, V_RETURN8|V_ALLOWLOWERCASE, char_notes);
+
+		V_DrawFill(lsbasex,     y+50, 141, 8, gametypedesc[cv_newgametype.value].col[0]);
+		V_DrawFill(lsbasex+141, y+50, 141, 8, gametypedesc[cv_newgametype.value].col[1]);
+
+		V_DrawString(lsbasex, y+50, 0, gametype_cons_t[cv_newgametype.value].strvalue);
+
+		if (!lsrow)
+		{
+			V_DrawCharacter(lsbasex - 10 - (skullAnimCounter/5), y+25,
+				'\x1C' | V_YELLOWMAP, false);
+			V_DrawCharacter(lsbasex+282 + 2 + (skullAnimCounter/5), y+25,
+				'\x1D' | V_YELLOWMAP, false);
+		}
+	}
+	else if (lswide(row))
 		M_DrawLevelPlatterWideMap(row, 0, lsbasex, y, rowhighlight);
 	else
 	{
@@ -4756,10 +4780,12 @@ static void M_DrawLevelPlatterMenu(void)
 	}
 
 	// draw cursor box, or just the cursor if legacy.pk3 is not loaded
-	if(legacypk3_loaded)
-		V_DrawSmallScaledPatch(lsbasex + cursorx + FixedInt(lsoffs[1]), lsbasey+FixedInt(lsoffs[0]), 0, (((lstic & 8) ? levselp[sizeselect][0] : levselp[sizeselect][1])));
-	else
+	if ((levellistmode != LLM_CREATESERVER || lsrow) && legacypk3_loaded)
+		V_DrawSmallScaledPatch(lsbasex + cursorx + FixedInt(lsoffs[1]), lsbasey+FixedInt(lsoffs[0]), 0, (levselp[sizeselect][((skullAnimCounter/4) ? 1 : 0)]));
+
+	if(!legacypk3_loaded && levelselect.rows[lsrow].maplist[lscol] > 0)
 		V_DrawScaledPatch(/*lsbasex*/ + (lscol*lshseperation) + FixedInt(lsoffs[1]), lsvseperation(iter)+40, 0, patch);
+
 	// handle movement of cursor box
 	fixed_t cursormovefrac = FixedDiv(2, 3);
 	if (lsoffs[0] > FRACUNIT || lsoffs[0] < -FRACUNIT)
@@ -5043,7 +5069,8 @@ static void M_HandleImageDef(INT32 choice)
 			S_StartSound(NULL, sfx_menu1);
 			if (itemOn >= (INT16)(currentMenu->numitems-1))
 				itemOn = 0;
-            else itemOn++;
+            else 
+				itemOn++;
 			M_UpdateItemOn();
 			break;
 
@@ -6078,7 +6105,7 @@ static void M_CustomLevelSelect(INT32 choice)
 	SR_LevelSelectDef.prevMenu = currentMenu;
 	levellistmode = LLM_LEVELSELECT;
 	maplistoption = (UINT8)(unlockables[ul].variable);
-	if (!M_PrepareLevelPlatter(-1))
+	if (!M_PrepareLevelPlatter(-1, true))
 	{
 		M_StartMessage(M_GetText("No selectable levels found.\n"),NULL,MM_NOTHING);
 		return;
@@ -6117,7 +6144,7 @@ static void M_LoadGameLevelSelect(INT32 choice)
 	SP_LevelSelectDef.prevMenu = currentMenu;
 	levellistmode = LLM_LEVELSELECT;
 	maplistoption = 1;
-	if (!M_PrepareLevelPlatter(-1))
+	if (!M_PrepareLevelPlatter(-1, true))
 	{
 		M_StartMessage(M_GetText("No selectable levels found.\n"),NULL,MM_NOTHING);
 		return;
@@ -7186,7 +7213,7 @@ static void M_TimeAttack(INT32 choice)
 		SP_TimeAttackDef.prevMenu = &MainDef;
 		levellistmode = LLM_RECORDATTACK; // Don't be dependent on cv_newgametype
 
-		if (!M_PrepareLevelPlatter(-1))
+		if (!M_PrepareLevelPlatter(-1, true))
 		{
 			M_StartMessage(M_GetText("No record-attackable levels found.\n"),NULL,MM_NOTHING);
 			return;
@@ -7377,7 +7404,7 @@ static void M_NightsAttack(INT32 choice)
 		SP_NightsAttackDef.prevMenu = &MainDef;
 		levellistmode = LLM_NIGHTSATTACK; // Don't be dependent on cv_newgametype
 
-		if (!M_PrepareLevelPlatter(-1))
+		if (!M_PrepareLevelPlatter(-1, true))
 		{
 			M_StartMessage(M_GetText("No NiGHTS-attackable levels found.\n"),NULL,MM_NOTHING);
 			return;
@@ -8330,33 +8357,6 @@ static void M_DrawServerMenu(void)
 	}
 }
 
-static void M_GameTypeChange(INT32 choice)
-{
-	(void)choice;
-
-	MISC_ChangeGameTypeDef.prevMenu = currentMenu;
-	M_SetupNextMenu(&MISC_ChangeGameTypeDef);
-	if (Playing())
-		itemOn = gametype;
-
-	Z_Free(char_notes);
-	char_notes = NULL;
-}
-
-
-void M_DrawGameTypeMenu(void)
-{
-	M_DrawGenericMenu();
-	M_DrawLevelPlatterHeader(currentMenu->y - lsheadingheight, "Select Gametype", true);
-
-	if (!char_notes)
-		char_notes = V_WordWrap(0, (160 - 30) - 8, V_ALLOWLOWERCASE, gametypedesc[itemOn].notes);
-
-	V_DrawFill(160, currentMenu->y, (160 - 30), 72 + 8, 239);
-	V_DrawString(164, currentMenu->y + 4, V_RETURN8|V_ALLOWLOWERCASE, char_notes);
-
-}
-
 static void M_MapChange(INT32 choice)
 {
 	MISC_ChangeLevelDef.prevMenu = currentMenu;
@@ -8367,7 +8367,7 @@ static void M_MapChange(INT32 choice)
 	if (Playing() && !(M_CanShowLevelOnPlatter(cv_nextmap.value-1, choice)) && (M_CanShowLevelOnPlatter(gamemap-1, choice)))
 		CV_SetValue(&cv_nextmap, gamemap);
 
-	if (!M_PrepareLevelPlatter(choice))
+	if (!M_PrepareLevelPlatter(cv_newgametype.value, (currentMenu == &MPauseDef)))
 	{
 		M_StartMessage(M_GetText("No selectable levels found.\n"),NULL,MM_NOTHING);
 		return;
