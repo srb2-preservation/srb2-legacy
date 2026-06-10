@@ -3476,6 +3476,39 @@ void M_DrawTextBox(INT32 x, INT32 y, INT32 width, INT32 boxlines)
 	V_DrawFill(x+5, y+5, width*8+6, boxlines*8+6, 239);
 }
 
+#define scale FRACUNIT/2
+
+static fixed_t staticalong = 0;
+
+static void M_DrawStaticBox(fixed_t x, fixed_t y, INT32 flags, fixed_t w, fixed_t h)
+{
+	patch_t *patch;
+	fixed_t sw, pw;
+
+	patch = W_CachePatchName("LSSTATIC", PU_PATCH);
+	pw = SHORT(patch->width) - (sw = w*2); //FixedDiv(w, scale); -- for scale FRACUNIT/2
+
+	/*if (pw > 0) -- model code for modders providing weird LSSTATIC
+	{
+		if (staticalong > pw)
+			staticalong -= pw;
+	}
+	else
+		staticalong = 0;*/
+
+	if (staticalong > pw) // simplified for base LSSTATIC
+		staticalong -= pw;
+
+	V_DrawCroppedPatch(x<<FRACBITS, y<<FRACBITS, FRACUNIT/2, flags, patch, staticalong, 0, sw, h*2); // FixedDiv(h, scale)); -- for scale FRACUNIT/2
+
+	staticalong += sw; //M_RandomRange(sw/2, 2*sw); -- turns out less randomisation looks better because immediately adjacent frames can't end up close to each other
+
+	W_UnlockCachedPatch(patch);
+}
+
+#undef scale
+
+
 //
 // Draw border for the savegame description
 //
@@ -4111,8 +4144,6 @@ static void M_PatchSkinNameTable(void)
 		}
 	}
 
-
-
 	CV_SetValue(&cv_chooseskin, 1);
 	Nextmap_OnChange();
 
@@ -4675,12 +4706,17 @@ static void M_DrawLevelPlatterWideMap(UINT8 row, UINT8 col, INT32 x, INT32 y, bo
 	if (!map)
 		return;
 
+	if (needpatchrecache)
+		M_CacheLevelPlatter();
 
 	//  A 564x100 image of the level as entry MAPxxW
 	if (!(levelselect.rows[row].mapavailable[col]))
 	{
 		if(legacypk3_loaded)
+		{
 	 		V_DrawSmallScaledPatch(x, y, /*V_STATIC*/0, levselp[1][2]); // static - make secret maps look ENTICING
+			M_DrawStaticBox(x, y, V_80TRANS, 282, 50);
+		}
 		else
 			V_DrawStretchyFixedPatch(x<<FRACBITS, y<<FRACBITS, FixedDiv(564*FRACUNIT, 160*FRACUNIT)/2, FRACUNIT/2, 0, levselp[1][2], NULL);
 	}
@@ -4730,13 +4766,20 @@ static void M_DrawLevelPlatterMap(UINT8 row, UINT8 col, INT32 x, INT32 y, boolea
 
 		//  A 160x100 image of the level as entry MAPxxP
 		if (!(levelselect.rows[row].mapavailable[col]))
-			patch = ((lstic & 1) ? levselp[0][2] : levselp[0][2]); // static - make secret maps look ENTICING
-		else if (W_CheckNumForName(va("%sP", G_BuildMapName(map))) != LUMPERROR)
-			patch = W_CachePatchName(va("%sP", G_BuildMapName(map)), PU_PATCH);
+		{
+			V_DrawSmallScaledPatch(x, y, 0, levselp[0][2]);
+			if(legacypk3_loaded)
+				M_DrawStaticBox(x, y, V_80TRANS, 80, 50);
+		}
 		else
-			patch = levselp[0][2]; // don't flash to indicate that it's just a normal level
+		{
+			if (W_CheckNumForName(va("%sP", G_BuildMapName(map))) != LUMPERROR)
+				patch = W_CachePatchName(va("%sP", G_BuildMapName(map)), PU_PATCH);
+			else
+				patch = levselp[0][2]; // don't static to indicate that it's just a normal level
 
-		V_DrawSmallScaledPatch(x, y, 0, patch);
+			V_DrawSmallScaledPatch(x, y, 0, patch);
+		}
 
 		if ((y+50) < 200)
 		{
@@ -6717,9 +6760,9 @@ static void M_DrawSetupChoosePlayerMenu(void)
 		}
 		patch = W_CachePatchName(picname, PU_PATCH);
 		if (SHORT(patch->width) >= 256)
-			V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT/2, 0, patch, 0, SHORT(patch->height) - 64 + o*2, SHORT(patch->width), SHORT(patch->height));
+			V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT/2, 0, patch, 0, SHORT(patch->height) + 2*(o-32), SHORT(patch->width), 32 - o);
 		else
-			V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT, 0, patch, 0, SHORT(patch->height) - 32 + o, SHORT(patch->width), SHORT(patch->height));
+			V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT, 0, patch, 0, SHORT(patch->height) + o - 32, SHORT(patch->width), 32 - o);
 		W_UnlockCachedPatch(patch);
 	}
 
@@ -6743,7 +6786,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 		}
 		patch = W_CachePatchName(picname, PU_PATCH);
 		if (SHORT(patch->width) >= 256)
-			V_DrawCroppedPatch(8<<FRACBITS, (my + 168 - o)<<FRACBITS, FRACUNIT/2, 0, patch, 0, 0, SHORT(patch->width), o*2);
+			V_DrawCroppedPatch(8<<FRACBITS, (my + 168 - o)<<FRACBITS, FRACUNIT/2, 0, patch, 0, 0, SHORT(patch->width)/2, o);
 		else
 			V_DrawCroppedPatch(8<<FRACBITS, (my + 168 - o)<<FRACBITS, FRACUNIT, 0, patch, 0, 0, SHORT(patch->width), o);
 		W_UnlockCachedPatch(patch);
@@ -6777,9 +6820,9 @@ static void M_DrawSetupChoosePlayerMenu(void)
 		else
 		{
 			if (SHORT(patch->width) >= 256)
-				V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT/2, 0, patch, 0, (o - 32)*2, SHORT(patch->width), SHORT(patch->height));
+				V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT/2, 0, patch, 0, (o - 32)*2, SHORT(patch->width)/2, SHORT(patch->height)/2 - (o-32));
 			else
-				V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT, 0, patch, 0, o - 32, SHORT(patch->width), SHORT(patch->height));
+				V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT, 0, patch, 0, o - 32, SHORT(patch->width), SHORT(patch->height) - (o-32));
 		}
 		W_UnlockCachedPatch(patch);
 	}
@@ -8374,7 +8417,6 @@ static void M_StartServer(INT32 choice)
 static void M_DrawServerMenu(void)
 {
 	M_DrawGenericMenu();
-
 
 #ifndef NONET
 	// Room name
