@@ -8343,10 +8343,10 @@ static void M_DrawServerMenu(void)
 
 static void M_MapChange(INT32 choice)
 {
+	(void)choice;
+
 	MISC_ChangeLevelDef.prevMenu = currentMenu;
 	levellistmode = LLM_CREATESERVER;
-
-	CV_SetValue(&cv_newgametype, choice);
 
 	if (Playing() && !(M_CanShowLevelOnPlatter(cv_nextmap.value-1, cv_newgametype.value)) && (M_CanShowLevelOnPlatter(gamemap-1, cv_newgametype.value)))
 		CV_SetValue(&cv_nextmap, gamemap);
