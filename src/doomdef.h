@@ -526,11 +526,6 @@ extern const char *compdate, *comptime, *comprevision, *compbranch, *compnote;
 /// OpenGL shaders
 #define GL_SHADERS
 
-/// Sprite rotation
-#define ROTSPRITE
-#define ROTANGLES 72 // Needs to be a divisor of 360 (45, 60, 90, 120...)
-#define ROTANGDIFF (360 / ROTANGLES)
-
 // Here once lied the corpse of ALAM_LIGHTING
 
 #endif // __DOOMDEF__

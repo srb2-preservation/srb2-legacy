@@ -4958,11 +4958,6 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	
 	fixed_t spr_width, spr_height;
 	fixed_t spr_offset, spr_topoffset;
-#ifdef ROTSPRITE
-	patch_t *rotsprite = NULL;
-	INT32 rollangle = 0;
-	angle_t rollsum = 0;
-#endif
 
 	// uncapped/interpolation
 	interpmobjstate_t interp = {0};
@@ -5030,16 +5025,10 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	if (thing->skin && thing->sprite == SPR_PLAY)
 	{
 		sprdef = &((skin_t *)thing->skin)->spritedef;
-#ifdef ROTSPRITE
-		sprinfo = &spriteinfo[thing->sprite];
-#endif
 	}
 	else
 	{
 		sprdef = &sprites[thing->sprite];
-#ifdef ROTSPRITE
-		sprinfo = &spriteinfo[thing->sprite];
-#endif
 	}
 
 	if (rot >= sprdef->numframes)
@@ -5108,27 +5097,6 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	spr_height = spritecachedinfo[lumpoff].height;
 	spr_offset = spritecachedinfo[lumpoff].offset;
 	spr_topoffset = spritecachedinfo[lumpoff].topoffset;
-
-#ifdef ROTSPRITE
-	if ((thing->rollangle)||(thing->sloperoll))
-	{
-		rollsum = (thing->rollangle)+(thing->sloperoll);
-		rollangle = R_GetRollAngle(rollsum);
-		rotsprite = Patch_GetRotatedSprite(sprframe, (thing->frame & FF_FRAMEMASK), rot, flip, sprinfo, rollangle);
-		
-		if (rotsprite != NULL)
-		{
-			spr_width = rotsprite->width << FRACBITS;
-			spr_height = rotsprite->height << FRACBITS;
-			spr_offset = rotsprite->leftoffset << FRACBITS;
-			spr_topoffset = rotsprite->topoffset << FRACBITS;
-			spr_topoffset += FEETADJUST;
-			
-			// flip -> rotate, not rotate -> flip
-			flip = 0;
-		}
-	}
-#endif
 
 	if (thing->renderflags & RF_ABSOLUTEOFFSETS)
 	{
@@ -5229,11 +5197,6 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	vis->spritexoffset = FIXED_TO_FLOAT(spr_offset);
 	vis->spriteyoffset = FIXED_TO_FLOAT(spr_topoffset);
 	//vis->patchlumpnum = sprframe->lumppat[rot];
-#ifdef ROTSPRITE
-	if (rotsprite)
-			vis->gpatch = (GLPatch_t *)rotsprite;
-	else
-#endif
 			vis->gpatch = (GLPatch_t *)W_CachePatchNum(sprframe->lumppat[rot], PU_CACHE);
 	vis->mobj = thing;
 	vis->z1 = z1;

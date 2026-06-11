@@ -132,15 +132,6 @@ static void R_InstallSpriteLump(UINT16 wad,            // graphics patch
 	if (maxframe ==(size_t)-1 || frame > maxframe)
 		maxframe = frame;
 
-	// rotsprite
-#ifdef ROTSPRITE
-	for (r = 0; r < 16; r++)
-	{
-		sprtemp[frame].rotated[0][r] = NULL;
-		sprtemp[frame].rotated[1][r] = NULL;
-	}
-#endif/*ROTSPRITE*/
-
 	if (rotation == 0)
 	{
 		// the lump should be used for all rotations
@@ -477,24 +468,12 @@ static vissprite_t *visspritechunks[MAXVISSPRITES >> VISSPRITECHUNKBITS] = {NULL
 void R_InitSprites(void)
 {
 	size_t i;
-#ifdef ROTSPRITE
-	INT32 angle;
-	float fa;
-#endif
 
 	for (i = 0; i < MAXVIDWIDTH; i++)
 	{
 		negonearray[i] = -1;
 	}
 
-#ifdef ROTSPRITE
-	for (angle = 1; angle < ROTANGLES; angle++)
-	{
-		fa = ANG2RAD(FixedAngle((ROTANGDIFF * angle)<<FRACBITS));
-		rollcosang[angle] = FLOAT_TO_FIXED(cos(-fa));
-		rollsinang[angle] = FLOAT_TO_FIXED(sin(-fa));
-	}
-#endif
 	//
 	// count the number of sprite names, and allocate sprites table
 	//
@@ -1154,9 +1133,6 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	spritedef_t *sprdef;
 	spriteframe_t *sprframe;
-#ifdef ROTSPRITE
-	spriteinfo_t *sprinfo;
-#endif
 	size_t lump;
 
 	size_t rot;
@@ -1182,11 +1158,6 @@ static void R_ProjectSprite(mobj_t *thing)
 	// rotsprite
 	fixed_t spr_width, spr_height;
 	fixed_t spr_offset, spr_topoffset;
-#ifdef ROTSPRITE
-	patch_t *rotsprite = NULL;
-	INT32 rollangle = 0;
-	angle_t rollsum = 0;
-#endif
 	fixed_t ang_scale = FRACUNIT;
 
 	interpmobjstate_t interp = {0};
@@ -1244,17 +1215,11 @@ static void R_ProjectSprite(mobj_t *thing)
 	if (thing->skin && thing->sprite == SPR_PLAY)
 	{
 		sprdef = &((skin_t *)thing->skin)->spritedef;
-#ifdef ROTSPRITE
-			sprinfo = &spriteinfo[thing->sprite];
-#endif
 		if (rot >= sprdef->numframes)
 			sprdef = &sprites[thing->sprite];
 	}
 	else
 	{
-#ifdef ROTSPRITE
-		sprinfo = &spriteinfo[thing->sprite];
-#endif
 		sprdef = &sprites[thing->sprite];
 	}
 
@@ -1265,9 +1230,6 @@ static void R_ProjectSprite(mobj_t *thing)
 		thing->sprite = states[S_UNKNOWN].sprite;
 		thing->frame = states[S_UNKNOWN].frame;
 		sprdef = &sprites[thing->sprite];
-#ifdef ROTSPRITE
-		sprinfo = &spriteinfo[thing->sprite];
-#endif
 		rot = thing->frame&FF_FRAMEMASK;
 		if (!thing->skin)
 		{
@@ -1323,27 +1285,6 @@ static void R_ProjectSprite(mobj_t *thing)
 	spr_height = spritecachedinfo[lump].height;
 	spr_offset = spritecachedinfo[lump].offset;
 	spr_topoffset = spritecachedinfo[lump].topoffset;
-
-#ifdef ROTSPRITE
-	if ((thing->rollangle)||(thing->sloperoll))
-	{
-		rollsum = (thing->rollangle)+(thing->sloperoll);
-		rollangle = R_GetRollAngle(rollsum);
-		rotsprite = Patch_GetRotatedSprite(sprframe, (thing->frame & FF_FRAMEMASK), rot, flip, sprinfo, rollangle);
-		
-		if (rotsprite != NULL)
-		{
-			spr_width = rotsprite->width << FRACBITS;
-			spr_height = rotsprite->height << FRACBITS;
-			spr_offset = rotsprite->leftoffset << FRACBITS;
-			spr_topoffset = rotsprite->topoffset << FRACBITS;
-			spr_topoffset += FEETADJUST;
-			
-			// flip -> rotate, not rotate -> flip
-			flip = 0;
-		}
-	}
-#endif
 
 	// calculate edges of the shape
 
@@ -1584,11 +1525,6 @@ static void R_ProjectSprite(mobj_t *thing)
 	vis->thingscale = interp.scale;
 	//Fab: lumppat is the lump number of the patch to use, this is different
 	//     than lumpid for sprites-in-pwad : the graphics are patched
-#ifdef ROTSPRITE
-	if (rotsprite != NULL)
-		vis->patch = rotsprite;
-	else
-#endif
 		vis->patch = W_CachePatchNum(sprframe->lumppat[rot], PU_CACHE);
 //
 // determine the colormap (lightlevel & special effects)

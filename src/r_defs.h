@@ -645,15 +645,6 @@ typedef enum
 	RGBA32          = 4,  // 32 bit rgba
 } pic_mode_t;
 
-// rotsprite
-#ifdef ROTSPRITE
-typedef struct
-{
-	INT32 angles;
-	void **patches; //2.2.9 system
-} rotsprite_t;
-#endif/*ROTSPRITE*/
-
 // Patches.
 // A patch holds one or more columns.
 // Patches are used for sprites and all masked pictures, and we compose
@@ -668,9 +659,6 @@ typedef struct
 	INT16 topoffset;      // pixels below the origin
 	INT32 columnofs[8];     // only [width] used
 	// the [0] is &columnofs[width]
-#ifdef ROTSPRITE
-	rotsprite_t *rotated; // Rotated patches
-#endif
 } patch_t;
 
 // a pic is an unmasked block of pixels, stored in horizontal way
@@ -747,9 +735,6 @@ typedef struct
 
 	// Flip bits (1 = flip) to use for view angles 0-7.
 	UINT8 flip;
-#ifdef ROTSPRITE
-	rotsprite_t *rotated[2][16]; // Rotated patches
-#endif
 } spriteframe_t;
 
 //
