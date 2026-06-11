@@ -18,6 +18,7 @@
 #include "g_game.h"
 #include "hu_stuff.h"
 #include "r_local.h"
+#include "r_main.h"
 #include "s_sound.h"
 #include "i_time.h"
 #include "i_video.h"
@@ -1452,8 +1453,8 @@ void F_SkyScroll(const char *patchname)
 	curbgy %= pat->height * 16;
 
 	// Ooh, fancy frame interpolation
-	x     = ((curbgx*dupz) + FixedInt((rendertimefrac-FRACUNIT) * curbgxspeed*dupz)) / 16;
-	basey = ((curbgy*dupz) + FixedInt((rendertimefrac-FRACUNIT) * curbgyspeed*dupz)) / 16;
+	x     = ((curbgx*dupz) + FixedInt((rendertimefrac_unpaused-FRACUNIT) * curbgxspeed*dupz)) / 16;
+	basey = ((curbgy*dupz) + FixedInt((rendertimefrac_unpaused-FRACUNIT) * curbgyspeed*dupz)) / 16;
 
 	if (x     > 0) // Make sure that we don't leave the left or top sides empty
 		x     -= pat->width  * dupz;
