@@ -291,6 +291,7 @@ typedef struct
 #define LF2_RECORDATTACK   4 ///< Show this map in Time Attack
 #define LF2_NIGHTSATTACK   8 ///< Show this map in NiGHTS mode menu
 #define LF2_NOVISITNEEDED 16 ///< Available in time attack/nights mode without visiting the level
+#define LF2_WIDEICON      32 ///< If you're in a circumstance where it fits, use a wide map icon
 
 // Save override
 #define SAVE_NEVER   -1
@@ -432,6 +433,7 @@ extern UINT16 extralifetics;
 
 extern UINT8 introtoplay;
 extern UINT8 creditscutscene;
+extern UINT8 useBlackRock;
 
 extern UINT8 use1upSound;
 extern UINT8 maxXtraLife; // Max extra lives from rings

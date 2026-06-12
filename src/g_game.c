@@ -214,6 +214,7 @@ UINT8 maxXtraLife = 2; // Max extra lives from rings
 
 UINT8 introtoplay;
 UINT8 creditscutscene;
+UINT8 useBlackRock = 1;
 
 // Emerald locations
 mobj_t *hunt1;

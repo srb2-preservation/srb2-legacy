@@ -338,13 +338,13 @@ typedef struct
 	char skinname[SKINNAMESIZE*2+2]; // skin&skin\0
 } description_t;
 
-// experimental level select -- remember to use M_HandleSetupMultiPlayer
+// level select platter
 typedef struct
 {
 	char header[22+5]; // mapheader_t lvltttl max length + " ZONE"
 	INT32 maplist[3];
 	char mapnames[3][17+1];
-	boolean mapavailable[3];
+	boolean mapavailable[4]; // mapavailable[3] == wide or not
 } levelselectrow_t;
 
 typedef struct
@@ -353,6 +353,14 @@ typedef struct
 	levelselectrow_t *rows;
 } levelselect_t;
 // experimental level select end
+
+// descriptions for gametype select screen
+typedef struct
+{
+	UINT8 col[2];
+	char notes[441];
+} gtdesc_t;
+
 
 // mode descriptions for video mode menu
 typedef struct
