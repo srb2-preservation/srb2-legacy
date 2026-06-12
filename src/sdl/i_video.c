@@ -1240,6 +1240,10 @@ void I_FinishUpdate(void)
 	if (marathonmode)
 		SCR_DisplayMarathonInfo();
 
+	// draw captions if enabled
+	if (cv_closedcaptioning.value)
+		SCR_ClosedCaptions();
+
 	if (rendermode == render_soft && screens[0])
 	{
 		SDL_LockSurface(vidSurface);

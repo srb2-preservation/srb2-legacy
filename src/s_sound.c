@@ -86,6 +86,7 @@ static consvar_t precachesound = CVAR_INIT ("precachesound", "Off", NULL, CV_SAV
 
 // actual general (maximum) sound & music volume, saved into the config
 consvar_t cv_soundvolume = CVAR_INIT ("soundvolume", "18", "Volume of sound effects", CV_SAVE, soundvolume_cons_t, NULL);
+consvar_t cv_closedcaptioning = CVAR_INIT("closedcaptioning", "Off", "Show descriptions of sounds playing", CV_SAVE|CV_CALL, CV_OnOff, S_ResetCaptions);
 consvar_t cv_digmusicvolume = CVAR_INIT ("digmusicvolume", "18", "Volume of digital music", CV_SAVE, soundvolume_cons_t, NULL);
 consvar_t cv_midimusicvolume = CVAR_INIT ("midimusicvolume", "18", "Volume of MIDI music", CV_SAVE, soundvolume_cons_t, NULL);
 // number of channels available
@@ -153,22 +154,22 @@ consvar_t cv_modfilter = CVAR_INIT ("modfilter", "0", "Filter to use for module 
 // percent attenuation from front to back
 #define S_IFRACVOL 30
 
-typedef struct
-{
-	// sound information (if null, channel avail.)
-	sfxinfo_t *sfxinfo;
-
-	// origin of sound
-	const void *origin;
-
-	// handle of the sound being played
-	INT32 handle;
-
-} channel_t;
-
 // the set of channels available
 static channel_t *channels = NULL;
 static INT32 numofchannels = 0;
+
+caption_t closedcaptions[NUMCAPTIONS];
+
+void S_ResetCaptions(void)
+{
+	UINT8 i;
+	for (i = 0; i < NUMCAPTIONS; i++)
+	{
+		closedcaptions[i].c = NULL;
+		closedcaptions[i].s = NULL;
+		closedcaptions[i].t = 0;
+	}
+}
 
 //
 // Internals.
@@ -328,6 +329,8 @@ static void SetChannelsNum(void)
 	// Free all channels for use
 	for (i = 0; i < numofchannels; i++)
 		channels[i].sfxinfo = 0;
+
+	S_ResetCaptions();
 }
 
 
@@ -382,6 +385,8 @@ void S_StopSounds(void)
 	for (cnum = 0; cnum < numofchannels; cnum++)
 		if (channels[cnum].sfxinfo)
 			S_StopChannel(cnum);
+
+	S_ResetCaptions();
 }
 
 void S_StopSoundByID(void *origin, sfxenum_t sfx_id)
@@ -570,6 +575,64 @@ void S_StartSoundAtVolume(const void *origin_p, sfxenum_t sfx_id, INT32 volume)
 			sep = (~sep) & 255;
 #endif
 
+		// Handle closed caption input.
+		if (cv_closedcaptioning.value && sfx->caption[0] != '/')
+		{
+			UINT8 i, set = NUMCAPTIONS-1, moveup = 255;
+			boolean same = false;
+			for (i = 0; i < set; i++)
+			{
+				same = ((sfx == closedcaptions[i].s) || (closedcaptions[i].s && strcmp(sfx->caption, closedcaptions[i].s->caption)));
+				if (same)
+				{
+					set = i;
+					break;
+				}
+			}
+
+			if (!same)
+			{
+				for (i = 0; i < set; i++)
+				{
+					if (!(closedcaptions[i].c || closedcaptions[i].s) || (sfx->priority >= closedcaptions[i].s->priority))
+					{
+						set = i;
+						if (closedcaptions[i].s && (sfx->priority >= closedcaptions[i].s->priority))
+							moveup = i;
+						break;
+					}
+				}
+				for (i = NUMCAPTIONS-1; i > set; i--)
+				{
+					if (sfx == closedcaptions[i].s)
+					{
+						closedcaptions[i].c = NULL;
+						closedcaptions[i].s = NULL;
+						closedcaptions[i].t = 0;
+					}
+				}
+			}
+
+			if (moveup != 255)
+			{
+				for (i = moveup; i < NUMCAPTIONS-1; i++)
+				{
+					if (!(closedcaptions[i].c || closedcaptions[i].s))
+						break;
+				}
+				for (; i > set; i--)
+				{
+					closedcaptions[i].c = closedcaptions[i-1].c;
+					closedcaptions[i].s = closedcaptions[i-1].s;
+					closedcaptions[i].t = closedcaptions[i-1].t;
+				}
+			}
+
+			closedcaptions[set].c = &channels[cnum];
+			closedcaptions[set].s = sfx;
+			closedcaptions[set].t = MAXCAPTIONTICS+2;
+		}
+
 		// Assigns the handle to one of the channels in the
 		// mix/output buffer.
 		channels[cnum].handle = I_StartSound(sfx_id, volume, sep, pitch, priority, cnum);
@@ -620,6 +683,63 @@ dontplay:
 		sep = (~sep) & 255;
 #endif
 
+	// Handle closed caption input.
+	if (cv_closedcaptioning.value && sfx->caption[0] != '/')
+	{
+		UINT8 i, set = NUMCAPTIONS-1, moveup = 255;
+		boolean same = false;
+		for (i = 0; i < set; i++)
+		{
+			if ((sfx == closedcaptions[i].s)
+			|| !(closedcaptions[i].c || closedcaptions[i].s) || (sfx->priority >= closedcaptions[i].s->priority))
+			{
+				set = i;
+				break;
+			}
+		}
+		if (sfx != closedcaptions[set].s)
+		{
+			for (i = 0; i < set; i++)
+			{
+				if (!(closedcaptions[i].c || closedcaptions[i].s) || (sfx->priority >= closedcaptions[i].s->priority))
+				{
+					set = i;
+					if (closedcaptions[i].s && (sfx->priority >= closedcaptions[i].s->priority))
+						moveup = i;
+					break;
+				}
+			}
+			for (i = NUMCAPTIONS-1; i > set; i--)
+			{
+				if (sfx == closedcaptions[i].s)
+				{
+					closedcaptions[i].c = NULL;
+					closedcaptions[i].s = NULL;
+					closedcaptions[i].t = 0;
+				}
+			}
+		}
+
+		if (moveup != 255)
+		{
+			for (i = moveup; i < NUMCAPTIONS-1; i++)
+			{
+				if (!(closedcaptions[i].c || closedcaptions[i].s))
+					break;
+			}
+			for (; i > set; i--)
+			{
+				closedcaptions[i].c = closedcaptions[i-1].c;
+				closedcaptions[i].s = closedcaptions[i-1].s;
+				closedcaptions[i].t = closedcaptions[i-1].t;
+			}
+		}
+
+		closedcaptions[set].c = &channels[cnum];
+		closedcaptions[set].s = sfx;
+		closedcaptions[set].t = MAXCAPTIONTICS+2;
+	}
+
 	// Assigns the handle to one of the channels in the
 	// mix/output buffer.
 	channels[cnum].handle = I_StartSound(sfx_id, volume, sep, pitch, priority, cnum);
@@ -641,6 +761,7 @@ void S_StartSound(const void *origin, sfxenum_t sfx_id)
 //				sfx_id = sfx_mario8;
 //				break;
 			case sfx_thok:
+			case sfx_wepfir:
 				sfx_id = sfx_mario7;
 				break;
 			case sfx_pop:
@@ -727,6 +848,7 @@ static INT32 actualmidimusicvolume;
 void S_UpdateSounds(void)
 {
 	INT32 audible, cnum, volume, sep, pitch;
+	UINT8 i;
 	channel_t *c;
 
 	listener_t listener;
@@ -754,9 +876,7 @@ void S_UpdateSounds(void)
 		I_UpdateMumble(NULL, listener);
 #endif
 
-		// Stop cutting FMOD out. WE'RE sick of it.
-		I_UpdateSound();
-		return;
+		goto notinlevel;
 	}
 
 	if (dedicated || sound_disabled)
@@ -795,8 +915,7 @@ void S_UpdateSounds(void)
 	if (hws_mode != HWS_DEFAULT_MODE)
 	{
 		HW3S_UpdateSources();
-		I_UpdateSound();
-		return;
+		goto notinlevel;
 	}
 #endif
 
@@ -884,7 +1003,29 @@ void S_UpdateSounds(void)
 		}
 	}
 
+notinlevel:
 	I_UpdateSound();
+
+	for (i = 0; i < NUMCAPTIONS; i++) // update captions
+	{
+		if (!closedcaptions[i].s)
+			continue;
+
+		if (closedcaptions[i].t <= MAXCAPTIONTICS)
+			closedcaptions[i].t--;
+
+		if (!closedcaptions[i].t)
+		{
+			closedcaptions[i].c = NULL;
+			closedcaptions[i].s = NULL;
+		}
+		else if (closedcaptions[i].c && !I_SoundIsPlaying(closedcaptions[i].c->handle))
+		{
+			closedcaptions[i].c = NULL;
+			if (closedcaptions[i].t > CAPTIONFADETICS)
+				closedcaptions[i].t = CAPTIONFADETICS;
+		}
+	}
 }
 
 void S_SetSfxVolume(INT32 volume)

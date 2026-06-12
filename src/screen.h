@@ -179,5 +179,6 @@ void SCR_DisplayTicRate(void);
 void SCR_CalculateFPS(void);
 void SCR_DisplayLocalPing(void);
 void SCR_DisplayMarathonInfo(void);
+void SCR_ClosedCaptions(void);
 #undef DNWH
 #endif //__SCREEN_H__

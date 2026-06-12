@@ -294,6 +294,7 @@ menu_t OP_P1ControlsDef, OP_P2ControlsDef, OP_MouseOptionsDef;
 menu_t OP_Mouse2OptionsDef, OP_Joystick1Def, OP_Joystick2Def;
 static void M_VideoModeMenu(INT32 choice);
 static void M_ResolutionMenu(INT32 choice);
+static void M_SoundMenu(INT32 choice);
 static void M_Setup1PControlsMenu(INT32 choice);
 static void M_Setup2PControlsMenu(INT32 choice);
 static void M_Setup1PJoystickMenu(INT32 choice);
@@ -1032,7 +1033,7 @@ static menuitem_t OP_MainMenu[] =
 	{IT_SUBMENU | IT_STRING, NULL, "Setup Controls...", NULL,      &OP_ControlsDef,      10},
 
 	{IT_CALL | IT_STRING, NULL, "Video Options...", NULL,      M_VideoOptions,  30},
-	{IT_SUBMENU | IT_STRING, NULL, "Sound Options...", NULL,      &OP_SoundOptionsDef,  40},
+	{IT_CALL | IT_STRING, NULL, "Sound Options...", NULL,      M_SoundMenu,  40},
 	{IT_SUBMENU | IT_STRING, NULL, "Data Options...",  NULL,      &OP_DataOptionsDef,   50},
 
 	{IT_SUBMENU | IT_STRING, NULL, "Legacy Options...", NULL,     &OP_LegacyOptionsDef,  70},
@@ -1398,8 +1399,9 @@ static menuitem_t OP_SoundOptionsMenu[] =
 	{IT_STRING | IT_CVAR,  NULL,  "MIDI Music", NULL,  &cv_gamemidimusic,        70},
 
 	{IT_STRING | IT_CVAR,  NULL,  "Music Preference", NULL,  &cv_musicpref,      90},
+	{IT_STRING | IT_CVAR, NULL, "Closed Captioning", NULL, &cv_closedcaptioning, 100},
 
-	{IT_STRING 	  | IT_SUBMENU, NULL, "Advanced Settings...", "Extra game sound settings",  &OP_SoundAdvancedDef, 110},
+	{IT_STRING 	  | IT_SUBMENU, NULL, "Advanced Settings...", "Extra game sound settings",  &OP_SoundAdvancedDef, 120},
 };
 
 #ifdef HAVE_OPENMPT
@@ -10493,6 +10495,13 @@ static void M_ChangeControl(INT32 choice)
 // Color stuff
 // ===========
 
+static void M_SoundMenu(INT32 choice)
+{
+	(void)choice;
+
+	M_SetupNextMenu(&OP_SoundOptionsDef);
+}
+
 void M_InitSkincolors(void)
 {
 	numskincolors = SKINCOLOR_FIRSTFREESLOT;
@@ -11030,6 +11039,7 @@ void M_QuitResponse(INT32 ch)
 	if (!(netgame || cv_debug))
 	{
 		marathonmode = 0;
+		S_ResetCaptions();
 
 		mrand = M_RandomKey(sizeof(quitsounds)/sizeof(INT32));
 		if (quitsounds[mrand]) S_StartSound(NULL, quitsounds[mrand]);

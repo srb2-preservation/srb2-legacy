@@ -30,6 +30,9 @@
 #include "d_main.h"
 #include "d_clisrv.h"
 #include "f_finale.h"
+#include "i_sound.h" // closed captions
+#include "s_sound.h" // ditto
+#include "g_game.h" // ditto
 
 
 // --------------------------------------------
@@ -693,4 +696,28 @@ void SCR_DisplayMarathonInfo(void)
 #undef PRIMEV2
 	V_DrawFillConsoleMap(-500, BASEVIDHEIGHT-8, BASEVIDWIDTH+500, 8, V_SNAPTOBOTTOM|V_SNAPTORIGHT|cons_backcolor.value);
 	V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-8, flags, str);
+}
+
+void SCR_ClosedCaptions(void)
+{
+	UINT8 i;
+
+	for (i = 0; i < NUMCAPTIONS; i++)
+	{
+		if (closedcaptions[i].s)
+		{
+			INT32 flags = V_NOSCALESTART|V_ALLOWLOWERCASE;
+			INT32 y = (vid.height-((i + 2)*10*vid.dupy))*FRACUNIT;
+			char dir = ' ';
+			if (closedcaptions[i].t < CAPTIONFADETICS)
+				flags |= (((CAPTIONFADETICS-closedcaptions[i].t)/2)*V_10TRANS);
+			else if (closedcaptions[i].t > MAXCAPTIONTICS)
+				y -= FixedMul((closedcaptions[i].t-- - MAXCAPTIONTICS)*vid.dupy, rendertimefrac);
+			if (closedcaptions[i].c && closedcaptions[i].c->origin)
+				dir = '\x1E';
+			char *captionString = va("%c %s", dir, (closedcaptions[i].s->caption[0] ? closedcaptions[i].s->caption : closedcaptions[i].s->name));
+			V_DrawRightAlignedStringAtFixed((vid.width-((10+V_StringWidth(captionString, V_SNAPTORIGHT))*vid.dupx))*FRACUNIT, y,
+			flags, captionString);
+		}
+	}
 }

@@ -29,7 +29,7 @@ extern openmpt_module *openmpt_mhandle;
 #define PICKUP_SOUND 0x8000
 
 extern consvar_t stereoreverse;
-extern consvar_t cv_soundvolume, cv_digmusicvolume, cv_midimusicvolume;
+extern consvar_t cv_soundvolume, cv_closedcaptioning, cv_digmusicvolume, cv_midimusicvolume;
 extern consvar_t cv_numChannels;
 extern consvar_t cv_resetmusic;
 extern consvar_t cv_gamedigimusic;
@@ -80,6 +80,33 @@ typedef struct {
 	fixed_t x, y, z;
 	angle_t angle;
 } listener_t;
+
+typedef struct
+{
+	// sound information (if null, channel avail.)
+	sfxinfo_t *sfxinfo;
+
+	// origin of sound
+	const void *origin;
+
+	// handle of the sound being played
+	INT32 handle;
+
+} channel_t;
+
+typedef struct {
+	channel_t *c;
+	sfxinfo_t *s;
+	UINT8 t;
+} caption_t;
+
+#define NUMCAPTIONS 8
+#define MAXCAPTIONTICS FixedMul(2*TICRATE, rendertimefrac)
+#define CAPTIONFADETICS FixedMul(20, rendertimefrac)
+
+extern caption_t closedcaptions[NUMCAPTIONS];
+void S_StartCaption(sfxenum_t sfx_id, INT32 cnum, UINT16 lifespan);
+void S_ResetCaptions(void);
 
 // register sound vars and commands at game startup
 void S_RegisterSoundStuff(void);
