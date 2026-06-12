@@ -6766,7 +6766,8 @@ static void M_DrawLoadGameData(void)
 			if ((savegameinfo[savetodraw].lives == -42)
 			|| (savegameinfo[savetodraw].lives == -666))
 			{
-				patch = W_CachePatchName("BLACKLVL", PU_CACHE);
+				patch = W_CachePatchName("BLANKLVL", PU_CACHE);
+				M_DrawStaticBox(x, y, V_80TRANS, 80, 50);
 				flags = 0;
 			}
 			else if (savegameinfo[savetodraw].gamemap & 8192)
@@ -6777,11 +6778,13 @@ static void M_DrawLoadGameData(void)
 				if (lumpnum != LUMPERROR)
 					patch = W_CachePatchNum(lumpnum, PU_CACHE);
 				else
+				{
 					patch = W_CachePatchName("BLANKLVL", PU_CACHE);
+					M_DrawStaticBox(x, y, V_80TRANS, 80, 50);
+				}
 			}
 				
 			V_DrawSmallScaledPatch(x, y, flags, patch);
-			M_DrawStaticBox(x, y, V_80TRANS, 80, 50);
 
 			y += 41;
 
