@@ -4725,8 +4725,8 @@ void A_MaceRotate(void *thing)
 	radius = FixedMul(actor->info->speed * actor->reactiontime, actor->target->scale);
 
 	// Double the radius if the chain links are made up of maces.
-	if (actor->target->type == MT_AXIS && (actor->type == MT_SMALLMACE || actor->type == MT_BIGMACE))
-		radius *= 2;
+	/*if (actor->target->type == MT_AXIS && (actor->type == MT_SMALLMACE || actor->type == MT_BIGMACE))
+		radius *= 2;*/
 
 	// Axis offset for the axis.
 	radius += actor->target->extravalue1;
@@ -4780,7 +4780,6 @@ void A_MaceRotate(void *thing)
 
 		actor->threshold += actor->target->lastlook;
 		actor->threshold &= FINEMASK;
-		actor->target->health &= FINEMASK;
 
 		fa = actor->threshold;
 		v[0] = FixedMul(FINECOSINE(fa), radius);
