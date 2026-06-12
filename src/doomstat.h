@@ -263,6 +263,8 @@ typedef struct
 	UINT8 levelflags;     ///< LF_flags:  merged eight booleans into one UINT8 for space, see below
 	UINT8 menuflags;      ///< LF2_flags: options that affect record attack / nights mode menus
 
+	char selectheading[22]; ///< Level select heading. Allows for controllable grouping.
+
 	// NiGHTS stuff.
 	UINT8 numGradedMares;   ///< Internal. For grade support.
 	nightsgrades_t *grades; ///< NiGHTS grades. Allocated dynamically for space reasons. Be careful.
@@ -338,7 +340,7 @@ enum GameType
 
 	NUMGAMETYPES
 };
-// If you alter this list, update dehacked.c, and Gametype_Names in g_game.c
+// If you alter this list, update dehacked.c, and gametype_cons_t and MISC_ChangeGameTypeMenu in m_menu.c
 
 // String names for gametypes
 extern const char *Gametype_Names[NUMGAMETYPES];
