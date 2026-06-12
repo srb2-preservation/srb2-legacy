@@ -3867,6 +3867,46 @@ void P_RainThinker(precipmobj_t *mobj)
 	}
 }
 
+static void P_KillRingsInLava(mobj_t *mo)
+{
+	msecnode_t *node;
+	I_Assert(mo != NULL);
+	I_Assert(!P_MobjWasRemoved(mo));
+
+	// go through all sectors being touched by the ring
+	for (node = mo->touching_sectorlist; node; node = node->m_sectorlist_next)
+	{
+		if (!node->m_sector)
+			break;
+
+		if (node->m_sector->ffloors)
+		{
+			ffloor_t *rover;
+			fixed_t topheight, bottomheight;
+
+			for (rover = node->m_sector->ffloors; rover; rover = rover->next) // go through all fofs in the sector
+			{
+				if (!(rover->flags & FF_EXISTS)) continue; // fof must be real
+
+				if (!(rover->flags & FF_SWIMMABLE // fof must be water
+					&& GETSECSPECIAL(rover->master->frontsector->special, 1) == 3)) // fof must be lava water
+					continue;
+
+				// find heights of FOF
+				topheight = P_GetFOFTopZ(mo, node->m_sector, rover, mo->x, mo->y, NULL);
+				bottomheight = P_GetFOFBottomZ(mo, node->m_sector, rover, mo->x, mo->y, NULL);
+
+				if (mo->z <= topheight && mo->z + mo->height >= bottomheight) // if ring touches it, KILL IT
+				{
+					P_KillMobj(mo, NULL, NULL);
+					return;
+				}
+			}
+		}
+	}
+}
+
+
 static void P_RingThinker(mobj_t *mobj)
 {
 	if (mobj->momx || mobj->momy)
@@ -7026,9 +7066,13 @@ void P_MobjThinker(mobj_t *mobj)
 			break;
 		case MT_RING:
 		case MT_COIN:
-		case MT_BLUEBALL:
 		case MT_REDTEAMRING:
 		case MT_BLUETEAMRING:
+				P_KillRingsInLava(mobj);
+				if (P_MobjWasRemoved(mobj))
+					return;
+				/* FALLTHRU */
+		case MT_BLUEBALL:
 			// No need to check water. Who cares?
 			P_RingThinker(mobj);
 			if (P_MobjWasRemoved(mobj))
@@ -7040,6 +7084,10 @@ void P_MobjThinker(mobj_t *mobj)
 			return;
 		// Flung items
 		case MT_FLINGRING:
+			P_KillRingsInLava(mobj);
+				if (P_MobjWasRemoved(mobj))
+					return;
+				/* FALLTHRU */
 		case MT_FLINGCOIN:
 			if (mobj->flags2 & MF2_NIGHTSPULL)
 				P_NightsItemChase(mobj);
@@ -10297,7 +10345,7 @@ mobj_t *P_SPMAngle(mobj_t *source, mobjtype_t type, angle_t angle, UINT8 allowai
 {
 	mobj_t *th;
 	angle_t an;
-	fixed_t x, y, z, slope = 0;
+	fixed_t x, y, z, slope = 0, speed;
 
 	// angle at which you fire, is player angle
 	an = angle;
@@ -10329,9 +10377,13 @@ mobj_t *P_SPMAngle(mobj_t *source, mobjtype_t type, angle_t angle, UINT8 allowai
 
 	P_SetTarget(&th->target, source);
 
+	speed = th->info->speed;
+	if (source->player && source->player->charability == CA_FLY)
+		speed = FixedMul(speed, 3*FRACUNIT/2);
+
 	th->angle = an;
-	th->momx = FixedMul(th->info->speed, FINECOSINE(an>>ANGLETOFINESHIFT));
-	th->momy = FixedMul(th->info->speed, FINESINE(an>>ANGLETOFINESHIFT));
+	th->momx = FixedMul(speed, FINECOSINE(an>>ANGLETOFINESHIFT));
+	th->momy = FixedMul(speed, FINESINE(an>>ANGLETOFINESHIFT));
 
 	if (allowaim)
 	{
@@ -10339,7 +10391,7 @@ mobj_t *P_SPMAngle(mobj_t *source, mobjtype_t type, angle_t angle, UINT8 allowai
 		th->momy = FixedMul(th->momy,FINECOSINE(source->player->aiming>>ANGLETOFINESHIFT));
 	}
 
-	th->momz = FixedMul(th->info->speed, slope);
+	th->momz = FixedMul(speed, slope);
 
 	//scaling done here so it doesn't clutter up the code above
 	th->momx = FixedMul(th->momx, th->scale);
