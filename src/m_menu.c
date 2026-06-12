@@ -6763,14 +6763,13 @@ static void M_DrawLoadGameData(void)
 		// level image area
 		{
 			patch_t *patch;
-			INT32 flags = 0;
+			boolean drawstatic = false;
 
 			if ((savegameinfo[savetodraw].lives == -42)
 			|| (savegameinfo[savetodraw].lives == -666))
 			{
 				patch = W_CachePatchName("BLANKLVL", PU_CACHE);
-				M_DrawStaticBox(x, y, V_80TRANS, 80, 50);
-				flags = 0;
+				drawstatic = true;
 			}
 			else if (savegameinfo[savetodraw].gamemap & 8192)
 				patch = W_CachePatchName("GAMEDONE", PU_CACHE);
@@ -6782,11 +6781,13 @@ static void M_DrawLoadGameData(void)
 				else
 				{
 					patch = W_CachePatchName("BLANKLVL", PU_CACHE);
-					M_DrawStaticBox(x, y, V_80TRANS, 80, 50);
+					drawstatic = true;
 				}
 			}
 				
-			V_DrawSmallScaledPatch(x, y, flags, patch);
+			V_DrawSmallScaledPatch(x, y, 0, patch);
+			if (drawstatic)
+				M_DrawStaticBox(x, y, V_80TRANS, 80, 50);
 
 			y += 41;
 
