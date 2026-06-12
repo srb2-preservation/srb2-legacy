@@ -525,7 +525,7 @@ extern const char *compdate, *comptime, *comprevision, *compbranch, *compnote;
 
 /// Handle touching sector specials in P_PlayerAfterThink instead of P_PlayerThink.
 /// \note   Required for proper collision with moving sloped surfaces that have sector specials on them.
-//#define SECTORSPECIALSAFTERTHINK
+#define SECTORSPECIALSAFTERTHINK
 
 
 /// FINALLY some real clipping that doesn't make walls dissappear AND speeds the game up
