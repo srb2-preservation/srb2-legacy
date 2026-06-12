@@ -6707,7 +6707,7 @@ static void M_DrawLoadGameData(void)
 				V_DrawFill(x, y+9, 80, 1, yellowmap[3]);
 			y += 11;
 			V_DrawSmallScaledPatch(x, y, 0,
-				W_CachePatchName("BLACKXLVL", PU_CACHE));
+				W_CachePatchName("BLACXLVL", PU_CACHE));
 			y += 41;
 			if (ultimate_selectable)
 				V_DrawRightAlignedThinString(x + 79, y, V_REDMAP, "ULTIMATE.");
