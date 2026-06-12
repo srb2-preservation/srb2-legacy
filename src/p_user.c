@@ -3983,6 +3983,12 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 								player->pflags &= ~PF_JUMPED;
 								P_DoJump(player, false);
 							}
+							{
+								angle_t a;
+								a = FixedAngle(cv_cam_rotate.value << FRACBITS);
+								if (abs((INT32)(player->mo->angle - a)) < ANGLE_45)
+									player->mo->angle = a;
+							}
 							P_InstaThrust(player->mo, player->mo->angle, FixedMul(actionspd, player->mo->scale));
 
 							if (maptol & TOL_2D)
@@ -4222,7 +4228,7 @@ INT32 P_GetPlayerControlDirection(player_t *player)
 		origtempangle = tempangle = 0; // relative to the axis rather than the player!
 		controlplayerdirection = R_PointToAngle2(0, 0, player->mo->momx, player->mo->momy);
 	}
-	else if (P_AnalogMove(player) && thiscam->chase)
+	else if ((P_AnalogMove(player)) && thiscam->chase)
 	{
 		if (player->awayviewtics)
 			origtempangle = tempangle = player->awayviewmobj->angle;
@@ -7942,8 +7948,8 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 				angle = R_PointToAngle2(mo->x, mo->y, mo->target->x, mo->target->y);
 		}
 	}
-	else if (P_AnalogMove(player)) // Analog
-		angle = R_PointToAngle2(thiscam->x, thiscam->y, mo->x, mo->y);
+	else if (cv_analog.value) // directioncahr
+		angle = FixedAngle(camrotate << FRACBITS);
 	else if (demoplayback)
 	{
 		angle = focusangle;
@@ -8017,13 +8023,6 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	else
 	{
 		dist = camdist;
-
-		// x1.2 dist for analog
-		if (P_AnalogMove(player))
-		{
-			dist = FixedMul(dist, 6*FRACUNIT/5);
-			camheight = FixedMul(camheight, 6*FRACUNIT/5);
-		}
 
 		if (player->climbing || player->exiting || player->playerstate == PST_DEAD || (player->pflags & (PF_MACESPIN|PF_ITEMHANG|PF_ROPEHANG)))
 			dist <<= 1;
