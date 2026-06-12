@@ -128,6 +128,9 @@ INT16 spstage_start, spmarathon_start;
 INT16 sstage_start;
 INT16 sstage_end;
 
+INT16 titlemap = 0;
+boolean hidetitlepics = false;
+
 boolean looptitle = false;
 boolean useNightsSS = false;
 
@@ -1593,6 +1596,21 @@ void G_DoLoadLevel(boolean resetplayer)
 	if (gamestate == GS_INTERMISSION)
 		Y_EndIntermission();
 
+	// cleanup
+	if (titlemapinaction == TITLEMAP_LOADING)
+	{
+		if (W_CheckNumForName(G_BuildMapName(gamemap)) == LUMPERROR)
+		{
+			titlemap = 0; // let's not infinite recursion ok
+			Command_ExitGame_f();
+			return;
+		}
+
+		titlemapinaction = TITLEMAP_RUNNING;
+	}
+	else
+		titlemapinaction = TITLEMAP_OFF;
+
 	G_SetGamestate(GS_LEVEL);
 	I_UpdateMouseGrab();
 
@@ -1965,6 +1983,7 @@ void G_Ticker(boolean run)
 			break;
 
 		case GS_TITLESCREEN:
+			if (titlemapinaction) P_Ticker(run); // then intentionally fall through
 			F_TitleScreenTicker(run);
 			break;
 

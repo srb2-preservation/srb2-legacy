@@ -17,6 +17,7 @@
 
 #include "doomtype.h"
 #include "d_event.h"
+#include "p_mobj.h"
 
 //
 // FINALE
@@ -65,6 +66,16 @@ void F_WaitingPlayersTicker(void);
 void F_WaitingPlayersDrawer(void);
 
 extern INT32 titlescrollspeed;
+
+typedef enum
+{
+	TITLEMAP_OFF = 0,
+	TITLEMAP_LOADING,
+	TITLEMAP_RUNNING
+} titlemap_enum;
+
+extern UINT8 titlemapinaction;
+extern mobj_t *titlemapcameraref;
 
 //
 // WIPE

@@ -1784,7 +1784,7 @@ void R_InitHardwareMode(void)
 	//HWR_AddCommands();
 	HWR_Switch();
 	HWR_LoadTextures(numtextures);
-	if (gamestate == GS_LEVEL)
+	if (gamestate == GS_LEVEL || (gamestate == GS_TITLESCREEN && titlemapinaction))
 		HWR_SetupLevel();
 }
 #endif

@@ -299,7 +299,7 @@ static void D_Display(void)
 		if (rendermode != render_none)
 		{
 			// Fade to black first
-			if (gamestate != GS_LEVEL // fades to black on its own timing, always
+			if (!(gamestate == GS_LEVEL || (gamestate == GS_TITLESCREEN && titlemapinaction)) // fades to black on its own timing, always
 			 && wipedefs[wipedefindex] != UINT8_MAX)
 			{
 				F_WipeStartScreen();
@@ -315,6 +315,12 @@ static void D_Display(void)
 	// do buffered drawing
 	switch (gamestate)
 	{
+		case GS_TITLESCREEN:
+			if (!titlemapinaction) {
+				F_TitleScreenDrawer();
+				break;
+			}
+			// Intentional fall-through
 		case GS_LEVEL:
 			if (!gametic)
 				break;
@@ -362,10 +368,6 @@ static void D_Display(void)
 			HU_Drawer();
 			break;
 
-		case GS_TITLESCREEN:
-			F_TitleScreenDrawer();
-			break;
-
 		case GS_WAITINGPLAYERS:
 			// The clientconnect drawer is independent...
 			if (netgame)
@@ -380,7 +382,9 @@ static void D_Display(void)
 			break;
 	}
 
-	if (gamestate == GS_LEVEL)
+	// clean up border stuff
+	// see if the border needs to be initially drawn
+	if (gamestate == GS_LEVEL || (gamestate == GS_TITLESCREEN && titlemapinaction))
 	{
 		// draw the view directly
 		if (cv_renderview.value && !automapactive)
@@ -450,8 +454,14 @@ static void D_Display(void)
 		}
 
 		PS_START_TIMING(ps_uitime);
-		ST_Drawer();
-		HU_Drawer();
+		if (gamestate == GS_LEVEL)
+		{
+			ST_Drawer();
+			HU_Drawer();
+		}
+		else
+			F_TitleScreenDrawer();
+		
 	}
 	else
 	{

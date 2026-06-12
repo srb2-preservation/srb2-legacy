@@ -2944,6 +2944,34 @@ static void readmaincfg(MYFILE *f)
 					introtoplay = 128;
 				introchanged = true;
 			}
+			else if (fastcmp(word, "LOOPTITLE"))
+			{
+				looptitle = (value || word2[0] == 'T' || word2[0] == 'Y');
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEMAP"))
+			{
+				// Support using the actual map name,
+				// i.e., Level AB, Level FZ, etc.
+
+				// Convert to map number
+				if (word2[0] >= 'A' && word2[0] <= 'Z')
+					value = M_MapNumber(word2[0], word2[1]);
+				else
+					value = get_number(word2);
+
+				titlemap = (INT16)value;
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "HIDETITLEPICS"))
+			{
+				hidetitlepics = (boolean)(value || word2[0] == 'T' || word2[0] == 'Y');
+			}
+			else if (fastcmp(word, "TITLESCROLLSPEED"))
+			{
+				titlescrollspeed = get_number(word2);
+				titlechanged = true;
+			}
 			else if (fastcmp(word, "CREDITSCUTSCENE"))
 			{
 				creditscutscene = (UINT8)get_number(word2);
@@ -8006,6 +8034,12 @@ static inline int lib_getenum(lua_State *L)
 		return 1;
 	} else if (fastcmp(word,"paused")) {
 		lua_pushboolean(L, paused);
+		return 1;
+	} else if (fastcmp(word,"titlemap")) {
+		lua_pushinteger(L, titlemap);
+		return 1;
+	} else if (fastcmp(word,"titlemapinaction")) {
+		lua_pushboolean(L, (titlemapinaction != TITLEMAP_OFF));
 		return 1;
 	} else if (fastcmp(word,"gametype")) {
 		lua_pushinteger(L, gametype);
