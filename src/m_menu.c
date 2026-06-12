@@ -7346,7 +7346,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 	i = (itemOn*128) - char_scroll/FRACUNIT;
 
 	if (abs(i) > 1)
-		char_scroll += i*FRACUNIT>>2;
+		char_scroll += FixedMul(i*FRACUNIT>>2, renderdeltatics);
 	else // close enough.
 		char_scroll = itemOn*128*FRACUNIT; // just be exact now.
 
