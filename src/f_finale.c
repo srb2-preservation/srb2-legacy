@@ -41,7 +41,8 @@
 // Stage of animation:
 // 0 = text, 1 = art screen
 static INT32 finalecount;
-INT32 titlescrollspeed = 80;
+INT32 titlescrollxspeed = 80;
+INT32 titlescrollyspeed = 0;
 UINT8 titlemapinaction = TITLEMAP_OFF;
 
 static INT32 timetonext; // Delay between screen changes
@@ -56,6 +57,17 @@ static tic_t stoptimer;
 static boolean keypressed = false;
 
 // (no longer) De-Demo'd Title Screen
+// menu presentation state
+char curbgname[8];
+SINT8 curfadevalue;
+boolean curhidepics;
+INT32 curbgcolor;
+INT32 curbgxspeed;
+INT32 curbgyspeed;
+boolean curbghide;
+
+static fixed_t curbgx = 0;
+static fixed_t curbgy = 0;
 static UINT8  curDemo = 0;
 static UINT32 demoDelayLeft;
 static UINT32 demoIdleLeft;
@@ -75,8 +87,6 @@ static patch_t *ttspop4;
 static patch_t *ttspop5;
 static patch_t *ttspop6;
 static patch_t *ttspop7;
-
-static void F_SkyScroll(INT32 scrollspeed);
 
 //
 // CUTSCENE TEXT WRITING
@@ -166,90 +176,6 @@ static void F_NewCutscene(const char *basetext)
 	cutscene_textcount = TICRATE/2;
 }
 
-/*
-//
-// F_DrawPatchCol
-//
-static void F_DrawPatchCol(INT32 x, patch_t *patch, INT32 col)
-{
-	const column_t *column;
-	const UINT8 *source;
-	UINT8 *desttop, *dest = NULL;
-	const UINT8 *deststop, *destbottom;
-	size_t count;
-
-	desttop = screens[0] + x*vid.dupx;
-	deststop = screens[0] + vid.rowbytes * vid.height;
-	destbottom = desttop + vid.height*vid.width;
-
-	do {
-		INT32 topdelta, prevdelta = -1;
-		column = (column_t *)((UINT8 *)patch + LONG(patch->columnofs[col]));
-
-		// step through the posts in a column
-		while (column->topdelta != 0xff)
-		{
-			topdelta = column->topdelta;
-			if (topdelta <= prevdelta)
-				topdelta += prevdelta;
-			prevdelta = topdelta;
-			source = (const UINT8 *)column + 3;
-			dest = desttop + topdelta*vid.width;
-			count = column->length;
-
-			while (count--)
-			{
-				INT32 dupycount = vid.dupy;
-
-				while (dupycount-- && dest < destbottom)
-				{
-					INT32 dupxcount = vid.dupx;
-					while (dupxcount-- && dest <= deststop)
-						*dest++ = *source;
-
-					dest += (vid.width - vid.dupx);
-				}
-				source++;
-			}
-			column = (const column_t *)((const UINT8 *)column + column->length + 4);
-		}
-
-		desttop += SHORT(patch->height)*vid.dupy*vid.width;
-	} while(dest < destbottom);
-}
-*/
-
-//
-// F_SkyScroll
-//
-static void F_SkyScroll(INT32 scrollspeed)
-{
-	INT32 scrolled, x;
-	patch_t *pat;
-
-	pat = W_CachePatchName("TITLESKY", PU_PATCH);
-
-	animtimer = ((finalecount*scrollspeed)/16) % SHORT(pat->width) + (FixedInt((R_GetHudUncap(true)) * scrollspeed)/16);
-
- if (rendermode != render_none)
-	{ // if only software rendering could be this simple and retarded
-		INT32 dupz = (vid.dupx < vid.dupy ? vid.dupx : vid.dupy);
-		INT32 y, pw = SHORT(pat->width) * dupz, ph = SHORT(pat->height) * dupz;
-		scrolled = animtimer * dupz;
-		for (x = 0; x < vid.width; x += pw)
-		{
-			for (y = 0; y < vid.height; y += ph)
-			{
-				if (scrolled > 0)
-					V_DrawScaledPatch(scrolled - pw, y, V_NOSCALESTART, pat);
-
-				V_DrawScaledPatch(x + scrolled, y, V_NOSCALESTART, pat);
-			}
-		}
-	}
-
-	W_UnlockCachedPatch(pat);
-}
 
 // =============
 //  INTRO SCENE
@@ -680,7 +606,7 @@ static void F_IntroDrawScene(void)
 		}
 		else
 		{
-			F_SkyScroll(80*4);
+			F_SkyScroll(curbgname);
 			if (timetonext == 6)
 			{
 				stoptimer = finalecount;
@@ -1479,14 +1405,93 @@ static void F_CacheTitleScreen(void)
 	ttspop7 = W_CachePatchName("TTSPOP7", PU_PATCH);
 }
 
+void F_InitMenuPresValues(void)
+{
+	curbgx = 0;
+	curbgy = 0;
+	prevMenuId = 0;
+	activeMenuId = MainDef.menuid;
+
+	// Set defaults for presentation values
+	strncpy(curbgname, "TITLESKY", 8);
+	curfadevalue = 16;
+	curhidepics = hidetitlepics;
+	curbgcolor = -1;
+	curbgxspeed = titlescrollxspeed;
+	curbgyspeed = titlescrollyspeed;
+	curbghide = false;
+
+	// Find current presentation values
+	M_SetMenuCurBackground((gamestate == GS_TIMEATTACK) ? "SRB2BACK" : "TITLESKY");
+	M_SetMenuCurFadeValue(16);
+	M_SetMenuCurHideTitlePics();
+}
+
+//
+// F_SkyScroll
+//
+void F_SkyScroll(const char *patchname)
+{
+	INT32 x, basey = 0;
+	INT32 dupz = (vid.dupx < vid.dupy ? vid.dupx : vid.dupy);
+	patch_t *pat;
+
+	if (rendermode == render_none)
+		return;
+
+	if (!patchname || !patchname[0])
+	{
+		V_DrawFill(0, 0, vid.width, vid.height, 31);
+		return;
+	}
+
+	pat = W_CachePatchName(patchname, PU_PATCH);
+
+	if (!curbgxspeed && !curbgyspeed)
+	{
+		V_DrawPatchFill(pat);
+		W_UnlockCachedPatch(pat);
+		return;
+	}
+
+	// Modulo the background scrolling to prevent jumps from integer overflows
+	// We already load the background patch here, so we can modulo it here
+	// to avoid also having to load the patch in F_MenuPresTicker
+	curbgx %= pat->width  * 16;
+	curbgy %= pat->height * 16;
+
+	// Ooh, fancy frame interpolation
+	x     = ((curbgx*dupz) + FixedInt((rendertimefrac_unpaused-FRACUNIT) * curbgxspeed*dupz)) / 16;
+	basey = ((curbgy*dupz) + FixedInt((rendertimefrac_unpaused-FRACUNIT) * curbgyspeed*dupz)) / 16;
+
+	if (x     > 0) // Make sure that we don't leave the left or top sides empty
+		x     -= pat->width  * dupz;
+	if (basey > 0)
+		basey -= pat->height * dupz;
+
+	for (; x < vid.width; x += pat->width * dupz)
+	{
+		for (INT32 y = basey; y < vid.height; y += pat->height * dupz)
+			V_DrawScaledPatch(x, y, V_NOSCALESTART, pat);
+	}
+
+	W_UnlockCachedPatch(pat);
+}
+
 mobj_t *titlemapcameraref = NULL;
 
 void F_StartTitleScreen(void)
 {
-	S_ChangeMusicInternal("titles", looptitle);
+	if (menupres[MN_MAIN].musname[0])
+		S_ChangeMusic(menupres[MN_MAIN].musname, menupres[MN_MAIN].mustrack, menupres[MN_MAIN].muslooping);
+	else
+		S_ChangeMusicInternal("titles", looptitle);
 
 	if (gamestate != GS_TITLESCREEN && gamestate != GS_WAITINGPLAYERS)
+	{
 		finalecount = 0;
+		wipetypepost = menupres[MN_MAIN].enterwipe;
+	}
 	else
 		wipegamestate = GS_TITLESCREEN;
 
@@ -1541,7 +1546,6 @@ void F_StartTitleScreen(void)
 	{
 		titlemapinaction = TITLEMAP_OFF;
 		gamemap = 1; // g_game.c
-		S_ChangeMusicInternal("titles", looptitle);
 		CON_ClearHUD();
 	}
 
@@ -1560,6 +1564,8 @@ void F_StartTitleScreen(void)
 // (no longer) De-Demo'd Title Screen
 void F_TitleScreenDrawer(void)
 {
+	boolean hidepics;
+
 	if (modeattacking)
 		return; // We likely came here from retrying. Don't do a damn thing.
 
@@ -1569,7 +1575,12 @@ void F_TitleScreenDrawer(void)
 
 	// Draw that sky!
 	if (!titlemapinaction)
-		F_SkyScroll(titlescrollspeed);
+	{
+		if (curbgcolor >= 0)
+			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, curbgcolor);
+		else if (!curbghide || gamestate == GS_WAITINGPLAYERS)
+			F_SkyScroll(curbgname);
+	}
 
 	// Don't draw outside of the title screewn, or if the patch isn't there.
 	if (!ttwing || (gamestate != GS_TITLESCREEN && gamestate != GS_WAITINGPLAYERS))
@@ -1618,6 +1629,14 @@ void F_TitleScreenDrawer(void)
 
 luahook:
 	LUAh_TitleHUD();
+}
+
+// separate animation timer for backgrounds, since we also count
+// during GS_TIMEATTACK
+void F_MenuPresTicker(void)
+{
+	curbgx += curbgxspeed;
+	curbgy += curbgyspeed;
 }
 
 // (no longer) De-Demo'd Title Screen
@@ -1672,7 +1691,7 @@ void F_TitleScreenTicker(boolean run)
 		else
 		{
 			// Default behavior: Do a lil' camera spin if a title map is loaded;
-			camera.angle += titlescrollspeed*ANG1/64;
+			camera.angle += titlescrollxspeed*ANG1/64;
 		}
 	}
 	// no demos to play? or, are they disabled?

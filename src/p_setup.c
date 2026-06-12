@@ -2747,6 +2747,9 @@ boolean P_SetupLevel(boolean skipprecip, boolean reloadinggamestate)
 	// will be set by player think.
 	players[consoleplayer].viewz = 1;
 
+	// Cancel all d_main.c fadeouts (keep fade in though).
+	wipegamestate = FORCEWIPEOFF;
+
 	// Special stage fade to white
 	// This is handled BEFORE sounds are stopped.
 	if (rendermode != render_none && G_IsSpecialStage(gamemap) && !reloadinggamestate)
