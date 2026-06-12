@@ -3973,13 +3973,13 @@ static void DEH_LoadDehackedFile(MYFILE *f, UINT16 wad)
 			{
 				menuactive = false;
 				I_UpdateMouseGrab();
-				COM_BufAddText("playintro");
+				COM_BufAddText("playintro\n");
 			}
 			else if (titlechanged)
 			{
 				menuactive = false;
 				I_UpdateMouseGrab();
-				COM_BufAddText("exitgame"); // Command_ExitGame_f() but delayed
+				COM_BufAddText("exitgame\n"); // Command_ExitGame_f() but delayed
 			}
 	}
 
