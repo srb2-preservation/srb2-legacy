@@ -1565,25 +1565,6 @@ void F_GameEndTicker(void)
 // ==============
 //  TITLE SCREEN
 // ==============
-static void F_CacheTitleScreen(void)
-{
-	ttbanner = W_CachePatchName("TTBANNER", PU_PATCH);
-	ttwing = W_CachePatchName("TTWING", PU_PATCH);
-	ttsonic = W_CachePatchName("TTSONIC", PU_PATCH);
-	ttswave1 = W_CachePatchName("TTSWAVE1", PU_PATCH);
-	ttswave2 = W_CachePatchName("TTSWAVE2", PU_PATCH);
-	ttswip1 = W_CachePatchName("TTSWIP1", PU_PATCH);
-	ttsprep1 = W_CachePatchName("TTSPREP1", PU_PATCH);
-	ttsprep2 = W_CachePatchName("TTSPREP2", PU_PATCH);
-	ttspop1 = W_CachePatchName("TTSPOP1", PU_PATCH);
-	ttspop2 = W_CachePatchName("TTSPOP2", PU_PATCH);
-	ttspop3 = W_CachePatchName("TTSPOP3", PU_PATCH);
-	ttspop4 = W_CachePatchName("TTSPOP4", PU_PATCH);
-	ttspop5 = W_CachePatchName("TTSPOP5", PU_PATCH);
-	ttspop6 = W_CachePatchName("TTSPOP6", PU_PATCH);
-	ttspop7 = W_CachePatchName("TTSPOP7", PU_PATCH);
-}
-
 void F_InitMenuPresValues(void)
 {
 	curbgx = 0;
@@ -1693,6 +1674,45 @@ else if (strlen(name) <= 6) \
 else \
 	arr[0] = 0;
 
+static void F_CacheTitleScreen(void)
+{
+	switch(curttmode)
+	{
+		case TTMODE_OLD:
+		case TTMODE_NONE:
+			ttbanner = W_CachePatchName("TTBANNER", PU_LEVEL);
+			ttwing = W_CachePatchName("TTWING", PU_LEVEL);
+			ttsonic = W_CachePatchName("TTSONIC", PU_LEVEL);
+			ttswave1 = W_CachePatchName("TTSWAVE1", PU_LEVEL);
+			ttswave2 = W_CachePatchName("TTSWAVE2", PU_LEVEL);
+			ttswip1 = W_CachePatchName("TTSWIP1", PU_LEVEL);
+			ttsprep1 = W_CachePatchName("TTSPREP1", PU_LEVEL);
+			ttsprep2 = W_CachePatchName("TTSPREP2", PU_LEVEL);
+			ttspop1 = W_CachePatchName("TTSPOP1", PU_LEVEL);
+			ttspop2 = W_CachePatchName("TTSPOP2", PU_LEVEL);
+			ttspop3 = W_CachePatchName("TTSPOP3", PU_LEVEL);
+			ttspop4 = W_CachePatchName("TTSPOP4", PU_LEVEL);
+			ttspop5 = W_CachePatchName("TTSPOP5", PU_LEVEL);
+			ttspop6 = W_CachePatchName("TTSPOP6", PU_LEVEL);
+			ttspop7 = W_CachePatchName("TTSPOP7", PU_LEVEL);
+			break;
+
+		// don't load alacroix gfx yet; we do that upon first draw.
+		case TTMODE_ALACROIX:
+			break;
+
+		case TTMODE_USER:
+		{
+			UINT16 i;
+			lumpnum_t lumpnum;
+			char lumpname[9];
+
+			LOADTTGFX(ttuser, curttname, TTMAX_USER)
+			break;
+		}
+	}
+}
+
 void F_StartTitleScreen(void)
 {
 	if (menupres[MN_MAIN].musname[0])
@@ -1783,41 +1803,7 @@ void F_StartTitleScreen(void)
 	demoDelayLeft = demoDelayTime;
 	demoIdleLeft = demoIdleTime;
 
-	switch(curttmode)
-	{
-		case TTMODE_OLD:
-		case TTMODE_NONE:
-			ttbanner = W_CachePatchName("TTBANNER", PU_LEVEL);
-			ttwing = W_CachePatchName("TTWING", PU_LEVEL);
-			ttsonic = W_CachePatchName("TTSONIC", PU_LEVEL);
-			ttswave1 = W_CachePatchName("TTSWAVE1", PU_LEVEL);
-			ttswave2 = W_CachePatchName("TTSWAVE2", PU_LEVEL);
-			ttswip1 = W_CachePatchName("TTSWIP1", PU_LEVEL);
-			ttsprep1 = W_CachePatchName("TTSPREP1", PU_LEVEL);
-			ttsprep2 = W_CachePatchName("TTSPREP2", PU_LEVEL);
-			ttspop1 = W_CachePatchName("TTSPOP1", PU_LEVEL);
-			ttspop2 = W_CachePatchName("TTSPOP2", PU_LEVEL);
-			ttspop3 = W_CachePatchName("TTSPOP3", PU_LEVEL);
-			ttspop4 = W_CachePatchName("TTSPOP4", PU_LEVEL);
-			ttspop5 = W_CachePatchName("TTSPOP5", PU_LEVEL);
-			ttspop6 = W_CachePatchName("TTSPOP6", PU_LEVEL);
-			ttspop7 = W_CachePatchName("TTSPOP7", PU_LEVEL);
-			break;
-
-		// don't load alacroix gfx yet; we do that upon first draw.
-		case TTMODE_ALACROIX:
-			break;
-
-		case TTMODE_USER:
-		{
-			UINT16 i;
-			lumpnum_t lumpnum;
-			char lumpname[9];
-
-			LOADTTGFX(ttuser, curttname, TTMAX_USER)
-			break;
-		}
-	}
+	F_CacheTitleScreen();
 }
 
 static void F_UnloadAlacroixGraphics(SINT8 oldttscale)
@@ -1964,8 +1950,9 @@ void F_TitleScreenDrawer(void)
 	if (modeattacking)
 		return; // We likely came here from retrying. Don't do a damn thing.
 
+
 	// Jimita: Load title screen patches.
-	if (needpatchrecache)
+	if (needpatchrecache && (curttmode != TTMODE_ALACROIX))
 		F_CacheTitleScreen();
 
 	// Draw that sky!
@@ -1984,6 +1971,13 @@ void F_TitleScreenDrawer(void)
 	// rei|miru: use title pics?
 	if (hidetitlepics)
 		goto luahook;
+
+	if (needpatchrecache && (curttmode == TTMODE_ALACROIX))
+	{
+		ttloaded[0] = ttloaded[1] = ttloaded[2] = ttloaded[3] = ttloaded[4] = ttloaded[5] = 0;
+		F_LoadAlacroixGraphics(activettscale);
+	}
+
 
 	switch(curttmode)
 	{
