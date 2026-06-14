@@ -1881,7 +1881,7 @@ menu_t MP_PlayerSetupDef =
 	&MP_MainDef,
 	MP_PlayerSetupMenu,
 	M_DrawSetupMultiPlayerMenu,
-	27, 40,
+	19, 26,
 	0,
 	M_QuitMultiPlayerMenu
 };
