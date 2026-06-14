@@ -12,6 +12,7 @@
 /// \file  m_menu.c
 /// \brief XMOD's extremely revamped menu system.
 
+#include "m_fixed.h"
 #ifdef __GNUC__
 #include <unistd.h>
 #endif
@@ -7888,34 +7889,55 @@ static UINT16     setupm_fakecolor;
 
 static void M_DrawSetupMultiPlayerMenu(void)
 {
-	INT32 mx, my, st, flags = 0;
+	INT32 x, y, cursory = 0, st = 0, flags = 0;
 	spritedef_t *sprdef;
 	spriteframe_t *sprframe;
 	patch_t *patch;
+	UINT8 *colormap;
 	UINT8 frame;
 
-	mx = MP_PlayerSetupDef.x;
-	my = MP_PlayerSetupDef.y;
+	x = MP_PlayerSetupDef.x;
+	y = MP_PlayerSetupDef.y;
 
 	// use generic drawer for cursor, items and title
-	M_DrawGenericMenu();
+	//M_DrawGenericMenu();
+
+	// draw title (or big pic)
+	M_DrawMenuTitle();
+
+	V_DrawString(x, y, V_YELLOWMAP, "Name");
+	if (itemOn == 0)
+		cursory = y;
+	y += 11;
 
 	// draw name string
-	M_DrawTextBox(mx + 90, my - 8, MAXPLAYERNAME, 1);
-	V_DrawString(mx + 98, my, V_ALLOWLOWERCASE, setupm_name);
+	V_DrawFill(x, y, 282/*(MAXPLAYERNAME+1)*8+6*/, 14, 239);
+	V_DrawString(x + 8, y + 3, V_ALLOWLOWERCASE, setupm_name);
+	if (skullAnimCounter < 4 && itemOn == 0)
+		V_DrawCharacter(x + 8 + V_StringWidth(setupm_name, V_ALLOWLOWERCASE), y + 3,
+			'_' | 0x80, false);
+
+	y += 20;
+
+	V_DrawString(x, y, V_YELLOWMAP, "Character");
+	if (itemOn == 1)
+		cursory = y;
 
 	// draw skin string
-	V_DrawString(208, 72,
-		((MP_PlayerSetupMenu[2].status & IT_TYPE) == IT_SPACE ? V_TRANSLUCENT : 0)|V_YELLOWMAP|V_ALLOWLOWERCASE,
-		skins[setupm_fakeskin].realname);
+	V_DrawRightAlignedString(BASEVIDWIDTH - x, y,
+	             ((MP_PlayerSetupMenu[1].status & IT_TYPE) == IT_SPACE ? V_TRANSLUCENT : 0)|(itemOn == 1 ? V_YELLOWMAP : 0)|V_ALLOWLOWERCASE,
+	             skins[setupm_fakeskin].realname);
 
-	// draw the name of the color you have chosen
-	// Just so people don't go thinking that "Default" is Green.
-	V_DrawRightAlignedString(291, my + 96, V_YELLOWMAP|V_ALLOWLOWERCASE, skincolors[setupm_fakecolor].name);
+	if (itemOn == 1 && (MP_PlayerSetupMenu[1].status & IT_TYPE) != IT_SPACE)
+	{
+		V_DrawCharacter(BASEVIDWIDTH - x - 10 - V_StringWidth(skins[setupm_fakeskin].realname, V_ALLOWLOWERCASE) - (skullAnimCounter/5), y,
+			'\x1C' | V_YELLOWMAP, false);
+		V_DrawCharacter(BASEVIDWIDTH - x + 2 + (skullAnimCounter/5), y,
+			'\x1D' | V_YELLOWMAP, false);
+	}
 
-	// draw text cursor for name
-	if (!itemOn && skullAnimCounter < 4) // blink cursor
-		V_DrawCharacter(mx + 98 + V_StringWidth(setupm_name, 0), my, '_', false);
+	x = BASEVIDWIDTH/2;
+	y += 11;
 
 	// anim the player in the box
 	multi_tics -= renderdeltatics;
@@ -7931,6 +7953,10 @@ static void M_DrawSetupMultiPlayerMenu(void)
 			multi_tics += multi_state->tics * FRACUNIT;
 	}
 
+#define charw 74
+
+	// draw box around character
+	V_DrawFill(x-(charw/2), y, charw, 84, 239);
 
 	// skin 0 is default player sprite
 	if (R_SkinAvailable(skins[setupm_fakeskin].name) != -1)
@@ -7938,86 +7964,108 @@ static void M_DrawSetupMultiPlayerMenu(void)
 	else
 		sprdef = &skins[0].spritedef;
 
-	if (!sprdef->numframes) // No frames ??
-		return; // Can't render!
+	if (!setupm_fakecolor || !sprdef->numframes) // should never happen but hey, who knows
+		goto faildraw;
+
+	// ok, draw player sprite for sure now
+	colormap = R_GetTranslationColormap(setupm_fakeskin, setupm_fakecolor, GTC_CACHE);
 
 	frame = multi_state->frame & FF_FRAMEMASK;
 	if (frame >= sprdef->numframes) // Walking animation missing
 		frame = 0; // Try to use standing frame
+
 
 	sprframe = &sprdef->spriteframes[frame];
 	patch = W_CachePatchNum(sprframe->lumppat[0], PU_PATCH);
 	if (sprframe->flip & 1) // Only for first sprite
 		flags |= V_FLIP; // This sprite is left/right flipped!
 
-	// draw box around guy
-	M_DrawTextBox(mx + 90, my + 8, PLBOXW, PLBOXH);
+#define chary (y+64)
 
-	// draw player sprite
-	if (!setupm_fakecolor) // should never happen but hey, who knows
+	V_DrawFixedPatch(
+		x<<FRACBITS,
+		chary<<FRACBITS,
+		(skins[setupm_fakeskin].flags & SF_HIRES) ? skins[setupm_fakeskin].highresscale : FRACUNIT,
+		flags, patch, colormap);
+
+	goto colordraw;
+
+faildraw:
+	sprdef = &sprites[SPR_UNKN];
+	if (!sprdef->numframes) // No frames ??
+		return; // Can't render!
+
+	sprframe = &sprdef->spriteframes[0];
+	patch = W_CachePatchNum(sprframe->lumppat[0], PU_PATCH);
+	if (sprframe->flip & 1) // Only for first sprite
+		flags |= V_FLIP; // This sprite is left/right flipped!
+
+	V_DrawScaledPatch(x, chary, flags, patch);
+
+#undef chary
+
+colordraw:
+	x = MP_PlayerSetupDef.x;
+	y += 75;
+
+	V_DrawString(x, y, V_YELLOWMAP, "Color");
+	if (itemOn == 2)
+		cursory = y;
+
+	// draw color string
+	V_DrawRightAlignedString(BASEVIDWIDTH - x, y,
+	             ((MP_PlayerSetupMenu[2].status & IT_TYPE) == IT_SPACE ? V_TRANSLUCENT : 0)|(itemOn == 2 ? V_YELLOWMAP : 0)|V_ALLOWLOWERCASE,
+	             skincolors[setupm_fakecolor].name);
+
+	if (itemOn == 2 && (MP_PlayerSetupMenu[2].status & IT_TYPE) != IT_SPACE)
 	{
-		if (skins[setupm_fakeskin].flags & SF_HIRES)
-		{
-			V_DrawSciencePatch((mx + 98 + (PLBOXW * 8 / 2)) << FRACBITS,
-				(my + 16 + (PLBOXH * 8) - 12) << FRACBITS,
-				flags, patch,
-				skins[setupm_fakeskin].highresscale);
+		V_DrawCharacter(BASEVIDWIDTH - x - 10 - V_StringWidth(skincolors[setupm_fakecolor].name, V_ALLOWLOWERCASE) - (skullAnimCounter/5), y,
+			'\x1C' | V_YELLOWMAP, false);
+		V_DrawCharacter(BASEVIDWIDTH - x + 2 + (skullAnimCounter/5), y,
+			'\x1D' | V_YELLOWMAP, false);
+	}
+
+	y += 11;
+
+#define indexwidth 8
+	{
+		const INT32 numcolors = (282-charw)/(2*indexwidth); // Number of colors per side
+		INT32 w = indexwidth; // Width of a singular color block
+		INT32 color = setupm_fakecolor;
+		UINT8 h;
+		INT16 i;
+
+		// Draw color in the middle
+		x += numcolors*w;
+		for (h = 0; h < 16; h++)
+			V_DrawFill(x, y+h, charw, 1, skincolors[setupm_fakecolor].ramp[h]);
+
+		//Draw colors from middle to left
+		for (i=0; i<numcolors; i++) {
+			x -= w;
+			// Find accessible color before this one
+			while (!skincolors[color].accessible)
+				color = M_GetColorPrev(color);
+			for (h = 0; h < 16; h++)
+				V_DrawFill(x, y+h, w, 1, skincolors[color].ramp[h]);
+			color = M_GetColorPrev(color);
 		}
-		else
-			V_DrawScaledPatch(mx + 98 + (PLBOXW * 8 / 2), my + 16 + (PLBOXH * 8) - 12, flags, patch);
-	}
-	else
-	{
-		UINT8 *colormap = R_GetTranslationColormap(setupm_fakeskin, setupm_fakecolor, GTC_CACHE);
 
-		if (skins[setupm_fakeskin].flags & SF_HIRES)
-		{
-			V_DrawFixedPatch((mx + 98 + (PLBOXW * 8 / 2)) << FRACBITS,
-				(my + 16 + (PLBOXH * 8) - 12) << FRACBITS,
-				skins[setupm_fakeskin].highresscale,
-				flags, patch, colormap);
+		// Draw colors from middle to right
+		color = M_GetColorNext(setupm_fakecolor);
+		x += numcolors*w + charw;
+		for (i=0; i<numcolors; i++) {
+			// Find accessible color after this one
+			while (!skincolors[color].accessible)
+				color = M_GetColorNext(color);
+			for (h = 0; h < 16; h++)
+				V_DrawFill(x, y+h, w, 1, skincolors[color].ramp[h]);
+			x += w;
+			color = M_GetColorNext(color);
 		}
-		else
-			V_DrawMappedPatch(mx + 98 + (PLBOXW * 8 / 2), my + 16 + (PLBOXH * 8) - 12, flags, patch, colormap);
 	}
-
-	// Draw the palette below!
-	// note: height is always 16
-#define color_width 12
-#define selected_width 80
-
-	int x,y,count,i,j,color;
-	count = 8;
-	x = (BASEVIDWIDTH / 2) - (color_width / 2);
-	y = 148;
-	color = setupm_fakecolor;
-
-	// selected color
-	for (j = 0; j < 16; j++)
-		V_DrawFill(x - (selected_width / 2), y+j, selected_width, 1, skincolors[color].ramp[j]);
-
-	color = M_GetColorPrev(color);
-
-	// prev colors
-	for (i = 0; i < count; i++)
-	{
-		for (j = 0; j < 16; j++)
-			V_DrawFill(x - (i * color_width) - (selected_width / 2), y+j, color_width, 1, skincolors[color].ramp[j]);
-		color = M_GetColorPrev(color);
-	}
-
-	color = M_GetColorNext(setupm_fakecolor);
-
-	// next colors
-	for (i = 0; i < count; i++)
-	{
-		for (j = 0; j < 16; j++)
-			V_DrawFill(x + (i * color_width) + (selected_width / 2), y+j, color_width, 1, skincolors[color].ramp[j]);
-		color = M_GetColorNext(color);
-	}
-
-#undef selected_width
-#undef color_width
+#undef charw
+#undef indexwidth
 
 	x = MP_PlayerSetupDef.x;
 	y += 20;
@@ -8029,8 +8077,12 @@ static void M_DrawSetupMultiPlayerMenu(void)
 			: V_TRANSLUCENT)
 		| ((itemOn == 3) ? V_YELLOWMAP : 0),
 		"Save as default");
-}
+	if (itemOn == 3)
+		cursory = y;
 
+	V_DrawScaledPatch(x - 17, cursory, 0,
+		W_CachePatchName("M_CURSOR", PU_PATCH));
+}
 // Handle 1P/2P MP Setup
 static void M_HandleSetupMultiPlayer(INT32 choice)
 {
@@ -8140,6 +8192,7 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 static void M_SetupMultiPlayer(INT32 choice)
 {
 	(void)choice;
+
 
 	multi_state = &states[mobjinfo[MT_PLAYER].seestate];
 	multi_tics = multi_state->tics*FRACUNIT;
