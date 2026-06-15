@@ -1848,6 +1848,8 @@ void A_Boss7FireMissiles(void *thing)
 // var2:
 //		0 - Boss 1 Left side
 //		1 - Boss 1 Right side
+//		2 - Triple laser
+//	    >3 - Boss 1 Middle
 //
 void A_Boss1Laser(void *thing)
 {
@@ -1882,6 +1884,15 @@ void A_Boss1Laser(void *thing)
 			else
 				z = actor->z + FixedMul(56*FRACUNIT, actor->scale);
 			break;
+		case 2:
+			var2 = 3; // Fire middle laser
+			A_Boss1Laser(actor);
+			var2 = 0; // Fire left laser
+			A_Boss1Laser(actor);
+			var2 = 1; // Fire right laser
+			A_Boss1Laser(actor);
+			return;
+			break;
 		default:
 			x = actor->x;
 			y = actor->y;
@@ -1889,7 +1900,7 @@ void A_Boss1Laser(void *thing)
 			break;
 	}
 
-	if (!(actor->flags2 & MF2_FIRING))
+	if (!(actor->flags2 & MF2_FIRING) && actor->tics > 1)
 	{
 		actor->angle = R_PointToAngle2(x, y, actor->target->x, actor->target->y);
 		if (mobjinfo[locvar1].seesound)
