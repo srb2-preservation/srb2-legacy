@@ -1363,13 +1363,10 @@ state_t states[NUMSTATES] =
 	{SPR_CFIR, FF_FULLBRIGHT|5, 2, NULL, 0, 0, S_DEMONFIRE1}, // S_DEMONFIRE6
 
 	// GFZ Flower
-	{SPR_FWR1, 0, 14, NULL, 0, 0, S_GFZFLOWERA2}, // S_GFZFLOWERA
-	{SPR_FWR1, 1, 14, NULL, 0, 0, S_GFZFLOWERA},  // S_GFZFLOWERA2
+	{SPR_FWR1, FF_ANIMATE, -1, NULL,  7, 3, S_NULL}, // S_GFZFLOWERA
+	{SPR_FWR2, FF_ANIMATE, -1, NULL, 19, 3, S_NULL}, // S_GFZFLOWERB
+	{SPR_FWR3, FF_ANIMATE, -1, NULL, 11, 4, S_NULL}, // S_GFZFLOWERC
 
-	{SPR_FWR2, 0, 7, NULL, 0, 0, S_GFZFLOWERB2}, // S_GFZFLOWERB1
-	{SPR_FWR2, 1, 7, NULL, 0, 0, S_GFZFLOWERB1}, // S_GFZFLOWERB1
-
-	{SPR_FWR3, 0, -1, NULL, 0, 0, S_NULL},       // S_GFZFLOWERC1
 
 	{SPR_BUS1, 0, -1, NULL, 0, 0, S_NULL},       // S_BERRYBUSH
 	{SPR_BUS2, 0, -1, NULL, 0, 0, S_NULL},       // S_BUSH
@@ -7042,7 +7039,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
 	{           // MT_GFZFLOWER2
 		801,            // doomednum
-		S_GFZFLOWERB1,  // spawnstate
+		S_GFZFLOWERB,  // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
@@ -7069,7 +7066,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
 	{           // MT_GFZFLOWER3
 		802,            // doomednum
-		S_GFZFLOWERC1,  // spawnstate
+		S_GFZFLOWERC,  // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
@@ -7090,7 +7087,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		100,            // mass
 		0,              // damage
 		sfx_None,       // activesound
-		MF_NOTHINK|MF_NOBLOCKMAP|MF_NOCLIP|MF_SCENERY, // flags
+		MF_NOBLOCKMAP|MF_NOCLIP|MF_SCENERY, // flags
 		S_NULL          // raisestate
 	},
 

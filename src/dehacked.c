@@ -5278,12 +5278,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	// GFZ flowers
 	"S_GFZFLOWERA",
-	"S_GFZFLOWERA2",
-
-	"S_GFZFLOWERB1",
-	"S_GFZFLOWERB2",
-
-	"S_GFZFLOWERC1",
+	"S_GFZFLOWERB",
+	"S_GFZFLOWERC",
 
 	"S_BERRYBUSH",
 	"S_BUSH",
