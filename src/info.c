@@ -1140,8 +1140,10 @@ state_t states[NUMSTATES] =
 
 	// Starpost
 	{SPR_STPT, 0           , -1, NULL,  0, 0, S_NULL},           // S_STARPOST_IDLE
-	{SPR_STPT, FF_ANIMATE  , -1, NULL,  1, 2, S_NULL},           // S_STARPOST_FLASH
-	{SPR_STPT, FF_ANIMATE|2, 31, NULL, 15, 1, S_STARPOST_FLASH}, // S_STARPOST_SPIN
+	{SPR_STPT, FF_ANIMATE|17, -1, NULL,  5, 1, S_NULL},           // S_STARPOST_FLASH
+	{SPR_STPT, FF_ANIMATE|13,  2, NULL,  1, 1, S_STARPOST_SPIN},  // S_STARPOST_STARTSPIN
+	{SPR_STPT, FF_ANIMATE|1 , 23, NULL, 11, 1, S_STARPOST_ENDSPIN}, // S_STARPOST_SPIN
+	{SPR_STPT, FF_ANIMATE|15,  2, NULL,  1, 1, S_STARPOST_FLASH}, // S_STARPOST_ENDSPIN
 
 	// Big floating mine
 	{SPR_BMNE, 0, 5, NULL, 0, 0, S_BIGMINE2},    // S_BIGMINE1
@@ -5556,7 +5558,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // seesound
 		8,              // reactiontime
 		sfx_None,       // attacksound
-		S_STARPOST_SPIN, // painstate
+		S_STARPOST_STARTSPIN, // painstate
 		0,              // painchance
 		sfx_strpst,     // painsound
 		S_NULL,         // meleestate
@@ -5566,7 +5568,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // deathsound
 		8,              // speed
 		64*FRACUNIT,    // radius
-		80*FRACUNIT,    // height
+		128*FRACUNIT,   // height
 		0,              // display offset
 		4,              // mass
 		0,              // damage

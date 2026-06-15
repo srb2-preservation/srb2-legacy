@@ -5054,7 +5054,9 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	// Starpost
 	"S_STARPOST_IDLE",
 	"S_STARPOST_FLASH",
+	"S_STARPOST_STARTSPIN",
 	"S_STARPOST_SPIN",
+	"S_STARPOST_ENDSPIN",
 
 	// Big floating mine
 	"S_BIGMINE1",
