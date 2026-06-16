@@ -1692,7 +1692,18 @@ menu_t MPauseDef = PAUSEMENUSTYLE(MPauseMenu, 40, 72);
 // Misc Main Menu
 menu_t MISC_ScrambleTeamDef = DEFAULTMENUSTYLE(MN_SPECIAL, NULL, MISC_ScrambleTeamMenu, &MPauseDef, 27, 40);
 menu_t MISC_ChangeTeamDef = DEFAULTMENUSTYLE(MN_SPECIAL, NULL, MISC_ChangeTeamMenu, &MPauseDef, 27, 40);
-menu_t MISC_ChangeLevelDef = MAPICONMENUSTYLE(MN_SPECIAL, NULL, MISC_ChangeLevelMenu, &MPauseDef);
+menu_t MISC_ChangeLevelDef =
+{
+	MN_SPECIAL,
+	NULL,
+	sizeof (MISC_ChangeLevelMenu)/sizeof (menuitem_t),
+	&MainDef,  // Doesn't matter.
+	MISC_ChangeLevelMenu,
+	M_DrawLevelPlatterMenu,
+	0, 0,
+	0,
+	NULL
+};
 menu_t MISC_HelpDef = IMAGEDEF(MISC_HelpMenu);
 
 static INT32 highlightflags, recommendedflags, warningflags;
