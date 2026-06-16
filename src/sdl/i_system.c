@@ -2950,6 +2950,75 @@ const char *I_ClipboardPaste(void)
 	return (const char *)&clipboard_modified;
 }
 
+#ifdef NATIVEDIR
+#ifndef __APPLE__
+// Reference for XDG directories:
+// <https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html>
+// from dsda-doom
+const char *I_GetXDGDataHome(const char *userhome)
+{
+	static char *datahome = 0;
+
+	if (!datahome)
+	{
+		const char *xdgdatahome = I_GetEnv("XDG_DATA_HOME");
+
+		if (!xdgdatahome || !*xdgdatahome)
+		{
+			size_t datahomesize = strlen(userhome) + strlen("/.local/share") + 1;
+			datahome = malloc(datahomesize);
+			snprintf(datahome, datahomesize, "%s%s%s", userhome, userhome[strlen(userhome)-1] != '/' ? "/" : "", ".local/share");
+		}
+		else
+		{
+			datahome = strdup(xdgdatahome);
+		}
+	}
+	return datahome;
+}
+#endif
+
+//
+// I_ConfigDir
+// from dsda-doom
+//
+const char *I_ConfigDir()
+{
+	static char *base = NULL;
+
+	if (!base)
+	{
+		const char *home = D_Home();
+
+		// First, try legacy directory.
+		size_t basesize = strlen(home) + 1 + strlen(DEFAULTDIR) + 1;
+		base = malloc(basesize);
+		snprintf(base, basesize, "%s/" DEFAULTDIR, home);
+
+#ifndef __EMSCRIPTEN__
+		if (FIL_FileExists(base) == 0)
+		{
+			// Legacy directory is not accessible. Use XDG directory.
+			free(base);
+
+#ifdef __APPLE__
+			basesize = strlen(home) + strlen("/Library/Application Support/srb2-legacy") + 1;
+			base = malloc(basesize);
+			snprintf(base, basesize, "%s/Library/Application Support/srb2-legacy", home);
+#else
+			const char *xdgdatahome = I_GetXDGDataHome(home);
+			basesize = strlen(xdgdatahome) + strlen("/srb2-legacy") + 1;
+			base = malloc(basesize);
+			snprintf(base, basesize, "%s/srb2-legacy", xdgdatahome);
+#endif
+		}
+#endif
+	}
+
+	return base;
+}
+#endif
+
 /**	\brief	The isWadPathOk function
 
 	\param	path	string path to check
@@ -3153,19 +3222,17 @@ static const char *locateWad(void)
 		return returnWadPath;
 #endif
 #ifndef NOHOME
-	// find in $HOME
-	I_OutputMsg(",HOME/" DEFAULTDIR);
-	if ((envstr = I_GetEnv("HOME")) != NULL)
+#ifdef NATIVEDIR
+	// find in config dir
+	envstr = I_ConfigDir();
+	I_OutputMsg(",%s", envstr);
+	if (envstr != NULL)
 	{
-		char *tmp = malloc(strlen(envstr) + 1 + sizeof(DEFAULTDIR));
-		strcpy(tmp, envstr);
-		strcat(tmp, "/");
-		strcat(tmp, DEFAULTDIR);
-		WadPath = searchWad(tmp);
-		free(tmp);
+		WadPath = searchWad(envstr);
 		if (WadPath)
 			return WadPath;
 	}
+#endif
 #endif
 #ifdef DEFAULTSEARCHPATH1
 	// find in /usr/local
