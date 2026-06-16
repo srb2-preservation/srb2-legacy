@@ -5299,11 +5299,10 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_BUSHTREE",
 	"S_BUSHREDTREE",
 
-	// THZ Plant
-	"S_THZPLANT1",
-	"S_THZPLANT2",
-	"S_THZPLANT3",
-	"S_THZPLANT4",
+	// THZ flowers
+	"S_THZFLOWERA", // THZ1 Steam flower
+	"S_THZFLOWERB", // THZ1 Spin flower (red)
+	"S_THZFLOWERC", // THZ1 Spin flower (yellow)
 
 	// THZ Steam Whistle tree/bush
 	"S_THZTREE",
@@ -6687,7 +6686,9 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_BUSHREDTREE",
 
 	// Techno Hill Scenery
-	"MT_THZPLANT", // THZ Plant
+	"MT_THZFLOWER1",
+	"MT_THZFLOWER2",
+	"MT_THZFLOWER3",
 	"MT_THZTREE", // Steam whistle tree/bush
 	"MT_THZTREEBRANCH", // branch of said tree
 	"MT_ALARM",

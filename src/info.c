@@ -36,6 +36,7 @@ char sprnames[NUMSPRITES + 1][5] =
 	"YLTV","BLTV","BKTV","WHTV","GRTV","ELTV","EGGB","MIXU","RECY","QUES",
 	"GBTV","PRUP","PTTV","MTEX","MISL","TORP","ENRG","MINE","JBUL","TRLS",
 	"CBLL","AROW","CFIR","FWR1","FWR2","FWR3","FWR4","BUS1","BUS2","THZP",
+	"FWR5", "FWR6",
 	"ALRM","GARG","SEWE","DRIP","CORL","CRL2","CRL3","BCRY","CHAN","FLAM",
 	"ESTA","SMCH","BMCH","SMCE","BMCE","BTBL","STBL","CACT","FLME","DFLM",
 	"XMS1","XMS2","XMS3","BSZ1","BSZ2","BSZ3","BSZ4","BSZ5","BSZ6","BSZ7",
@@ -1365,7 +1366,7 @@ state_t states[NUMSTATES] =
 	{SPR_CFIR, FF_FULLBRIGHT|4, 2, NULL, 0, 0, S_DEMONFIRE6}, // S_DEMONFIRE5
 	{SPR_CFIR, FF_FULLBRIGHT|5, 2, NULL, 0, 0, S_DEMONFIRE1}, // S_DEMONFIRE6
 
-	// GFZ Flower
+	// GFZ flowers
 	{SPR_FWR1, FF_ANIMATE, -1, NULL,  7, 3, S_NULL}, // S_GFZFLOWERA
 	{SPR_FWR2, FF_ANIMATE, -1, NULL, 19, 3, S_NULL}, // S_GFZFLOWERB
 	{SPR_FWR3, FF_ANIMATE, -1, NULL, 11, 4, S_NULL}, // S_GFZFLOWERC
@@ -1386,10 +1387,9 @@ state_t states[NUMSTATES] =
 	{SPR_TRE5, 0, -1, NULL, 0, 0, S_NULL}, // S_BUSHTREE
 	{SPR_TRE5, 1, -1, NULL, 0, 0, S_NULL}, // S_BUSHREDTREE
 
-	{SPR_THZP, 0, 4, NULL, 0, 0, S_THZPLANT2}, // S_THZPLANT1
-	{SPR_THZP, 1, 4, NULL, 0, 0, S_THZPLANT3}, // S_THZPLANT1
-	{SPR_THZP, 2, 4, NULL, 0, 0, S_THZPLANT4}, // S_THZPLANT1
-	{SPR_THZP, 3, 4, NULL, 0, 0, S_THZPLANT1}, // S_THZPLANT1
+	{SPR_THZP, FF_ANIMATE, -1, NULL,  7, 4, S_NULL}, // S_THZFLOWERA
+	{SPR_FWR5, FF_ANIMATE, -1, NULL, 19, 2, S_NULL}, // S_THZFLOWERB
+	{SPR_FWR6, FF_ANIMATE, -1, NULL, 19, 2, S_NULL}, // S_THZFLOWERC
 
 	// THZ Steam Whistle tree/bush
 	{SPR_THZT, 0, -1, NULL, 0, 0, S_NULL}, // S_THZTREE
@@ -7460,9 +7460,9 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL          // raisestate
 	},
 
-	{           // MT_THZPLANT
+	{           // MT_THZFLOWER1
 		900,            // doomednum
-		S_THZPLANT1,    // spawnstate
+		S_THZFLOWERA,    // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
@@ -7479,6 +7479,58 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		8,              // speed
 		8*FRACUNIT,     // radius
 		32*FRACUNIT,    // height
+		0,              // display offset
+		16,             // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOBLOCKMAP|MF_NOCLIP|MF_SCENERY, // flags
+		S_NULL          // raisestate
+	},
+	{           // MT_THZFLOWER2
+		902,            // doomednum
+		S_THZFLOWERB,    // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		8,              // speed
+	16*FRACUNIT,    // radius
+		64*FRACUNIT,    // height
+		0,              // display offset
+		16,             // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOBLOCKMAP|MF_NOCLIP|MF_SCENERY, // flags
+		S_NULL          // raisestate
+	},
+	{           // MT_THZFLOWER3
+		903,            // doomednum
+		S_THZFLOWERC,    // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		8,              // speed
+		16*FRACUNIT,    // radius
+		64*FRACUNIT,    // height
 		0,              // display offset
 		16,             // mass
 		0,              // damage
