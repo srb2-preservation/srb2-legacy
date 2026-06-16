@@ -1941,7 +1941,7 @@ static void P_SceneryXYMovement(mobj_t *mo)
 // 1 - forces false check for water (rings)
 // 2 - forces false check for water + different quicksand behaviour (scenery)
 //
-static void P_AdjustMobjFloorZ_FFloors(mobj_t *mo, sector_t *sector, UINT8 motype)
+void P_AdjustMobjFloorZ_FFloors(mobj_t *mo, sector_t *sector, UINT8 motype)
 {
 	ffloor_t *rover;
 	fixed_t delta1, delta2, thingtop;

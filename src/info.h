@@ -213,6 +213,7 @@ void A_NapalmScatter(void *actor);
 void A_SpawnFreshCopy(void *actor);
 void A_DebrisRandom(void *actor);
 void A_DustDevilThink(void *actor);
+void A_ConnectToGround(void *actor);
 
 // ratio of states to sprites to mobj types is roughly 6 : 1 : 1
 #define NUMMOBJFREESLOTS 1024
@@ -377,7 +378,7 @@ typedef enum sprite
 	SPR_GARG, // Deep Sea Gargoyle
 	SPR_SEWE, // Deep Sea Seaweed
 	SPR_DRIP, // Dripping water
-	SPR_CRL1, // Coral 1
+	SPR_CORL, // Coral 1
 	SPR_CRL2, // Coral 2
 	SPR_CRL3, // Coral 3
 	SPR_BCRY, // Blue Crystal
@@ -394,7 +395,7 @@ typedef enum sprite
 	// Arid Canyon Scenery
 	SPR_BTBL, // Big tumbleweed
 	SPR_STBL, // Small tumbleweed
-	SPR_CACT, // Cacti sprites
+	SPR_CACT, // Cacti
 
 	// Red Volcano Scenery
 	SPR_FLME, // Flame jet
@@ -595,6 +596,9 @@ typedef enum sprite
 	SPR_ADST, // Arid dust
 
 	SPR_THZT,
+
+	SPR_ALGA, // Animated algae top
+	SPR_ALGB, // Animated algae segment	
 
 	SPR_FIRSTFREESLOT,
 	SPR_LASTFREESLOT = SPR_FIRSTFREESLOT + NUMSPRITEFREESLOTS - 1,
@@ -1899,6 +1903,7 @@ typedef enum state
 
 	// Deep Sea Gargoyle
 	S_GARGOYLE,
+	S_BIGGARGOYLE,
 
 	// DSZ Seaweed
 	S_SEAWEED1,
@@ -1917,17 +1922,20 @@ typedef enum state
 	S_DRIPC1,
 	S_DRIPC2,
 
-	// Coral 1
+	// Coral
 	S_CORAL1,
-
-	// Coral 2
 	S_CORAL2,
-
-	// Coral 3
 	S_CORAL3,
+	S_CORAL4,
+	S_CORAL5,
 
 	// Blue Crystal
 	S_BLUECRYSTAL1,
+
+	// Animated algae
+	S_ANIMALGAETOP1,
+	S_ANIMALGAETOP2,
+	S_ANIMALGAESEG,
 
 	// CEZ Chain
 	S_CEZCHAIN,
@@ -1981,11 +1989,13 @@ typedef enum state
 	S_LITTLETUMBLEWEED_ROLL7,
 	S_LITTLETUMBLEWEED_ROLL8,
 
-	// Cacti Sprites
+	// Cacti
 	S_CACTI1,
 	S_CACTI2,
 	S_CACTI3,
 	S_CACTI4,
+	S_CACTITINYSEG,
+	S_CACTISMALLSEG,
 
 	//Dust devil
 	S_DUSTDEVIL,
@@ -3266,13 +3276,18 @@ typedef enum mobj_type
 
 	// Deep Sea Scenery
 	MT_GARGOYLE, // Deep Sea Gargoyle
+	MT_BIGGARGOYLE, // Deep Sea Gargoyle (Big)
 	MT_SEAWEED, // DSZ Seaweed
 	MT_WATERDRIP, // Dripping Water source
 	MT_WATERDROP, // Water drop from dripping water
-	MT_CORAL1, // Coral 1
-	MT_CORAL2, // Coral 2
-	MT_CORAL3, // Coral 3
+	MT_CORAL1, // Coral 
+	MT_CORAL2,
+	MT_CORAL3,
+	MT_CORAL4,
+	MT_CORAL5,
 	MT_BLUECRYSTAL, // Blue Crystal
+	MT_ANIMALGAETOP, // Animated algae top
+	MT_ANIMALGAESEG, // Animated algae segment
 
 	// Castle Eggman Scenery
 	MT_CHAIN, // CEZ Chain
@@ -3296,6 +3311,8 @@ typedef enum mobj_type
 	MT_CACTI2,
 	MT_CACTI3,
 	MT_CACTI4,
+	MT_CACTITINYSEG, // Tiny Cactus Segment
+	MT_CACTISMALLSEG, // Small Cactus Segment
 
 	MT_DUSTDEVIL,
 	MT_DUSTLAYER,

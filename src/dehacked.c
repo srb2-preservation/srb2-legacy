@@ -1998,6 +1998,7 @@ static actionpointer_t actionpointers[] =
 	{A_NapalmScatter,        "A_NAPALMSCATTER"},
 	{A_SpawnFreshCopy,       "A_SPAWNFRESHCOPY"},
 	{A_DustDevilThink,       "A_DUSTDEVILTHINK"},
+	{A_ConnectToGround,       "A_CONNECTTOGROUND"},
 
 	{NULL,                   "NONE"},
 
@@ -5325,6 +5326,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	// Deep Sea Gargoyle
 	"S_GARGOYLE",
+	"S_BIGGARGOYLE",
 
 	// DSZ Seaweed
 	"S_SEAWEED1",
@@ -5343,17 +5345,20 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_DRIPC1",
 	"S_DRIPC2",
 
-	// Coral 1
+	// Coral
 	"S_CORAL1",
-
-	// Coral 2
 	"S_CORAL2",
-
-	// Coral 3
 	"S_CORAL3",
+	"S_CORAL4",
+	"S_CORAL5",
 
 	// Blue Crystal
 	"S_BLUECRYSTAL1",
+
+	// Animated algae
+	"S_ANIMALGAETOP1",
+	"S_ANIMALGAETOP2",
+	"S_ANIMALGAESEG",
 
 	// CEZ Chain
 	"S_CEZCHAIN",
@@ -5412,6 +5417,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_CACTI2",
 	"S_CACTI3",
 	"S_CACTI4",
+	"S_CACTITINYSEG",
+	"S_CACTISMALLSEG",
 
 	//Dust devil
 	"S_DUSTDEVIL",
@@ -6674,13 +6681,18 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 
 	// Deep Sea Scenery
 	"MT_GARGOYLE", // Deep Sea Gargoyle
+	"MT_BIGGARGOYLE", // Deep Sea Gargoyle (Big)
 	"MT_SEAWEED", // DSZ Seaweed
 	"MT_WATERDRIP", // Dripping Water source
 	"MT_WATERDROP", // Water drop from dripping water
-	"MT_CORAL1", // Coral 1
-	"MT_CORAL2", // Coral 2
-	"MT_CORAL3", // Coral 3
+	"MT_CORAL1", // Coral
+	"MT_CORAL2",
+	"MT_CORAL3",
+	"MT_CORAL4",
+	"MT_CORAL5",
 	"MT_BLUECRYSTAL", // Blue Crystal
+	"MT_ANIMALGAETOP", // Animated algae top
+	"MT_ANIMALGAESEG", // Animated algae segment
 
 	// Castle Eggman Scenery
 	"MT_CHAIN", // CEZ Chain
@@ -6704,6 +6716,8 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_CACTI2",
 	"MT_CACTI3",
 	"MT_CACTI4",
+	"MT_CACTITINYSEG",
+	"MT_CACTISMALLSEG",
 
 	"MT_DUSTDEVIL",
 	"MT_DUSTLAYER",

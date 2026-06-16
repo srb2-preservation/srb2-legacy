@@ -10001,3 +10001,62 @@ void A_DustDevilThink(void *thing)
 	if (leveltime % 70 == 0)
 		S_StartSound(actor, sfx_s3kcel);
 }
+
+// Function: A_ConnectToGround
+// Description: Create a palm tree trunk/mine chain.
+//
+// var1 = Object type to connect to ground
+// var2 = Object type to place on ground
+//
+void A_ConnectToGround(void *thing)
+{
+	mobj_t *actor = thing;
+	mobj_t *work;
+	fixed_t endz;
+	angle_t ang;
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+
+	if (LUA_CallAction("A_ConnectToGround", actor))
+		return;
+
+	if (actor->subsector->sector->ffloors)
+		P_AdjustMobjFloorZ_FFloors(actor, actor->subsector->sector, 2);
+
+	endz = actor->z;
+	if (actor->flags2 & MF2_OBJECTFLIP)
+		actor->z = actor->ceilingz - actor->height; // Ensures perfect ceiling connection
+	else
+		actor->z = actor->floorz; // Ensures perfect floor connection
+
+	if (locvar2)
+	{
+		work = P_SpawnMobj(actor->x, actor->y, actor->z, locvar2);
+		if (work)
+			work->old_z = work->z; // Don't copy old_z from the actor
+
+		actor->z += P_MobjFlip(actor) * FixedMul(mobjinfo[locvar2].height, actor->scale);
+	}
+
+	if (!locvar1 || !mobjinfo[locvar1].height) // Can't tile the middle object?
+	{
+		actor->z = endz;
+		return;
+	}
+
+	ang = actor->angle + ANGLE_45;
+	while ((actor->flags2 & MF2_OBJECTFLIP) ? (actor->z > endz) : (actor->z < endz))
+	{
+		work = P_SpawnMobj(actor->x, actor->y, actor->z, locvar1);
+		if (work)
+		{
+			work->angle = work->old_angle = ang;
+			work->old_z = work->z; // Don't copy old_z from the actor
+		}
+
+		ang += ANGLE_90;
+		actor->z += P_MobjFlip(actor) * FixedMul(mobjinfo[locvar1].height, actor->scale);
+	}
+
+	actor->old_z = actor->z; // Reset Z interpolation - the spawned objects intentionally don't have any Z interpolation either, after all
+}
