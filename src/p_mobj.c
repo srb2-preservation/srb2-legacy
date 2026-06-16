@@ -7873,14 +7873,6 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			}
 			break;
 		}
-		case MT_THZTREE:
-			{ // Spawn the branches
-				angle_t mobjangle = FixedAngle(tmthing->angle*FRACUNIT);
-				P_SpawnMobj(mobj->x+1*FRACUNIT,  mobj->y,          mobj->z, MT_THZTREEBRANCH)->angle = mobjangle + ANGLE_22h;
-				P_SpawnMobj(mobj->x+0,           mobj->y+1*FRACUNIT, mobj->z, MT_THZTREEBRANCH)->angle = mobjangle + ANGLE_157h;
-				P_SpawnMobj(mobj->x-1*FRACUNIT, mobj->y,          mobj->z, MT_THZTREEBRANCH)->angle = mobjangle + ANGLE_270;
-			}
-			break;
 		case MT_CEZPOLE:
 			// Spawn the banner
 			P_SpawnMobj(
@@ -9330,6 +9322,14 @@ ML_NOCLIMB : Direction not controllable
 	case MT_NIGHTSDRONE:
 		if (mthing->angle > 0)
 			mobj->health = mthing->angle;
+		break;
+	case MT_THZTREE:
+		{ // Spawn the branches
+			angle_t mobjangle = FixedAngle((mthing->angle % 113) << FRACBITS);
+			P_SpawnMobj(mobj->x+1*FRACUNIT,  mobj->y,          mobj->z, MT_THZTREEBRANCH)->angle = mobjangle + ANGLE_22h;
+			P_SpawnMobj(mobj->x+0,           mobj->y+1*FRACUNIT, mobj->z, MT_THZTREEBRANCH)->angle = mobjangle + ANGLE_157h;
+			P_SpawnMobj(mobj->x-1*FRACUNIT, mobj->y,          mobj->z, MT_THZTREEBRANCH)->angle = mobjangle + ANGLE_270;
+		}
 		break;
 	case MT_TRAPGOYLE:
 	case MT_TRAPGOYLEUP:
