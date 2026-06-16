@@ -62,7 +62,7 @@ static void ShowSplashScreen(void)
 #define REQUEST_STORAGE_PERMISSION
 
 #define REQUEST_MESSAGE_TITLE "Permission required"
-#define REQUEST_MESSAGE_TEXT "Sonic Robo Blast 2 Legacy needs storage permission.\nYour settings and game progress will not be saved if you decline."
+#define REQUEST_MESSAGE_TEXT "SRB2 Legacy needs storage permission.\nYour settings and game progress will not be saved if you decline."
 
 static void PermissionRequestMessage(void)
 {
@@ -156,13 +156,6 @@ void I_InitLogging(void)
 					"%s"PATHSEP "%s"PATHSEP, logdir, reldir);
 		}
 		else
-#elif defined(DEFAULTDIR)
-		if (logdir)
-		{
-			left = snprintf(logfilename, sizeof logfilename,
-					"%s"PATHSEP DEFAULTDIR PATHSEP"%s"PATHSEP, logdir, reldir);
-		}
-		else
 #endif
 		{
 			left = snprintf(logfilename, sizeof logfilename,
@@ -179,12 +172,7 @@ void I_InitLogging(void)
 
 #ifdef LOGSYMLINK
 	logstream = fopen(logfilename, "w");
-#ifdef DEFAULTDIR
-	if (logdir)
-		link = va("%s/"DEFAULTDIR"/latest-log.txt", logdir);
-	else
-#endif/*DEFAULTDIR*/
-		link = "latest-log.txt";
+	link = "latest-log.txt";
 	unlink(link);
 	if (symlink(logfilename, link) == -1)
 	{
@@ -230,7 +218,7 @@ int main(int argc, char* argv[])
 		I_InitLogging();
 #endif
 
-	CONS_Printf("Sonic Robo Blast 2 Legacy for Android\n");
+	CONS_Printf("SRB2 Legacy for Android\n");
 
 #ifdef LOGMESSAGES
 	if (logstream)
@@ -243,7 +231,7 @@ int main(int argc, char* argv[])
 #endif
 
 	// Begin the normal game setup and loop.
-	CONS_Printf("Setting up Sonic Robo Blast 2 Legacy...\n");
+	CONS_Printf("Setting up SRB2 Legacy...\n");
 	D_SRB2Main();
 
 	CONS_Printf("Entering main game loop...\n");

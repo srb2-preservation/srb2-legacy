@@ -310,7 +310,13 @@ enum {
 	LE_BRAKVILEATACK   = -6  // Brak's doing his LOS attack, oh noes
 };
 
-// Name of local directory for config files and savegames
+// Use XDG Base Directory Specification (*nix) or Application Support (macOS) by default if defined
+#if (defined (__unix__) || defined (UNIXCOMMON)) && !defined(__ANDROID__)
+#define NATIVEDIR
+#endif
+
+// Name of fallback local directory for config files and savegames
+// Depreciated in favor of NATIVEDIR
 #if (defined (__unix__) || defined (UNIXCOMMON)) && !defined (__CYGWIN__) && !defined (__APPLE__)
 #define DEFAULTDIR ".srb2_21"
 #else
