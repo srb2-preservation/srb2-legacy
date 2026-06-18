@@ -59,4 +59,4 @@ jobs:
       with:
         name: srb2legacy-appimage-${{ matrix.arch.name }}-${{ github.sha }}
         path: |
-          SRB2_Legacy_(2.1)-${{ matrix.arch.name }}.AppImage
+          SRB2_Legacy-${{ matrix.arch.name }}.AppImage
