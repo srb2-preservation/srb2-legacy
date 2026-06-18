@@ -213,84 +213,6 @@ static void R_UpdatePlaneRipple(void)
 //  viewcos
 //  viewheight
 
-#ifndef NOWATER
-static void R_DrawTranslucentWaterSpan_8(void)
-{
-	UINT32 xposition;
-	UINT32 yposition;
-	UINT32 xstep, ystep;
-
-	UINT8 *source;
-	UINT8 *colormap;
-	UINT8 *dest;
-	UINT8 *dsrc;
-
-	size_t count;
-
-	// SoM: we only need 6 bits for the integer part (0 thru 63) so the rest
-	// can be used for the fraction part. This allows calculation of the memory address in the
-	// texture with two shifts, an OR and one AND. (see below)
-	// for texture sizes > 64 the amount of precision we can allow will decrease, but only by one
-	// bit per power of two (obviously)
-	// Ok, because I was able to eliminate the variable spot below, this function is now FASTER
-	// than the original span renderer. Whodathunkit?
-	xposition = ds_xfrac << nflatshiftup; yposition = (ds_yfrac + ds_waterofs) << nflatshiftup;
-	xstep = ds_xstep << nflatshiftup; ystep = ds_ystep << nflatshiftup;
-
-	source = ds_source;
-	colormap = ds_colormap;
-	dest = ylookup[ds_y] + columnofs[ds_x1];
-	dsrc = screens[1] + (ds_y+ds_bgofs)*vid.width + ds_x1;
-	count = ds_x2 - ds_x1 + 1;
-
-	while (count >= 8)
-	{
-		// SoM: Why didn't I see this earlier? the spot variable is a waste now because we don't
-		// have the uber complicated math to calculate it now, so that was a memory write we didn't
-		// need!
-		dest[0] = colormap[*(ds_transmap + (source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)] << 8) + *dsrc++)];
-		xposition += xstep;
-		yposition += ystep;
-
-		dest[1] = colormap[*(ds_transmap + (source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)] << 8) + *dsrc++)];
-		xposition += xstep;
-		yposition += ystep;
-
-		dest[2] = colormap[*(ds_transmap + (source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)] << 8) + *dsrc++)];
-		xposition += xstep;
-		yposition += ystep;
-
-		dest[3] = colormap[*(ds_transmap + (source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)] << 8) + *dsrc++)];
-		xposition += xstep;
-		yposition += ystep;
-
-		dest[4] = colormap[*(ds_transmap + (source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)] << 8) + *dsrc++)];
-		xposition += xstep;
-		yposition += ystep;
-
-		dest[5] = colormap[*(ds_transmap + (source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)] << 8) + *dsrc++)];
-		xposition += xstep;
-		yposition += ystep;
-
-		dest[6] = colormap[*(ds_transmap + (source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)] << 8) + *dsrc++)];
-		xposition += xstep;
-		yposition += ystep;
-
-		dest[7] = colormap[*(ds_transmap + (source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)] << 8) + *dsrc++)];
-		xposition += xstep;
-		yposition += ystep;
-
-		dest += 8;
-		count -= 8;
-	}
-	while (count--)
-	{
-		*dest++ = colormap[*(ds_transmap + (source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)] << 8) + *dsrc++)];
-		xposition += xstep;
-		yposition += ystep;
-	}
-}
-#endif
 
 void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 {
@@ -800,6 +722,9 @@ void R_CalculateSlopeVectors(pslope_t *slope, fixed_t planeviewx, fixed_t planev
 	temp = P_GetZAt(slope, planeviewx + xscale * FLOAT_TO_FIXED(cos(ang)), planeviewy - xscale * FLOAT_TO_FIXED(sin(ang)));
 	n.y = FIXED_TO_FLOAT(temp) - zeroheight;
 
+
+if (ds_powersoftwo)
+{
 	m.x /= fudge;
 	m.y /= fudge;
 	m.z /= fudge;
@@ -807,6 +732,7 @@ void R_CalculateSlopeVectors(pslope_t *slope, fixed_t planeviewx, fixed_t planev
 	n.x *= fudge;
 	n.y *= fudge;
 	n.z *= fudge;
+}
 
 	// Eh. I tried making this stuff fixed-point and it exploded on me. Here's a macro for the only floating-point vector function I recall using.
 #define CROSS(d, v1, v2) \
@@ -823,6 +749,8 @@ d->z = (v1.x * v2.y) - (v1.y * v2.x)
 	ds_szp->z *= focallengthf;
 
 	// Premultiply the texture vectors with the scale factors
+	if (ds_powersoftwo)
+	{
 #define SFMULT 65536.f
 	ds_sup->x *= (SFMULT * (1<<nflatshiftup));
 	ds_sup->y *= (SFMULT * (1<<nflatshiftup));
@@ -830,6 +758,17 @@ d->z = (v1.x * v2.y) - (v1.y * v2.x)
 	ds_svp->x *= (SFMULT * (1<<nflatshiftup));
 	ds_svp->y *= (SFMULT * (1<<nflatshiftup));
 	ds_svp->z *= (SFMULT * (1<<nflatshiftup));
+	}
+	else
+	{
+		// I'm essentially multiplying the vectors by FRACUNIT...
+		ds_sup->x *= SFMULT;
+		ds_sup->y *= SFMULT;
+		ds_sup->z *= SFMULT;
+		ds_svp->x *= SFMULT;
+		ds_svp->y *= SFMULT;
+		ds_svp->z *= SFMULT;	
+	}
 #undef SFMULT
 }
 
@@ -849,15 +788,196 @@ static void R_SetSlopePlaneVectors(visplane_t *pl, INT32 y, fixed_t xoff, fixed_
 	R_CalculateSlopeVectors(pl->slope, pl->viewx, pl->viewy, pl->viewz, FRACUNIT, FRACUNIT, xoff, yoff, pl->viewangle, pl->plangle, fudge);
 }
 
+//
+// R_CheckPowersOfTwo
+//
+// Self-explanatory?
+//
+boolean R_CheckPowersOfTwo(void)
+{
+	boolean wpow2 = (!(ds_flatwidth & (ds_flatwidth - 1)));
+	boolean hpow2 = (!(ds_flatheight & (ds_flatheight - 1)));
+
+	// Initially, the flat isn't powers-of-two-sized.
+	ds_powersoftwo = false;
+
+	// But if the width and height are powers of two,
+	// and are EQUAL, then it's okay :]
+	if ((ds_flatwidth == ds_flatheight) && (wpow2 && hpow2))
+		ds_powersoftwo = true;
+
+	// Just return ds_powersoftwo.
+	return ds_powersoftwo;
+}
+
+//
+// R_CheckFlatLength
+//
+// Determine the flat's dimensions from the lump length.
+//
+void R_CheckFlatLength(size_t size)
+{
+	switch (size)
+	{
+		case 4194304: // 2048x2048 lump
+			nflatmask = 0x3FF800;
+			nflatxshift = 21;
+			nflatyshift = 10;
+			nflatshiftup = 5;
+			ds_flatwidth = ds_flatheight = 2048;
+			break;
+		case 1048576: // 1024x1024 lump
+			nflatmask = 0xFFC00;
+			nflatxshift = 22;
+			nflatyshift = 12;
+			nflatshiftup = 6;
+			ds_flatwidth = ds_flatheight = 1024;
+			break;
+		case 262144:// 512x512 lump
+			nflatmask = 0x3FE00;
+			nflatxshift = 23;
+			nflatyshift = 14;
+			nflatshiftup = 7;
+			ds_flatwidth = ds_flatheight = 512;
+			break;
+		case 65536: // 256x256 lump
+			nflatmask = 0xFF00;
+			nflatxshift = 24;
+			nflatyshift = 16;
+			nflatshiftup = 8;
+			ds_flatwidth = ds_flatheight = 256;
+			break;
+		case 16384: // 128x128 lump
+			nflatmask = 0x3F80;
+			nflatxshift = 25;
+			nflatyshift = 18;
+			nflatshiftup = 9;
+			ds_flatwidth = ds_flatheight = 128;
+			break;
+		case 1024: // 32x32 lump
+			nflatmask = 0x3E0;
+			nflatxshift = 27;
+			nflatyshift = 22;
+			nflatshiftup = 11;
+			ds_flatwidth = ds_flatheight = 32;
+			break;
+		default: // 64x64 lump
+			nflatmask = 0xFC0;
+			nflatxshift = 26;
+			nflatyshift = 20;
+			nflatshiftup = 10;
+			ds_flatwidth = ds_flatheight = 64;
+			break;
+	}
+}
+
+//
+// R_GenerateFlat
+//
+// Generate a flat from specified width and height.
+//
+static UINT8 *R_GenerateFlat(UINT16 width, UINT16 height)
+{
+	UINT8 *flat = Z_Malloc(width * height, PU_LEVEL, NULL);
+	memset(flat, TRANSPARENTPIXEL, width * height);
+	return flat;
+}
+
+//
+// R_GetTextureFlat
+//
+// Convert a texture or patch to a flat.
+//
+static UINT8 *R_GetTextureFlat(levelflat_t *levelflat, boolean leveltexture, boolean ispng)
+{
+	UINT8 *flat;
+	textureflat_t *texflat = &texflats[levelflat->u.texture.num];
+	patch_t *patch = NULL;
+	boolean texturechanged = (leveltexture ? (levelflat->u.texture.num != levelflat->u.texture.lastnum) : false);
+
+	// Check if the texture changed.
+	if (leveltexture && (!texturechanged))
+	{
+		if (texflat != NULL && texflat->flat)
+		{
+			flat = texflat->flat;
+			ds_flatwidth = texflat->width;
+			ds_flatheight = texflat->height;
+			texturechanged = false;
+		}
+		else
+			texturechanged = true;
+	}
+
+	// If the texture changed, or the patch doesn't exist, convert either of them to a flat.
+	if (levelflat->flatpatch == NULL || texturechanged)
+	{
+		// Level texture
+		if (leveltexture)
+		{
+			texture_t *texture = textures[levelflat->u.texture.num];
+			texflat->width = ds_flatwidth = texture->width;
+			texflat->height = ds_flatheight = texture->height;
+
+			texflat->flat = R_GenerateFlat(ds_flatwidth, ds_flatheight);
+			R_TextureToFlat(levelflat->u.texture.num, texflat->flat);
+			flat = texflat->flat;
+
+			levelflat->flatpatch = flat;
+			levelflat->width = ds_flatwidth;
+			levelflat->height = ds_flatheight;
+		}
+		// Patch (never happens yet)
+		else
+		{
+			patch = (patch_t *)ds_source;
+#ifndef NO_PNG_LUMPS
+			if (ispng)
+			{
+				levelflat->flatpatch = R_PNGToFlat(&levelflat->width, &levelflat->height, ds_source, W_LumpLength(levelflat->u.flat.lumpnum));
+				levelflat->topoffset = levelflat->leftoffset = 0;
+				ds_flatwidth = levelflat->width;
+				ds_flatheight = levelflat->height;
+			}
+			else
+#endif
+			{
+				levelflat->width = ds_flatwidth = SHORT(patch->width);
+				levelflat->height = ds_flatheight = SHORT(patch->height);
+
+				levelflat->topoffset = patch->topoffset * FRACUNIT;
+				levelflat->leftoffset = patch->leftoffset * FRACUNIT;
+
+				levelflat->flatpatch = R_GenerateFlat(ds_flatwidth, ds_flatheight);
+				R_PatchToFlat(patch, levelflat->flatpatch);
+			}
+			flat = levelflat->flatpatch;
+		}
+	}
+	else
+	{
+		flat = levelflat->flatpatch;
+		ds_flatwidth = levelflat->width;
+		ds_flatheight = levelflat->height;
+	}
+
+	xoffs += levelflat->leftoffset;
+	yoffs += levelflat->topoffset;
+
+	levelflat->u.texture.lastnum = levelflat->u.texture.num;
+	return flat;
+}
 
 
 void R_DrawSinglePlane(visplane_t *pl)
 {
+	UINT8 *flat;
 	INT32 light = 0;
 	INT32 x;
 	INT32 stop, angle;
-	size_t size;
 	ffloor_t *rover;
+	levelflat_t *levelflat;
+	int type;
 
 	if (!(pl->minx <= pl->maxx))
 		return;
@@ -991,63 +1111,51 @@ void R_DrawSinglePlane(visplane_t *pl)
 		viewangle = pl->viewangle+pl->plangle;
 	}
 
-	currentplane = pl;
-
-	ds_source = (UINT8 *)
-		W_CacheLumpNum(levelflats[pl->picnum].lumpnum,
-			PU_STATIC); // Stay here until Z_ChangeTag
-
-	size = W_LumpLength(levelflats[pl->picnum].lumpnum);
-
-	switch (size)
-	{
-		case 4194304: // 2048x2048 lump
-			nflatmask = 0x3FF800;
-			nflatxshift = 21;
-			nflatyshift = 10;
-			nflatshiftup = 5;
-			break;
-		case 1048576: // 1024x1024 lump
-			nflatmask = 0xFFC00;
-			nflatxshift = 22;
-			nflatyshift = 12;
-			nflatshiftup = 6;
-			break;
-		case 262144:// 512x512 lump'
-			nflatmask = 0x3FE00;
-			nflatxshift = 23;
-			nflatyshift = 14;
-			nflatshiftup = 7;
-			break;
-		case 65536: // 256x256 lump
-			nflatmask = 0xFF00;
-			nflatxshift = 24;
-			nflatyshift = 16;
-			nflatshiftup = 8;
-			break;
-		case 16384: // 128x128 lump
-			nflatmask = 0x3F80;
-			nflatxshift = 25;
-			nflatyshift = 18;
-			nflatshiftup = 9;
-			break;
-		case 1024: // 32x32 lump
-			nflatmask = 0x3E0;
-			nflatxshift = 27;
-			nflatyshift = 22;
-			nflatshiftup = 11;
-			break;
-		default: // 64x64 lump
-			nflatmask = 0xFC0;
-			nflatxshift = 26;
-			nflatyshift = 20;
-			nflatshiftup = 10;
-			break;
-	}
 
 	xoffs = pl->xoffs;
 	yoffs = pl->yoffs;
 	planeheight = abs(pl->height - pl->viewz);
+
+
+	currentplane = pl;
+	levelflat = &levelflats[pl->picnum];
+
+	/* :james: */
+	type = levelflat->type;
+	switch (type)
+	{
+		case LEVELFLAT_NONE:
+			return;
+		case LEVELFLAT_FLAT:
+			ds_source = W_CacheLumpNum(levelflat->u.flat.lumpnum, PU_CACHE);
+			R_CheckFlatLength(W_LumpLength(levelflat->u.flat.lumpnum));
+			// Raw flats always have dimensions that are powers-of-two numbers.
+			ds_powersoftwo = true;
+			break;
+		default:
+			switch (type)
+			{
+				case LEVELFLAT_TEXTURE:
+					/* Textures get cached differently and don't need ds_source */
+					ds_source = R_GetTextureFlat(levelflat, true, false);
+					break;
+				default:
+					ds_source = W_CacheLumpNum(levelflat->u.flat.lumpnum, PU_STATIC);
+					flat      = R_GetTextureFlat(levelflat, false,
+#ifndef NO_PNG_LUMPS
+							( type == LEVELFLAT_PNG )
+#else
+							false
+#endif
+					);
+					Z_ChangeTag(ds_source, PU_CACHE);
+					ds_source = flat;
+			}
+			// Check if this texture or patch has power-of-two dimensions.
+			if (R_CheckPowersOfTwo())
+				R_CheckFlatLength(ds_flatwidth * ds_flatheight);
+			
+	}
 
 	if (light >= LIGHTLEVELS)
 		light = LIGHTLEVELS-1;
@@ -1205,8 +1313,6 @@ using the palette colors.
 		}
 	}
 #endif
-
-	Z_ChangeTag(ds_source, PU_CACHE);
 }
 
 void R_PlaneBounds(visplane_t *plane)

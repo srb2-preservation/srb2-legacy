@@ -1321,7 +1321,7 @@ void zerr(int ret)
 }
 #endif
 
-#define NO_PNG_LUMPS
+
 
 #ifdef NO_PNG_LUMPS
 static void ErrorIfPNG(UINT8 *d, size_t s, char *f, char *l)
