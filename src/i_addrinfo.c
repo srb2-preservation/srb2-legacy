@@ -21,8 +21,8 @@
 #include <winsock.h>
 #endif
 #else
-#include <sys/socket.h>
 #ifndef _NDS
+#include <sys/socket.h>
 #include <arpa/inet.h>
 #endif
 #include <netdb.h>

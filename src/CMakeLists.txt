@@ -1,4 +1,5 @@
 # SRB2 Core
+if (NOT ${NINTENDO_DS})
 
 if(${CMAKE_SYSTEM} MATCHES "Android")
 	add_library(SRB2SDL2 SHARED)
@@ -306,4 +307,8 @@ if((CMAKE_COMPILER_IS_GNUCC) AND NOT ("${CMAKE_SYSTEM_NAME}" MATCHES Darwin))
 			COMMAND ${OBJCOPY} --add-gnu-debuglink=$<TARGET_FILE:SRB2SDL2>.debug $<TARGET_FILE:SRB2SDL2>
 		)
 	endif()
+endif()
+
+else() # if (NOT ${NINTENDO_DS})
+add_subdirectory(nds)
 endif()

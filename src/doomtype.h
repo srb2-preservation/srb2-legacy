@@ -40,6 +40,10 @@
 #define INT64  int64_t
 #define UINT64 uint64_t
 
+#ifdef _NDS
+#define u8 UINT8
+#endif
+
 #ifdef __APPLE_CC__
 #define DIRECTFULLSCREEN 1
 #define DEBUG_LOG
@@ -48,7 +52,7 @@
 
 /* Strings and some misc platform specific stuff */
 
-#if defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON)
+#if defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON) || defined (_NDS)
 	#undef stricmp
 	#define stricmp(x,y) strcasecmp(x,y)
 	#undef strnicmp
@@ -69,7 +73,7 @@
 #endif
 
 
-#if defined (_WIN32) || defined (__HAIKU__) || defined(__EMSCRIPTEN__)
+#if defined (_WIN32) || defined (__HAIKU__) || defined(__EMSCRIPTEN__) || defined (_NDS)
 #define HAVE_DOSSTR_FUNCS
 #endif
 

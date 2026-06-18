@@ -39,6 +39,8 @@
 #include "doomdef.h"
 #include "z_zone.h"
 
+#ifndef _NDS
+
 #ifdef NONET
 #undef HAVE_MINIUPNPC
 #else
@@ -1405,3 +1407,11 @@ boolean Net_IsNodeIPv6(INT32 node)
 }
 
 #include "i_addrinfo.c"
+
+#else // #ifndef _NDS
+// fake NONET because that doesnt work anymore
+boolean I_InitTcpDriver(void) { return false; }
+boolean I_InitTcpNetwork(void) { return false; }
+boolean Net_IsNodeIPv6(INT32 node) { return false; }
+void I_ShutdownTcpDriver(void) {}
+#endif

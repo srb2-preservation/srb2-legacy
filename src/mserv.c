@@ -200,6 +200,8 @@ static size_t recvfull(SOCKET_TYPE s, char *buf, size_t len, int flags);
 // Avoiding having to get info ten thousand times...
 msg_rooms_t room_list[NUM_LIST_ROOMS+1]; // +1 for easy test
 
+#ifndef _NDS
+
 /** Adds variables and commands relating to the master server.
   *
   * \sa cv_masterserver, cv_servername,
@@ -855,4 +857,25 @@ static size_t recvfull(SOCKET_TYPE s, char *buf, size_t len, int flags)
 
 	return totallen;
 }
+#endif
+
+#else // #ifndef _NDS
+// fake NONET because that doesnt work anymore
+static void MasterServer_OnChange(void) {}
+static void ServerName_OnChange(void) {}
+
+const char *GetMasterServerPort(void);
+const char *GetMasterServerIP(void);
+
+void RegisterServer(void) {}
+void UnregisterServer(void) {}
+
+void MasterClient_Ticker(void) {}
+
+const msg_ext_server_t *GetShortServersList(INT32 room) { return NULL; }
+INT32 GetRoomsList(boolean hosting) { return 0; }
+const char *GetMODVersion(void) { return ""; }
+void GetMODVersion_Console(void) {}
+
+void AddMServCommands(void) {}
 #endif

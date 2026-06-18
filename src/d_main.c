@@ -980,7 +980,7 @@ static void IdentifyVersion(void)
 	char *srb2wad1, *srb2wad2;
 	const char *srb2waddir = NULL;
 
-#if defined (__unix__) || defined (UNIXCOMMON) || defined (HAVE_SDL)
+#if defined (__unix__) || defined (UNIXCOMMON) || defined (HAVE_SDL) || defined (_NDS)
 	// change to the directory where 'srb2.srb' is found
 	srb2waddir = I_LocateWad();
 #endif
@@ -1641,6 +1641,9 @@ const char *D_Home(void)
 	if (I_SharedStorageLocation())
 		userhome = I_SharedStorageLocation();
 	else
+#endif
+#ifdef _NDS
+		userhome = "nitro:/";
 #endif
 	{
 #if !(defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON))

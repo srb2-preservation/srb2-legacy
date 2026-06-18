@@ -31,10 +31,14 @@ static precise_t enterprecise, oldenterprecise;
 static fixed_t entertic, oldentertics;
 static double tictimer;
 
+
+// nds backend has its own I_GetTime
+#ifndef _NDS
 tic_t I_GetTime(void)
 {
 	return g_time.time;
 }
+#endif
 
 void I_InitializeTime(void)
 {
