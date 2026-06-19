@@ -143,7 +143,7 @@ void I_GetEvent(void)
 		if (menuactive || gamestate == GS_TITLESCREEN)
 			event.data1 = KEY_ENTER;
 		else
-			event.data1 = 'z';
+			event.data1 = KEY_SPACE;
 		
 		D_PostEvent(&event);
 	}
@@ -155,7 +155,7 @@ void I_GetEvent(void)
 		if (menuactive || gamestate == GS_TITLESCREEN)
 			event.data1 = KEY_ESCAPE;
 		else
-			event.data1 = 'x';
+			event.data1 = KEY_LSHIFT;
 		
 		D_PostEvent(&event);
 	}
@@ -170,14 +170,24 @@ void I_GetEvent(void)
 	if (keys & KEY_UP) {
 		event_t event;
 		event.type = ev_keydown;
-		event.data1 = KEY_UPARROW;
+
+		if (menuactive || gamestate == GS_TITLESCREEN)
+			event.data1 = KEY_UPARROW;
+		else
+			event.data1 = 'w';
+
 		D_PostEvent(&event);
 	}
 	
 	if (keys & KEY_DOWN) {
 		event_t event;
 		event.type = ev_keydown;
-		event.data1 = KEY_DOWNARROW;
+
+		if (menuactive || gamestate == GS_TITLESCREEN)
+			event.data1 = KEY_DOWNARROW;
+		else
+			event.data1 = 's';
+
 		D_PostEvent(&event);
 	}
 
@@ -280,14 +290,24 @@ void I_GetEvent(void)
 	if (keys & KEY_UP) {
 		event_t event;
 		event.type = ev_keyup;
-		event.data1 = KEY_UPARROW;
+
+		if (menuactive || gamestate == GS_TITLESCREEN)
+			event.data1 = KEY_UPARROW;
+		else
+			event.data1 = 'w';
+
 		D_PostEvent(&event);
 	}
 	
 	if (keys & KEY_DOWN) {
 		event_t event;
 		event.type = ev_keyup;
-		event.data1 = KEY_DOWNARROW;
+
+		if (menuactive || gamestate == GS_TITLESCREEN)
+			event.data1 = KEY_DOWNARROW;
+		else
+			event.data1 = 's';
+
 		D_PostEvent(&event);
 	}
 

@@ -40,10 +40,6 @@
 #define INT64  int64_t
 #define UINT64 uint64_t
 
-#ifdef _NDS
-#define u8 UINT8
-#endif
-
 #ifdef __APPLE_CC__
 #define DIRECTFULLSCREEN 1
 #define DEBUG_LOG

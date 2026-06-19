@@ -907,7 +907,7 @@ static void SV_SendServerInfo(INT32 node, tic_t servertime)
 	netbuffer->u.serverinfo.modifiedgame = (UINT8)modifiedgame;
 	netbuffer->u.serverinfo.cheatsenabled = CV_CheatsEnabled();
 	netbuffer->u.serverinfo.isdedicated = (UINT8)dedicated;
-	strncpy(netbuffer->u.serverinfo.servername, cv_servername.string,
+	strncpy(netbuffer->u.serverinfo.servername, "temporary",//cv_servername.string,
 		sizeof(netbuffer->u.serverinfo.servername)-1);
 	strncpy(netbuffer->u.serverinfo.mapname, G_BuildMapName(gamemap), 7);
 
