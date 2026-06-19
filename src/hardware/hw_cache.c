@@ -574,6 +574,9 @@ void HWR_LiterallyGetFlat(lumpnum_t flatlumpnum)
 	GLMipmap_t *grmip;
 	if (flatlumpnum == LUMPERROR)
 		return;
+	
+	if (needpatchflush)
+		W_FlushCachedPatches();
 
 	grmip = HWR_GetCachedGLPatch(flatlumpnum)->mipmap;
 	if (!grmip->downloaded && !grmip->data)
@@ -604,16 +607,25 @@ void HWR_GetLevelFlat(levelflat_t *levelflat)
 		INT32 texturenum = levelflat->u.texture.num;
 #ifdef PARANOIA
 		if ((unsigned)texturenum >= gl_numtextures)
-			I_Error("HWR_GetLevelFlat: texturenum >= numtextures\n");
+			I_Error("HWR_GetLevelFlat: texturenum >= numtextures");
 #endif
+
+		// Who knows?
 		if (texturenum == 0 || texturenum == -1)
 			return;
+
+		// Every texture in memory, stored as a 8-bit flat. Wow!
 		grtex = &gl_textures2[texturenum];
 
+		// Generate flat if missing from the cache
 		if (!grtex->mipmap.data && !grtex->mipmap.downloaded)
 			HWR_CacheTextureAsFlat(&grtex->mipmap, texturenum);
 
-		HWD.pfnSetTexture(&grtex->mipmap);
+		// If hardware does not have the texture, then call pfnSetTexture to upload it
+		if (!grtex->mipmap.downloaded)
+			HWD.pfnSetTexture(&grtex->mipmap);
+
+		HWR_SetCurrentTexture(&grtex->mipmap);
 
 		// The system-memory data can be purged now.
 		Z_ChangeTag(grtex->mipmap.data, PU_HWRCACHE_UNLOCKED);
