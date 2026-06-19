@@ -24,6 +24,7 @@
 #include "../z_zone.h"
 #include "../v_video.h"
 #include "../r_draw.h"
+#include "../p_setup.h"
 
 INT32 patchformat = GL_TEXFMT_AP_88; // use alpha for holes
 INT32 textureformat = GL_TEXFMT_P_8; // use chromakey for hole
@@ -275,7 +276,12 @@ static void HWR_GenerateTexture(INT32 texnum, GLMapTexture_t *grtex)
 	// Composite the columns together.
 	for (i = 0, patch = texture->patches; i < texture->patchcount; i++, patch++)
 	{
+		size_t lumplength = W_LumpLengthPwad(patch->wad, patch->lump);
 		realpatch = W_CacheLumpNumPwad(patch->wad, patch->lump, PU_CACHE);
+#ifndef NO_PNG_LUMPS
+		if (R_IsLumpPNG((UINT8 *)realpatch, lumplength))
+			realpatch = R_PNGToPatch((UINT8 *)realpatch, lumplength, NULL, false);
+#endif
 		HWR_DrawPatchInCache(&grtex->mipmap,
 			blockwidth, blockheight,
 			blockwidth*format2bpp(grtex->mipmap.format),
@@ -350,10 +356,12 @@ void HWR_MakePatch (patch_t *patch, GLPatch_t *grPatch, GLMipmap_t *grMipmap, bo
 
 static size_t gl_numtextures = 0;
 static GLMapTexture_t *gl_textures; // for ALL Doom textures
+static GLMapTexture_t *gl_textures2;
 
 void HWR_InitTextureCache(void)
 {
 	gl_textures = NULL;
+	gl_textures2 = NULL;
 }
 
 // Callback function for HWR_FreeTextureCache.
@@ -436,7 +444,16 @@ void HWR_FreeTextureCache(void)
 		}
 		free(gl_textures);
 	}
+	if (gl_textures2)
+	{
+		for (i = 0; i < gl_numtextures; i++)
+		{
+			Z_Free(gl_textures2[i].mipmap.data);
+		}
+		free(gl_textures2);
+	}
 	gl_textures = NULL;
+	gl_textures2 = NULL;
 	gl_numtextures = 0;
 }
 
@@ -447,7 +464,11 @@ void HWR_LoadTextures(size_t pnumtextures)
 
 	gl_numtextures = pnumtextures;
 	gl_textures = calloc(pnumtextures, sizeof (*gl_textures));
-	if (gl_textures == NULL)
+	gl_textures2 = calloc(pnumtextures, sizeof (*gl_textures2));
+
+	// Doesn't tell you which it _is_, but hopefully
+	// should never ever happen (right?!)
+	if ((gl_textures == NULL) || (gl_textures2 == NULL))
 		I_Error("HWR_LoadTextures: ran out of memory for OpenGL textures. Sad!");
 }
 
@@ -526,13 +547,38 @@ static void HWR_CacheFlat(GLMipmap_t *grMipmap, lumpnum_t flatlumpnum)
 }
 
 
+
+static void HWR_CacheTextureAsFlat(GLMipmap_t *grMipmap, INT32 texturenum)
+{
+	UINT8 *flat;
+
+	if (needpatchflush)
+		W_FlushCachedPatches();
+
+	// setup the texture info
+	grMipmap->format = GL_TEXFMT_P_8;
+	grMipmap->flags = TF_WRAPXY|TF_CHROMAKEYED;
+
+	grMipmap->width  = (UINT16)textures[texturenum]->width;
+	grMipmap->height = (UINT16)textures[texturenum]->height;
+
+	flat = Z_Malloc(grMipmap->width * grMipmap->height, PU_HWRCACHE, &grMipmap->data);
+	memset(flat, TRANSPARENTPIXEL, grMipmap->width * grMipmap->height);
+
+	R_TextureToFlat(texturenum, flat);
+}
+
 // Download a Doom 'flat' to the hardware cache and make it ready for use
-void HWR_GetFlat(lumpnum_t flatlumpnum)
+void HWR_LiterallyGetFlat(lumpnum_t flatlumpnum)
 {
 	GLMipmap_t *grmip;
+	if (flatlumpnum == LUMPERROR)
+		return;
+	
+	if (needpatchflush)
+		W_FlushCachedPatches();
 
 	grmip = HWR_GetCachedGLPatch(flatlumpnum)->mipmap;
-
 	if (!grmip->downloaded && !grmip->data)
 		HWR_CacheFlat(grmip, flatlumpnum);
 
@@ -544,6 +590,48 @@ void HWR_GetFlat(lumpnum_t flatlumpnum)
 
 	// The system-memory data can be purged now.
 	Z_ChangeTag(grmip->data, PU_HWRCACHE_UNLOCKED);
+}
+
+
+void HWR_GetLevelFlat(levelflat_t *levelflat)
+{
+	// Who knows?
+	if (levelflat == NULL)
+		return;
+
+	if (levelflat->type == LEVELFLAT_FLAT)
+		HWR_LiterallyGetFlat(levelflat->u.flat.lumpnum);
+	else if (levelflat->type == LEVELFLAT_TEXTURE)
+	{
+		GLMapTexture_t *grtex;
+		INT32 texturenum = levelflat->u.texture.num;
+#ifdef PARANOIA
+		if ((unsigned)texturenum >= gl_numtextures)
+			I_Error("HWR_GetLevelFlat: texturenum >= numtextures");
+#endif
+
+		// Who knows?
+		if (texturenum == 0 || texturenum == -1)
+			return;
+
+		// Every texture in memory, stored as a 8-bit flat. Wow!
+		grtex = &gl_textures2[texturenum];
+
+		// Generate flat if missing from the cache
+		if (!grtex->mipmap.data && !grtex->mipmap.downloaded)
+			HWR_CacheTextureAsFlat(&grtex->mipmap, texturenum);
+
+		// If hardware does not have the texture, then call pfnSetTexture to upload it
+		if (!grtex->mipmap.downloaded)
+			HWD.pfnSetTexture(&grtex->mipmap);
+
+		HWR_SetCurrentTexture(&grtex->mipmap);
+
+		// The system-memory data can be purged now.
+		Z_ChangeTag(grtex->mipmap.data, PU_HWRCACHE_UNLOCKED);
+	}
+	else // set no texture
+		HWD.pfnSetTexture(NULL);
 }
 
 //

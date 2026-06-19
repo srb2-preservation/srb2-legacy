@@ -543,4 +543,8 @@ extern const char *compdate, *comptime, *comprevision, *compbranch, *compnote;
 
 // Here once lied the corpse of ALAM_LIGHTING
 
+#ifndef HAVE_PNG
+#define NO_PNG_LUMPS
+#endif
+
 #endif // __DOOMDEF__

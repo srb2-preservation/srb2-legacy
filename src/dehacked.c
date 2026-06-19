@@ -2837,7 +2837,7 @@ static void readtexture(MYFILE *f, const char *name)
 	char *word;
 	char *word2;
 	char *tmp;
-	INT32 i, j, value;
+	INT32 i, value;
 	UINT16 width = 0, height = 0;
 	INT16 patchcount = 0;
 	texture_t *texture;
@@ -2921,13 +2921,8 @@ static void readtexture(MYFILE *f, const char *name)
 	while (textures[i])
 		i++;
 
-	// Fill the global texture buffer entries.
-	j = 1;
-	while (j << 1 <= texture->width)
-		j <<= 1;
-
 	textures[i] = texture;
-	texturewidthmask[i] = j - 1;
+	texturewidth[i] = texture->width;
 	textureheight[i] = texture->height << FRACBITS;
 
 	// Clean up.
@@ -8681,7 +8676,12 @@ static inline int lib_getenum(lua_State *L)
 	} else if (fastcmp(word,"VERSIONSTRING")) {
 		lua_pushstring(L, VERSIONSTRING);
 		return 1;
-	} else if (fastcmp(word, "token")) {
+	}
+	else if (fastcmp(word,"CUSTOMVERSION")) {
+		lua_pushstring(L, customversionstring);
+		return 1;
+	} 
+	else if (fastcmp(word, "token")) {
 		lua_pushinteger(L, token);
 		return 1;
 	}

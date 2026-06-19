@@ -1262,17 +1262,17 @@ void D_SRB2Main(void)
 #ifdef __EMSCRIPTEN__
 	EM_ASM(
 	function force_rmdir(path) {
-  		FS.readdir(path).forEach(function(f) {
-   		if (f === '.' || f === '..') return;
+		FS.readdir(path).forEach(function(f) {
+		if (f === '.' || f === '..') return;
 
-    	fpath = path + '/' + f;
+		fpath = path + '/' + f;
 
 		if (FS.analyzePath(fpath).object.isFolder) {
-      		force_rmdir(fpath);
-      		FS.rmdir(fpath);
-    	} else {
-      		FS.unlink(fpath);
-    	}
+			force_rmdir(fpath);
+			FS.rmdir(fpath);
+		} else {
+			FS.unlink(fpath);
+		}
   	})
 	}
 	if (FS.analyzePath('/home/web_user/.srb2_21/addons').exists) force_rmdir('/home/web_user/.srb2_21/addons');

@@ -58,7 +58,9 @@ extern INT32 ds_y, ds_x1, ds_x2;
 extern lighttable_t *ds_colormap;
 extern fixed_t ds_xfrac, ds_yfrac, ds_xstep, ds_ystep;
 extern INT32 ds_waterofs, ds_bgofs;
-extern UINT8 *ds_source; // points to the start of a flat
+extern UINT16 ds_flatwidth, ds_flatheight;
+extern boolean ds_powersoftwo;
+extern UINT8 *ds_source;
 extern UINT8 *ds_transmap;
 
 
@@ -129,6 +131,9 @@ void R_FillBackScreen(void);
 void R_DrawViewBorder(void);
 #endif
 
+
+#define TRANSPARENTPIXEL 255
+
 // -----------------
 // 8bpp DRAWING CODE
 // -----------------
@@ -145,6 +150,7 @@ void R_CalcTiltedLighting(fixed_t start, fixed_t end);
 void R_DrawTiltedSpan_8(void);
 void R_DrawTiltedTranslucentSpan_8(void);
 #ifndef NOWATER
+void R_DrawTranslucentWaterSpan_8(void);
 void R_DrawTiltedTranslucentWaterSpan_8(void);
 #endif
 void R_DrawTiltedSplat_8(void);

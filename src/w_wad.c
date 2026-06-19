@@ -42,6 +42,7 @@
 #include "i_system.h"
 #include "md5.h"
 #include "lua_script.h"
+#include "lua_hook.h"
 #ifdef SCANTHINGS
 #include "p_setup.h" // P_ScanThings
 #endif
@@ -829,6 +830,8 @@ UINT16 W_InitFile(const char *filename)
 		break;
 	}
 
+	LUAh_AddonLoaded();
+
 	W_InvalidateLumpnumCache();
 	return wadfile->numlumps;
 }
@@ -1318,7 +1321,7 @@ void zerr(int ret)
 }
 #endif
 
-#define NO_PNG_LUMPS
+
 
 #ifdef NO_PNG_LUMPS
 static void ErrorIfPNG(UINT8 *d, size_t s, char *f, char *l)

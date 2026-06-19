@@ -542,50 +542,115 @@ size_t P_PrecacheLevelFlats(void)
 	//SoM: 4/18/2000: New flat code to make use of levelflats.
 	for (i = 0; i < numlevelflats; i++)
 	{
-		lump = levelflats[i].lumpnum;
-		if (devparm)
-			flatmemory += W_LumpLength(lump);
-		R_GetFlat(lump);
+		if (levelflats[i].type == LEVELFLAT_FLAT)
+		{
+				lump = levelflats[i].u.flat.lumpnum;
+			if (devparm)
+				flatmemory += W_LumpLength(lump);
+			R_GetFlat(lump);
+		}
 	}
 	return flatmemory;
 }
 
-// help function for P_LoadSectors, find a flat in the active wad files,
-// allocate an id for it, and set the levelflat (to speedup search)
-//
-INT32 P_AddLevelFlat(const char *flatname, levelflat_t *levelflat)
+static INT32
+Ploadflat (levelflat_t *levelflat, const char *flatname, boolean resize)
 {
-	size_t i;
-
-	//
-	//  first scan through the already found flats
-	//
-	for (i = 0; i < numlevelflats; i++, levelflat++)
-		if (strnicmp(levelflat->name,flatname,8)==0)
-			break;
-
-	// that flat was already found in the level, return the id
-	if (i == numlevelflats)
-	{
-		// store the name
-		strlcpy(levelflat->name, flatname, sizeof (levelflat->name));
-		strupr(levelflat->name);
-
-		// store the flat lump number
-		levelflat->lumpnum = R_GetFlatNumForName(flatname);
-
-#ifndef ZDEBUG
-		CONS_Debug(DBG_SETUP, "flat #%03d: %s\n", atoi(sizeu1(numlevelflats)), levelflat->name);
+#ifndef NO_PNG_LUMPS
+	UINT8         buffer[8];
 #endif
 
-		numlevelflats++;
+	lumpnum_t    flatnum;
+	int       texturenum;
 
-		if (numlevelflats >= MAXLEVELFLATS)
-			I_Error("Too many flats in level\n");
+	size_t i;
+
+	// Scan through the already found flats, return if it matches.
+	for (i = 0; i < numlevelflats; i++)
+	{
+		if (strnicmp(levelflat[i].name, flatname, 8) == 0)
+			return i;
 	}
 
-	// level flat id
-	return (INT32)i;
+	if (resize)
+	{
+		// allocate new flat memory
+		levelflats = Z_Realloc(levelflats, (numlevelflats + 1) * sizeof(*levelflats), PU_LEVEL, NULL);
+		levelflat  = levelflats + numlevelflats;
+	}
+	else
+	{
+		if (numlevelflats >= MAXLEVELFLATS)
+			I_Error("Too many flats in level\n");
+
+		levelflat += numlevelflats;
+	}
+
+	// Store the name.
+	strlcpy(levelflat->name, flatname, sizeof (levelflat->name));
+	strupr(levelflat->name);
+
+	/* If we can't find a flat, try looking for a texture! */
+	if (( flatnum = R_GetFlatNumForName(flatname) ) == LUMPERROR)
+	{
+		if (( texturenum = R_CheckTextureNumForName(flatname) ) == -1)
+		{
+			// check for REDWALL
+			if (( texturenum = R_CheckTextureNumForName("REDWALL") ) != -1)
+				goto texturefound;
+			// check for REDFLR
+			else if (( flatnum = R_GetFlatNumForName("REDFLR") ) != LUMPERROR)
+				goto flatfound;
+			// nevermind
+			levelflat->type = LEVELFLAT_NONE;
+		}
+		else
+		{
+texturefound:
+			levelflat->type = LEVELFLAT_TEXTURE;
+			levelflat->u.texture.    num = texturenum;
+			levelflat->u.texture.lastnum = texturenum;
+			/* start out unanimated */
+			levelflat->u.texture.basenum = -1;
+		}
+	}
+	else
+	{
+flatfound:
+		/* This could be a flat, patch, or PNG. */
+		if (R_CheckIfPatch(flatnum))
+			levelflat->type = LEVELFLAT_PATCH;
+		else
+		{
+#ifndef NO_PNG_LUMPS
+			/*
+			Only need eight bytes for PNG headers.
+			FIXME: Put this elsewhere.
+			*/
+			W_ReadLumpHeader(flatnum, buffer, 8, 0);
+			if (R_IsLumpPNG(buffer, W_LumpLength(flatnum)))
+				levelflat->type = LEVELFLAT_PNG;
+			else
+#endif/*NO_PNG_LUMPS*/
+				levelflat->type = LEVELFLAT_FLAT;/* phew */
+		}
+
+		levelflat->u.flat.    lumpnum = flatnum;
+		levelflat->u.flat.baselumpnum = LUMPERROR;
+	}
+
+#ifndef ZDEBUG
+	CONS_Debug(DBG_SETUP, "flat #%03d: %s\n", atoi(sizeu1(numlevelflats)), levelflat->name);
+#endif
+
+	return ( numlevelflats++ );
+}
+
+// Auxiliary function. Find a flat in the active wad files,
+// allocate an id for it, and set the levelflat (to speedup search)
+INT32 P_AddLevelFlat(const char *flatname, levelflat_t *levelflat)
+{
+	return Ploadflat(levelflat, flatname, false);
 }
 
 // help function for Lua and $$$.sav reading
@@ -594,40 +659,9 @@ INT32 P_AddLevelFlat(const char *flatname, levelflat_t *levelflat)
 //
 INT32 P_AddLevelFlatRuntime(const char *flatname)
 {
-	size_t i;
-	levelflat_t *levelflat = levelflats;
-
-	//
-	//  first scan through the already found flats
-	//
-	for (i = 0; i < numlevelflats; i++, levelflat++)
-		if (strnicmp(levelflat->name,flatname,8)==0)
-			break;
-
-	// that flat was already found in the level, return the id
-	if (i == numlevelflats)
-	{
-		// allocate new flat memory
-		levelflats = Z_Realloc(levelflats, (numlevelflats + 1) * sizeof(*levelflats), PU_LEVEL, NULL);
-		levelflat = levelflats+i;
-
-		// store the name
-		strlcpy(levelflat->name, flatname, sizeof (levelflat->name));
-		strupr(levelflat->name);
-
-		// store the flat lump number
-		levelflat->lumpnum = R_GetFlatNumForName(flatname);
-
-#ifndef ZDEBUG
-		CONS_Debug(DBG_SETUP, "flat #%03d: %s\n", atoi(sizeu1(numlevelflats)), levelflat->name);
-#endif
-
-		numlevelflats++;
-	}
-
-	// level flat id
-	return (INT32)i;
+	return Ploadflat(levelflats, flatname, true);
 }
+
 
 // help function for $$$.sav checking
 // this simply returns the flat # for the name given
