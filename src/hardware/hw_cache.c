@@ -575,22 +575,27 @@ void HWR_LiterallyGetFlat(lumpnum_t flatlumpnum)
 	if (flatlumpnum == LUMPERROR)
 		return;
 
-	if (needpatchflush)
-		W_FlushCachedPatches();
-
 	grmip = HWR_GetCachedGLPatch(flatlumpnum)->mipmap;
 	if (!grmip->downloaded && !grmip->data)
 		HWR_CacheFlat(grmip, flatlumpnum);
 
-	HWD.pfnSetTexture(grmip);
+	// If hardware does not have the texture, then call pfnSetTexture to upload it
+	if (!grmip->downloaded)
+		HWD.pfnSetTexture(grmip);
+
+	HWR_SetCurrentTexture(grmip);
 
 	// The system-memory data can be purged now.
 	Z_ChangeTag(grmip->data, PU_HWRCACHE_UNLOCKED);
 }
 
 
-void HWR_GetFlat(levelflat_t *levelflat)
+void HWR_GetLevelFlat(levelflat_t *levelflat)
 {
+	// Who knows?
+	if (levelflat == NULL)
+		return;
+
 	if (levelflat->type == LEVELFLAT_FLAT)
 		HWR_LiterallyGetFlat(levelflat->u.flat.lumpnum);
 	else if (levelflat->type == LEVELFLAT_TEXTURE)
@@ -598,8 +603,8 @@ void HWR_GetFlat(levelflat_t *levelflat)
 		GLMapTexture_t *grtex;
 		INT32 texturenum = levelflat->u.texture.num;
 #ifdef PARANOIA
-		if ((unsigned)texturenum >= gr_numtextures)
-			I_Error("HWR_GetFlat: texturenum >= numtextures\n");
+		if ((unsigned)texturenum >= gl_numtextures)
+			I_Error("HWR_GetLevelFlat: texturenum >= numtextures\n");
 #endif
 		if (texturenum == 0 || texturenum == -1)
 			return;
@@ -613,6 +618,8 @@ void HWR_GetFlat(levelflat_t *levelflat)
 		// The system-memory data can be purged now.
 		Z_ChangeTag(grtex->mipmap.data, PU_HWRCACHE_UNLOCKED);
 	}
+	else // set no texture
+		HWD.pfnSetTexture(NULL);
 }
 
 //
