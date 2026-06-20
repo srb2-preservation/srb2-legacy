@@ -1,5 +1,5 @@
 add_executable(SRB2DSI)
-target_link_libraries(SRB2DSI dswifi9 png z)
+target_link_libraries(SRB2DSI dswifi9 mm9 png z)
 
 set (SRB2_NDS_SOURCES
     i_main.c

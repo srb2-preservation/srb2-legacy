@@ -1,8 +1,43 @@
-// im not doing this :rofl:
+// Emacs style mode select   -*- C++ -*-
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) 1993-1996 by id Software, Inc.
+//
+// This program is free software; you can redistribute it and/or
+// modify it under the terms of the GNU General Public License
+// as published by the Free Software Foundation; either version 2
+// of the License, or (at your option) any later version.
+//
+// The source is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//-----------------------------------------------------------------------------
+/// \file
+/// \brief NDS interface for sound
+
+// uses stb_vorbis to decode OGG files and maxmod to play the PCM
+// obviously because of that this only works on OGG files (most mods already use them)
 
 #include "../i_sound.h"
+#include "../s_sound.h"
+#include "stb_vorbis.c"
+
+#include <maxmod9.h>
+
+stb_vorbis *vorbis = NULL;
+stb_vorbis_info info;
+mm_stream stream;
 
 UINT8 sound_started = 0;
+
+static mm_word StreamCallback(mm_word length, mm_addr dest, mm_stream_formats format)
+{
+    INT32 samples_per_channel = length * info.channels;
+    INT32 read = stb_vorbis_get_samples_short_interleaved(vorbis, info.channels, dest, samples_per_channel);
+
+    return length;
+}
 
 void *I_GetSfx(sfxinfo_t *sfx)
 {
@@ -64,7 +99,10 @@ void I_SetSfxVolume(UINT8 volume)
 //  MUSIC SYSTEM
 /// ------------------------
 
-void I_InitMusic(void){}
+void I_InitMusic(void)
+{
+    mmInitNoSoundbank();
+}
 
 void I_ShutdownMusic(void){}
 
@@ -134,23 +172,57 @@ UINT32 I_GetSongPosition(void)
 
 boolean I_LoadSong(char *data, size_t len)
 {
-	(void)data;
-	(void)len;
-	return -1;
+	if (!cv_gamedigimusic.value) { return true; }
+
+    int error;
+    vorbis = stb_vorbis_open_memory(data, len, &error, NULL);
+
+	// if it failed somehow
+    if (!vorbis)
+        return false;
+
+    info = stb_vorbis_get_info(vorbis);
+
+    return true;
 }
 
 void I_UnloadSong(void)
 {
+	if (!cv_gamedigimusic.value) { return; }
+
+    mmStreamClose();
+
+    if (vorbis)
+    {
+        stb_vorbis_close(vorbis);
+        vorbis = NULL;
+    }
 }
 
 boolean I_PlaySong(boolean looping)
 {
 	(void)looping;
-	return false;
+	if (!cv_gamedigimusic.value) { return true; }
+
+	// stop currently playing music
+	I_StopSong();
+
+	// set stream properties
+    stream.sampling_rate = info.sample_rate;
+    stream.buffer_length = 1024;
+    stream.callback = StreamCallback;
+    stream.format = (info.channels > 1) ? MM_STREAM_16BIT_STEREO : MM_STREAM_16BIT_MONO;
+    stream.timer = MM_TIMER3;
+    stream.manual = false;
+
+    mmStreamOpen(&stream);
+
+    return true;
 }
 
 void I_StopSong(void)
 {
+    mmStreamClose();
 }
 
 void I_PauseSong(void)
