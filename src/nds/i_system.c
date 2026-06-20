@@ -139,24 +139,21 @@ void I_GetEvent(void)
 	if (keys & KEY_A) {
 		event_t event;
 		event.type = ev_keydown;
-		
-		if (menuactive || gamestate == GS_TITLESCREEN)
-			event.data1 = KEY_ENTER;
-		else
-			event.data1 = KEY_SPACE;
-		
+		event.data1 = KEY_ENTER;
 		D_PostEvent(&event);
 	}
 	
 	if (keys & KEY_B) {
 		event_t event;
 		event.type = ev_keydown;
-		
-		if (menuactive || gamestate == GS_TITLESCREEN)
-			event.data1 = KEY_ESCAPE;
-		else
-			event.data1 = KEY_LSHIFT;
-		
+		event.data1 = KEY_LSHIFT;
+		D_PostEvent(&event);
+	}
+
+	if (keys & KEY_Y) {
+		event_t event;
+		event.type = ev_keydown;
+		event.data1 = 'v';
 		D_PostEvent(&event);
 	}
 	
@@ -170,72 +167,42 @@ void I_GetEvent(void)
 	if (keys & KEY_UP) {
 		event_t event;
 		event.type = ev_keydown;
-
-		if (menuactive || gamestate == GS_TITLESCREEN)
-			event.data1 = KEY_UPARROW;
-		else
-			event.data1 = 'w';
-
+		event.data1 = KEY_UPARROW;
 		D_PostEvent(&event);
 	}
 	
 	if (keys & KEY_DOWN) {
 		event_t event;
 		event.type = ev_keydown;
-
-		if (menuactive || gamestate == GS_TITLESCREEN)
-			event.data1 = KEY_DOWNARROW;
-		else
-			event.data1 = 's';
-
+		event.data1 = KEY_DOWNARROW;
 		D_PostEvent(&event);
 	}
 
 	if (keys & KEY_LEFT) {
 		event_t event;
 		event.type = ev_keydown;
-		
-		if (menuactive || gamestate == GS_TITLESCREEN)
-			event.data1 = KEY_LEFTARROW;
-		else
-			event.data1 = 'a';
-		
+		event.data1 = KEY_LEFTARROW;
 		D_PostEvent(&event);
 	}
 	
 	if (keys & KEY_RIGHT) {
 		event_t event;
 		event.type = ev_keydown;
-		
-		if (menuactive || gamestate == GS_TITLESCREEN)
-			event.data1 = KEY_RIGHTARROW;
-		else
-			event.data1 = 'd';
-
+		event.data1 = KEY_RIGHTARROW;
 		D_PostEvent(&event);
 	}
 	
 	if (keys & KEY_L) {
 		event_t event;
 		event.type = ev_keydown;
-		
-		if (cv_analog.value)
-			event.data1 = '[';
-		else
-			event.data1 = KEY_LEFTARROW;
-
+			event.data1 = 'a';
 		D_PostEvent(&event);
 	}
 	
 	if (keys & KEY_R) {
 		event_t event;
 		event.type = ev_keydown;
-		
-		if (cv_analog.value)
-			event.data1 = ']';
-		else
-			event.data1 = KEY_RIGHTARROW;
-
+		event.data1 = 'd';
 		D_PostEvent(&event);
 	}
 
@@ -259,24 +226,21 @@ void I_GetEvent(void)
 	if (keys & KEY_A) {
 		event_t event;
 		event.type = ev_keyup;
-		
-		if (menuactive || gamestate == GS_TITLESCREEN)
-			event.data1 = KEY_ENTER;
-		else
-			event.data1 = 'z';
-		
+		event.data1 = KEY_ENTER;
 		D_PostEvent(&event);
 	}
 	
 	if (keys & KEY_B) {
 		event_t event;
 		event.type = ev_keyup;
-		
-		if (menuactive || gamestate == GS_TITLESCREEN)
-			event.data1 = KEY_ESCAPE;
-		else
-			event.data1 = 'x';
-		
+		event.data1 = KEY_LSHIFT;
+		D_PostEvent(&event);
+	}
+
+	if (keys & KEY_Y) {
+		event_t event;
+		event.type = ev_keydown;
+		event.data1 = 'v';
 		D_PostEvent(&event);
 	}
 	
@@ -290,72 +254,42 @@ void I_GetEvent(void)
 	if (keys & KEY_UP) {
 		event_t event;
 		event.type = ev_keyup;
-
-		if (menuactive || gamestate == GS_TITLESCREEN)
-			event.data1 = KEY_UPARROW;
-		else
-			event.data1 = 'w';
-
+		event.data1 = KEY_UPARROW;
 		D_PostEvent(&event);
 	}
 	
 	if (keys & KEY_DOWN) {
 		event_t event;
 		event.type = ev_keyup;
-
-		if (menuactive || gamestate == GS_TITLESCREEN)
-			event.data1 = KEY_DOWNARROW;
-		else
-			event.data1 = 's';
-
+		event.data1 = KEY_DOWNARROW;
 		D_PostEvent(&event);
 	}
 
 	if (keys & KEY_LEFT) {
 		event_t event;
 		event.type = ev_keyup;
-		
-		if (menuactive || gamestate == GS_TITLESCREEN)
-			event.data1 = KEY_LEFTARROW;
-		else
-			event.data1 = 'a';
-		
+		event.data1 = KEY_LEFTARROW;
 		D_PostEvent(&event);
 	}
 	
 	if (keys & KEY_RIGHT) {
 		event_t event;
 		event.type = ev_keyup;
-		
-		if (menuactive || gamestate == GS_TITLESCREEN)
-			event.data1 = KEY_RIGHTARROW;
-		else
-			event.data1 = 'd';
-		
+		event.data1 = KEY_RIGHTARROW;
 		D_PostEvent(&event);
 	}
 	
 	if (keys & KEY_L) {
 		event_t event;
 		event.type = ev_keyup;
-		
-		if (cv_analog.value)
-			event.data1 = '[';
-		else
-			event.data1 = KEY_LEFTARROW;
-
+		event.data1 = 'a';
 		D_PostEvent(&event);
 	}
 	
 	if (keys & KEY_R) {
 		event_t event;
 		event.type = ev_keyup;
-		
-		if (cv_analog.value)
-			event.data1 = ']';
-		else
-			event.data1 = KEY_RIGHTARROW;
-
+		event.data1 = 'd';
 		D_PostEvent(&event);
 	}
 
@@ -426,7 +360,7 @@ void I_Error(const char *error, ...)
 
     char buffer[512];
     vsnprintf(buffer, sizeof(buffer), error, args);
-    printf("SRB2 Error:\n%s\n", buffer);
+    printf("I_Error: %s\n", buffer);
 
 
     M_SaveConfig(NULL);

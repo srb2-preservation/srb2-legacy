@@ -32,7 +32,7 @@
 #endif
 
 // Each screen is [vid.width*vid.height];
-UINT8 *screens[5];
+UINT8 *screens[NUMSCREENS];
 // screens[0] = main display window
 // screens[1] = back screen, alternative blitting
 // screens[2] = screenshot buffer, gif movie buffer

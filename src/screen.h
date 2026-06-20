@@ -44,17 +44,15 @@
 // so all the small-enough tables based on screen size, are allocated once
 // and for all at the maximum size.
 #ifdef _NDS
-// needed for how small the screen is
+// needed for how little memory we have
 #define MAXVIDWIDTH 256
 #define MAXVIDHEIGHT 192
-#define BASEVIDWIDTH 256
-#define BASEVIDHEIGHT 192
 #else
 #define MAXVIDWIDTH 1920 // don't set this too high because actually
 #define MAXVIDHEIGHT 1200 // lots of tables are allocated with the MAX size.
+#endif
 #define BASEVIDWIDTH 320 // NEVER CHANGE THIS! This is the original
 #define BASEVIDHEIGHT 200 // resolution of the graphics.
-#endif
 
 // global video state
 typedef struct viddef_s

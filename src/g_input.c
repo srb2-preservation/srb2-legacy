@@ -612,6 +612,22 @@ INT32 G_KeyStringtoNum(const char *keystr)
 	return 0;
 }
 
+#ifdef _NDS
+void G_Controldefault(void)
+{
+	gamecontrol[gc_forward    ][0] = KEY_UPARROW;
+	gamecontrol[gc_backward   ][0] = KEY_DOWNARROW;
+	gamecontrol[gc_strafeleft ][0] = KEY_LEFTARROW;
+	gamecontrol[gc_straferight][0] = KEY_RIGHTARROW;
+	gamecontrol[gc_turnleft   ][0] = 'a';
+	gamecontrol[gc_turnright  ][0] = 'd';
+	gamecontrol[gc_use        ][0] = KEY_LSHIFT;
+	gamecontrol[gc_camtoggle  ][0] = 'v';
+	gamecontrol[gc_jump       ][0] = KEY_ENTER;
+	gamecontrol[gc_console    ][0] = KEY_CONSOLE;
+	gamecontrol[gc_systemmenu ][0] = KEY_ESCAPE; // Start
+}
+#else
 void G_Controldefault(void)
 {
 	gamecontrol[gc_forward    ][0] = 'w';
@@ -681,6 +697,7 @@ void G_Controldefault(void)
 	//gamecontrolbis[gc_talkkey   ][0] = KEY_2HAT1+2; // D-Pad Left
 	//gamecontrolbis[gc_scores    ][0] = KEY_2HAT1+3; // D-Pad Right
 }
+#endif
 
 void G_SaveKeySetting(FILE *f)
 {
