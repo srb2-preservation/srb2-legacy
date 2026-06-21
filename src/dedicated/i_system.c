@@ -1755,6 +1755,7 @@ static boolean isWadPathOk(const char *path)
 	return false;
 }
 
+#ifdef NATIVEDIR
 static void pathonly(char *s)
 {
 	size_t j;
@@ -1798,6 +1799,7 @@ static const char *searchWad(const char *searchDir)
 	}
 	return NULL;
 }
+#endif
 
 /**	\brief go through all possible paths and look for srb2.srb
 
@@ -1806,7 +1808,9 @@ static const char *searchWad(const char *searchDir)
 static const char *locateWad(void)
 {
 	const char *envstr;
+#ifdef NATIVEDIR
 	const char *WadPath;
+#endif
 
 	// SRB2WADDIR environment variable has been renamed to SRB2LEGACYWADDIR to prevent conflicts with 2.2+.
 	I_OutputMsg("SRB2LEGACYWADDIR");
