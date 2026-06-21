@@ -2970,6 +2970,7 @@ static const char *I_GetXDGDataDirs(void)
 		return "/usr/local/share/:/usr/share/";
 	return datadirs;
 }
+#endif
 
 //
 // I_ConfigDir
@@ -2977,6 +2978,7 @@ static const char *I_GetXDGDataDirs(void)
 //
 const char *I_ConfigDir()
 {
+#ifdef NATIVEDIR
 	static char *base = NULL;
 
 	if (!base)
@@ -3009,8 +3011,10 @@ const char *I_ConfigDir()
 	}
 
 	return base;
-}
+#else
+	return NULL;
 #endif
+}
 
 /**	\brief	The isWadPathOk function
 

@@ -268,17 +268,9 @@ char *I_GetUserName(void);
 */
 INT32 I_mkdir(const char *dirname, INT32 unixright);
 
-#ifdef NATIVEDIR
 /**	\brief Returns the path for SRB2's home folder
 */
 const char *I_ConfigDir();
-
-#ifndef __APPLE__
-/**	\brief Get XDG_DATA_HOME
-*/
-const char *I_GetXDGDataHome(const char *userhome);
-#endif
-#endif
 
 /**	\brief Find main WAD
 		\return path to main WAD
