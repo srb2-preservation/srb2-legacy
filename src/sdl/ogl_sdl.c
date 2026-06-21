@@ -102,19 +102,22 @@ boolean OglSdlSurface(INT32 w, INT32 h)
 	INT32 cbpp = cv_scr_depth.value < 16 ? 16 : cv_scr_depth.value;
 	static int majorGL = 0, minorGL = 0;
 	static boolean first_init = false;
+#ifdef NATIVEDIR
 	const char *homedir = NULL;
 	const char *gllogdir = NULL;
+#endif
 
 	if (!gllogstream)
 	{
-		homedir = D_Home();
-		if (homedir)
-			gllogdir = I_ConfigDir();
-
 #ifdef DEBUG_TO_FILE
 #ifdef NATIVEDIR
+		homedir = D_Home();
+
 		if (homedir)
+		{
+			gllogdir = I_ConfigDir();
 			gllogstream = fopen(va("%s/ogllog.txt",gllogdir), "wt");
+		}
 		else
 #endif
 			gllogstream = fopen("./ogllog.txt", "wt");

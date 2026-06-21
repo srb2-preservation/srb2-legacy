@@ -74,7 +74,9 @@ typedef BOOL (WINAPI *p_IsDebuggerPresent)(VOID);
 static void InitLogging(void)
 {
 	const char *homedir = NULL;
+#ifdef NATIVEDIR
 	const char *logdir = NULL;
+#endif
 	time_t my_time;
 	struct tm * timeinfo;
 	const char *format;
@@ -86,8 +88,6 @@ static void InitLogging(void)
 #endif
 
 	homedir = D_Home();
-	if (homedir)
-		logdir = I_ConfigDir();
 
 	my_time = time(NULL);
 	timeinfo = localtime(&my_time);
@@ -123,6 +123,7 @@ static void InitLogging(void)
 #ifdef NATIVEDIR
 		if (homedir)
 		{
+			logdir = I_ConfigDir();
 			left = snprintf(logfilename, sizeof logfilename,
 					"%s"PATHSEP"%s"PATHSEP, logdir, reldir);
 		}
@@ -138,7 +139,7 @@ static void InitLogging(void)
 	}
 
 	M_MkdirEachUntil(logfilename,
-			M_PathParts(logdir) - 1,
+			M_PathParts(homedir) - 1,
 			M_PathParts(logfilename) - 1, 0755);
 
 #if defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON)

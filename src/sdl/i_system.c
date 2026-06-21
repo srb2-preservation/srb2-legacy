@@ -3051,6 +3051,7 @@ static boolean isWadPathOk(const char *path)
 	return false;
 }
 
+#ifdef NATIVEDIR
 static void pathonly(char *s)
 {
 	size_t j;
@@ -3094,6 +3095,7 @@ static const char *searchWad(const char *searchDir)
 	}
 	return NULL;
 }
+#endif
 
 /**	\brief go through all possible paths and look for srb2.srb
 
@@ -3102,7 +3104,10 @@ static const char *searchWad(const char *searchDir)
 static const char *locateWad(void)
 {
 	const char *envstr;
+#if defined(NATIVEDIR) || defined(__ANDROID__)
 	const char *WadPath;
+#endif
+
 #if defined(__ANDROID__)
 	// Access the shared storage location
 	WadPath = I_SharedStorageLocation();
