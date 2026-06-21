@@ -1192,11 +1192,11 @@ void D_SRB2Main(void)
 			if (M_CheckParm("-workdir") && M_IsNextParm())
 				snprintf(srb2home, sizeof srb2home, "%s", M_GetNextParm());
 			else
-#if defined(DEFAULTDIR) && !defined(__ANDROID__)
-				snprintf(srb2home, sizeof srb2home, "%s" PATHSEP DEFAULTDIR, userhome);
-#else // DEFAULTDIR
+#ifdef NATIVEDIR
+				snprintf(srb2home, sizeof srb2home, "%s", I_ConfigDir());
+#else
 				snprintf(srb2home, sizeof srb2home, "%s", userhome);
-#endif // DEFAULTDIR
+#endif
 			snprintf(downloaddir, sizeof downloaddir, "%s" PATHSEP "DOWNLOAD", srb2home);
 			if (dedicated)
 				snprintf(configfile, sizeof configfile, "%s" PATHSEP "d"CONFIGFILENAME, srb2home);
