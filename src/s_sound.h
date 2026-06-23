@@ -32,6 +32,7 @@ extern consvar_t stereoreverse;
 extern consvar_t cv_soundvolume, cv_digmusicvolume, cv_midimusicvolume;
 extern consvar_t cv_numChannels;
 extern consvar_t cv_resetmusic;
+extern consvar_t cv_1upsound;
 extern consvar_t cv_gamedigimusic;
 extern consvar_t cv_gamemidimusic;
 extern consvar_t cv_gamesounds;

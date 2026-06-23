@@ -99,6 +99,14 @@ consvar_t cv_numChannels = CVAR_INIT ("snd_channels", "64", NULL, CV_SAVE|CV_CAL
 static consvar_t surround = CVAR_INIT ("surround", "Off", NULL, CV_SAVE, CV_OnOff, NULL);
 consvar_t cv_resetmusic = CVAR_INIT ("resetmusic", "No", NULL, CV_SAVE, CV_YesNo, NULL);
 
+static CV_PossibleValue_t cons_1upsound_t[] = {
+	{0, "Jingle"},
+	{1, "Sound"},
+	
+	{0}
+};
+consvar_t cv_1upsound = CVAR_INIT("1upsound", "Jingle", "Whether to use music or a sound for 1-ups", CV_SAVE, cons_1upsound_t, NULL);
+
 // Sound system toggles, saved into the config
 consvar_t cv_gamedigimusic = CVAR_INIT ("digimusic", "On", "Enable or disable digital music", CV_SAVE|CV_CALL|CV_NOINIT, CV_OnOff, GameDigiMusic_OnChange);
 consvar_t cv_gamemidimusic = CVAR_INIT ("midimusic", "On", "Enable or disable MIDI music", CV_SAVE|CV_CALL|CV_NOINIT, CV_OnOff, GameMIDIMusic_OnChange);
@@ -276,6 +284,7 @@ void S_RegisterSoundStuff(void)
 #endif
 	CV_RegisterVar(&surround);
 	CV_RegisterVar(&cv_resetmusic);
+	CV_RegisterVar(&cv_1upsound);
 	CV_RegisterVar(&cv_playsoundsifunfocused);
 	CV_RegisterVar(&cv_playmusicifunfocused);
 	CV_RegisterVar(&cv_playtitlescreenmusic);
