@@ -1370,7 +1370,7 @@ char music_stack_nextmusname[7];
 boolean music_stack_noposition = false;
 UINT32 music_stack_fadeout = 0;
 UINT32 music_stack_fadein = 0;
-static const musicstack_t empty_music_stack_entry = {{0}};
+static const musicstack_t empty_music_stack_entry = {"\0", 0, false, 0, 0, 0};
 
 void S_SetStackAdjustmentStart(void)
 {
