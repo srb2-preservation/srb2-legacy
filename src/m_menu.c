@@ -262,6 +262,7 @@ menu_t OP_AllControls2Def; // for 2P
 menu_t OP_ControlsDef;
 menu_t OP_P1ControlsDef, OP_P2ControlsDef, OP_MouseOptionsDef;
 menu_t OP_Mouse2OptionsDef, OP_Joystick1Def, OP_Joystick2Def;
+menu_t OP_CameraOptionsDef, OP_Camera2OptionsDef;
 static void M_VideoModeMenu(INT32 choice);
 static void M_ResolutionMenu(INT32 choice);
 static void M_Setup1PControlsMenu(INT32 choice);
@@ -1000,10 +1001,9 @@ static menuitem_t OP_P1ControlsMenu[] =
 	{IT_SUBMENU | IT_STRING, NULL, "Mouse Options...", NULL,  &OP_MouseOptionsDef, 20},
 	{IT_SUBMENU | IT_STRING, NULL, "Gamepad Options...", NULL,  &OP_Joystick1Def  ,  30},
 
-	{IT_STRING  | IT_CVAR, NULL, "Camera"  , NULL,  &cv_chasecam  ,  50},
-	{IT_STRING  | IT_CVAR, NULL, "Crosshair", NULL,  &cv_crosshair , 60},
+	{IT_SUBMENU | IT_STRING, NULL, "Camera Options...", NULL, &OP_CameraOptionsDef,	50},
 
-	{IT_STRING  | IT_CVAR, NULL, "Analog Control", NULL,  &cv_useranalog,  80},
+	{IT_STRING  | IT_CVAR, NULL, "Analog Control", NULL,  &cv_useranalog,  70},
 };
 
 static menuitem_t OP_P2ControlsMenu[] =
@@ -1011,11 +1011,9 @@ static menuitem_t OP_P2ControlsMenu[] =
 	{IT_CALL    | IT_STRING, NULL, "Control Configuration...", NULL,  M_Setup2PControlsMenu,   10},
 	{IT_SUBMENU | IT_STRING, NULL, "Second Mouse Options...", NULL,  &OP_Mouse2OptionsDef, 20},
 	{IT_SUBMENU | IT_STRING, NULL, "Second Gamepad Options...", NULL,  &OP_Joystick2Def  ,  30},
+	{IT_SUBMENU | IT_STRING, NULL, "Camera Options...", NULL, &OP_Camera2OptionsDef,	50},
 
-	{IT_CVAR | IT_STRING, NULL, "Camera", NULL, &cv_chasecam2,	50},
-	{IT_STRING  | IT_CVAR, NULL, "Crosshair", NULL, &cv_crosshair2, 60},
-
-	{IT_STRING  | IT_CVAR, NULL, "Analog Control", NULL,  &cv_useranalog2,  80},
+	{IT_STRING  | IT_CVAR, NULL, "Analog Control", NULL,  &cv_useranalog2,  70},
 };
 
 static menuitem_t OP_AllControlsMenu[] =
@@ -1188,6 +1186,39 @@ static menuitem_t OP_Mouse2OptionsMenu[] =
 	                      NULL, "Mouse X Speed", NULL,    &cv_mousesens2,       70},
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER,
 	                      NULL, "Mouse Y Speed", NULL,    &cv_mouseysens2,      80},
+};
+
+static menuitem_t OP_CameraOptionsMenu[] =
+{
+	{IT_STRING  | IT_CVAR, NULL, "Third-person Camera"  , NULL, &cv_chasecam , 10},
+	{IT_STRING  | IT_CVAR, NULL, "Flip Camera with Gravity"  ,  NULL,  &cv_flipcam , 20},
+	{IT_STRING  | IT_CVAR, NULL, "Orbital Looking"  ,   NULL, &cv_cam_orbit , 30},
+	{IT_STRING	|	IT_CVAR, NULL, "Downhill Slope Adjustment",  NULL, &cv_cam_adjust, 40},
+	{IT_STRING	|	IT_CVAR, NULL, "Precise Camera",  NULL, &cv_cam_exact, 50},
+	{IT_STRING	|	IT_CVAR, NULL, "Camera Clipping Style",  NULL, &cv_cam_clipping, 60},
+
+	{IT_STRING	|	IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Distance",  NULL,  &cv_cam_dist, 80},
+	{IT_STRING	| IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Height",  NULL,  &cv_cam_height, 90},
+	{IT_STRING	|	IT_CVAR	| IT_CV_FLOATSLIDER, NULL, "Camera Speed",  NULL,  &cv_cam_speed, 100},
+
+	{IT_STRING  | IT_CVAR, NULL, "Crosshair",  NULL,  &cv_crosshair,  120},
+};
+
+static menuitem_t OP_Camera2OptionsMenu[] =
+{
+	{IT_STRING  | IT_CVAR, NULL, "Third-person Camera"  ,  NULL,  &cv_chasecam2 , 10},
+	{IT_STRING  | IT_CVAR, NULL, "Flip Camera with Gravity"  ,  NULL,  &cv_flipcam2 , 20},
+	{IT_STRING  | IT_CVAR, NULL, "Orbital Looking"  ,  NULL,  &cv_cam2_orbit , 30},
+	{IT_STRING	|	IT_CVAR, NULL, "Downhill Slope Adjustment",  NULL,  &cv_cam2_adjust, 40},
+	{IT_STRING	|	IT_CVAR, NULL, "Precise Camera",  NULL, &cv_cam2_exact, 50},
+	{IT_STRING	|	IT_CVAR, NULL, "Camera Clipping Style",  NULL, &cv_cam2_clipping, 60},
+		
+
+	{IT_STRING	|	IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Distance",  NULL,  &cv_cam2_dist, 80},
+	{IT_STRING	| IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Height",  NULL,  &cv_cam2_height, 90},
+	{IT_STRING	|	IT_CVAR	| IT_CV_FLOATSLIDER, NULL, "Camera Speed", NULL,  &cv_cam2_speed, 100},
+
+	{IT_STRING  | IT_CVAR, NULL, "Crosshair",  NULL,  &cv_crosshair2,  120},
 };
 
 enum
@@ -1909,6 +1940,13 @@ menu_t OP_JoystickSetDef =
 	0,
 	NULL
 };
+
+menu_t OP_CameraOptionsDef = DEFAULTMENUSTYLE(
+	/*MN_OP_MAIN + (MN_OP_P1CONTROLS << 6) + (MN_OP_P1CAMERA << 12),*/ // Menu SOC :money_mouth:
+	"M_CONTRO", OP_CameraOptionsMenu, &OP_P1ControlsDef, 35, 30);
+menu_t OP_Camera2OptionsDef = DEFAULTMENUSTYLE(
+	/*MN_OP_MAIN + (MN_OP_P2CONTROLS << 6) + (MN_OP_P2CAMERA << 12),*/
+	"M_CONTRO", OP_Camera2OptionsMenu, &OP_P2ControlsDef, 35, 30);
 
 menu_t OP_VideoOptionsDef = DEFAULTSCROLLMENUSTYLE("M_VIDEO", OP_VideoOptionsMenu, &OP_MainDef, 30, 30);
 menu_t OP_VideoModeDef =

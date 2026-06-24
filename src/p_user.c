@@ -14,7 +14,7 @@
 ///        Bobbing POV/weapon, movement.
 ///        Pending weapon.
 
-#include "d_player.h"
+
 #include "doomdef.h"
 #include "doomstat.h"
 #include "i_system.h"
@@ -7910,11 +7910,11 @@ consvar_t cv_quakelive = CVAR_INIT ("windowquake", "Off", "Shake the game window
 static CV_PossibleValue_t clipping_cons_t[] = { {0, "Off"}, {1, "Vanilla"}, {2, "Exact"}, {0, NULL} };
 
 consvar_t cv_cam_clipping = CVAR_INIT ("cam_clipping", "Vanilla", "The way that the camera clips through walls", CV_SAVE, clipping_cons_t, NULL);
-consvar_t cv_cam2_clipping = CVAR_INIT ("cam2_clipping", "Vanilla", "The way that the camera clips through walls", CV_SAVE, clipping_cons_t, NULL);
+consvar_t cv_cam2_clipping = CVAR_INIT ("cam2_clipping", "Vanilla", "The way that the camera clips through walls, for player two", CV_SAVE, clipping_cons_t, NULL);
 
 // romoney5: exact camera aiming
 consvar_t cv_cam_exact = CVAR_INIT ("cam_exact", "Off", "More precise camera movement", CV_SAVE, CV_OnOff, NULL);
-consvar_t cv_cam2_exact = CVAR_INIT ("cam2_exact", "Off", "More precise camera movement", CV_SAVE, CV_OnOff, NULL);
+consvar_t cv_cam2_exact = CVAR_INIT ("cam2_exact", "Off", "More precise camera movement, for player two", CV_SAVE, CV_OnOff, NULL);
 
 fixed_t t_cam_dist = -42;
 fixed_t t_cam_height = -42;
@@ -8624,7 +8624,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		thiscam->angle = R_PointToAngle2(thiscam->x, thiscam->y, viewpointx, viewpointy);
 
 	// romoney5: roblox-style camera clipping
-	if (camclipping == 2 && !(twodlevel || (mo->flags2 & MF2_TWOD) && !(player->pflags & PF_NIGHTSMODE)))
+	if (camclipping == 2 && !(twodlevel || (mo->flags2 & MF2_TWOD)) && !(player->pflags & PF_NIGHTSMODE))
 	{
 		INT32 targetx = thiscam->x, targety = thiscam->y, targetz = thiscam->z;
 
