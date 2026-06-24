@@ -1566,6 +1566,8 @@ boolean S_RecallMusic(UINT16 status, boolean fromfirst)
 	boolean mapmuschanged = false;
 	musicstack_t *result;
 	musicstack_t *entry = Z_Calloc(sizeof (*result), PU_MUSIC, NULL);
+	boolean currentmidi = (I_SongType() == MU_MID /*|| I_SongType() == MU_MID_EX*/);
+	boolean midipref = cv_musicpref.value;
 
 	if (status)
 		result = S_GetMusicStackEntry(status, fromfirst, -1);
@@ -1620,7 +1622,8 @@ boolean S_RecallMusic(UINT16 status, boolean fromfirst)
 		return false;
 	}
 
-	if (strncmp(entry->musname, S_MusicName(), 7)) // don't restart music if we're already playing it
+	if (strncmp(entry->musname, S_MusicName(), 7) || // don't restart music if we're already playing it
+		(midipref != currentmidi && S_PrefAvailable(midipref, entry->musname))) // but do if the user's preference has changed
 	{
 		if (music_stack_fadeout)
 			S_ChangeMusicEx(entry->musname, entry->musflags, entry->looping, 0, music_stack_fadeout, 0);
@@ -1818,7 +1821,7 @@ void S_ChangeMusicEx(const char *mmusic, UINT16 mflags, boolean looping, UINT32 
 		I_FadeSong(0, prefadems, S_ChangeMusicToQueue);
 		return;
 	}
-	else if (strnicmp(music_name, newmusic, 6) || (mflags & MUSIC_FORCERESET) ||
+	else if (strnicmp(music_name, newmusic, 6) || (mflags & MUSIC_FORCERESET) || 
 		(midipref != currentmidi && S_PrefAvailable(midipref, newmusic)))
  	{
 		CONS_Debug(DBG_DETAILED, "Now playing song %s\n", newmusic);
