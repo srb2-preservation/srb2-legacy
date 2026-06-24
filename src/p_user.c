@@ -15,6 +15,7 @@
 ///        Pending weapon.
 
 
+#include "command.h"
 #include "doomdef.h"
 #include "doomstat.h"
 #include "i_system.h"
@@ -7881,6 +7882,7 @@ static void CV_CamRotate2_OnChange(void)
 static CV_PossibleValue_t CV_CamSpeed[] = {{0, "MIN"}, {1*FRACUNIT, "MAX"}, {0, NULL}};
 static CV_PossibleValue_t rotation_cons_t[] = {{1, "MIN"}, {45, "MAX"}, {0, NULL}};
 static CV_PossibleValue_t CV_CamRotate[] = {{-720, "MIN"}, {720, "MAX"}, {0, NULL}};
+static CV_PossibleValue_t multiplier_cons_t[] = {{0, "MIN"}, {3*FRACUNIT, "MAX"}, {0, NULL}};
 
 consvar_t cv_cam_dist = CVAR_INIT ("cam_dist", "160", NULL, CV_FLOAT|CV_SAVE, NULL, NULL);
 consvar_t cv_cam_height = CVAR_INIT ("cam_height", "25", NULL, CV_FLOAT|CV_SAVE, NULL, NULL);
@@ -7888,6 +7890,7 @@ consvar_t cv_cam_still = CVAR_INIT ("cam_still", "Off", NULL, 0, CV_OnOff, NULL)
 consvar_t cv_cam_speed = CVAR_INIT ("cam_speed", "0.3", NULL, CV_FLOAT|CV_SAVE, CV_CamSpeed, NULL);
 consvar_t cv_cam_rotate = CVAR_INIT ("cam_rotate", "0", NULL, CV_CALL|CV_NOINIT, CV_CamRotate, CV_CamRotate_OnChange);
 consvar_t cv_cam_rotspeed = CVAR_INIT ("cam_rotspeed", "10", NULL, CV_SAVE, rotation_cons_t, NULL);
+consvar_t cv_cam_turnmultiplier = CVAR_INIT ("cam_turnmultiplier", "1.0", "Mulitiplies camera turning speed by this value", CV_FLOAT|CV_SAVE, multiplier_cons_t, NULL);
 consvar_t cv_cam_orbit = CVAR_INIT ("cam_orbit", "Off", NULL, CV_SAVE, CV_OnOff, NULL);
 consvar_t cv_cam_adjust = CVAR_INIT ("cam_adjust", "On", NULL, CV_SAVE|CV_SHOWMODIF, CV_OnOff, NULL);
 consvar_t cv_cam2_dist = CVAR_INIT ("cam2_dist", "160", NULL, CV_FLOAT|CV_SAVE, NULL, NULL);
@@ -7896,6 +7899,7 @@ consvar_t cv_cam2_still = CVAR_INIT ("cam2_still", "Off", NULL, 0, CV_OnOff, NUL
 consvar_t cv_cam2_speed = CVAR_INIT ("cam2_speed", "0.3", NULL, CV_FLOAT|CV_SAVE, CV_CamSpeed, NULL);
 consvar_t cv_cam2_rotate = CVAR_INIT ("cam2_rotate", "0", NULL, CV_CALL|CV_NOINIT, CV_CamRotate, CV_CamRotate2_OnChange);
 consvar_t cv_cam2_rotspeed = CVAR_INIT ("cam2_rotspeed", "10", NULL, CV_SAVE, rotation_cons_t, NULL);
+consvar_t cv_cam2_turnmultiplier = CVAR_INIT ("cam2_turnmultiplier", "1.0", "Mulitiplies camera turning speed by this value, for player two", CV_FLOAT|CV_SAVE, multiplier_cons_t, NULL);
 consvar_t cv_cam2_orbit = CVAR_INIT ("cam2_orbit", "Off", NULL, CV_SAVE, CV_OnOff, NULL);
 consvar_t cv_cam2_adjust = CVAR_INIT ("cam2_adjust", "On", NULL, CV_SAVE|CV_SHOWMODIF, CV_OnOff, NULL);
 
