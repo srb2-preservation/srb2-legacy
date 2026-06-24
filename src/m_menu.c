@@ -1199,9 +1199,10 @@ static menuitem_t OP_CameraOptionsMenu[] =
 
 	{IT_STRING	|	IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Distance",  NULL,  &cv_cam_dist, 80},
 	{IT_STRING	| IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Height",  NULL,  &cv_cam_height, 90},
-	{IT_STRING	|	IT_CVAR	| IT_CV_FLOATSLIDER, NULL, "Camera Speed",  NULL,  &cv_cam_speed, 100},
+{IT_STRING  | IT_CVAR | IT_CV_FLOATSLIDER, NULL, "Camera Spacial Speed", NULL, &cv_cam_speed, 100},
+	{IT_STRING  | IT_CVAR | IT_CV_FLOATSLIDER, NULL, "Camera Turning Speed", NULL, &cv_cam_turnmultiplier, 110},
 
-	{IT_STRING  | IT_CVAR, NULL, "Crosshair",  NULL,  &cv_crosshair,  120},
+	{IT_STRING  | IT_CVAR, NULL, "Crosshair",  NULL,  &cv_crosshair,  130},
 };
 
 static menuitem_t OP_Camera2OptionsMenu[] =
@@ -1216,9 +1217,10 @@ static menuitem_t OP_Camera2OptionsMenu[] =
 
 	{IT_STRING	|	IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Distance",  NULL,  &cv_cam2_dist, 80},
 	{IT_STRING	| IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Height",  NULL,  &cv_cam2_height, 90},
-	{IT_STRING	|	IT_CVAR	| IT_CV_FLOATSLIDER, NULL, "Camera Speed", NULL,  &cv_cam2_speed, 100},
+{IT_STRING  | IT_CVAR | IT_CV_FLOATSLIDER, NULL, "Camera Spacial Speed", NULL, &cv_cam2_speed, 100},
+	{IT_STRING  | IT_CVAR | IT_CV_FLOATSLIDER, NULL, "Camera Turning Speed", NULL, &cv_cam2_turnmultiplier, 110},
 
-	{IT_STRING  | IT_CVAR, NULL, "Crosshair",  NULL,  &cv_crosshair2,  120},
+	{IT_STRING  | IT_CVAR, NULL, "Crosshair",  NULL,  &cv_crosshair2,  130},
 };
 
 enum
