@@ -89,7 +89,7 @@ static CV_PossibleValue_t grfiltermode_cons_t[]= {{HWD_SET_TEXTUREFILTER_POINTSA
 
 CV_PossibleValue_t glanisotropicmode_cons_t[] = {{1, "MIN"}, {16, "MAX"}, {0, NULL}};
 
-CV_PossibleValue_t glloadingscreen_cons_t[] = {{0, "OFF"}, {1, "2.1.0-2.1.4"}, {2, "Pre 2.1"},  {0, NULL}};
+CV_PossibleValue_t glloadingscreen_cons_t[] = {{0, "OFF"}, {1, "2.1"}, {2, "Pre 2.1"},  {0, NULL}};
 
 static CV_PossibleValue_t grfakecontrast_cons_t[] = {{0, "Off"}, {1, "On"}, {2, "Smooth"}, {0, NULL}};
 static CV_PossibleValue_t grshearing_cons_t[] = {{0, "Off"}, {1, "On"}, {2, "Third-person"}, {0, NULL}};
@@ -164,9 +164,7 @@ static void CV_glmodellighting_OnChange(void)
 	HWD.pfnSetSpecialState(HWD_SET_MODEL_LIGHTING, cv_glmodellighting.value);
 	// if shaders have been compiled, then they now need to be recompiled.
   if (gl_shadersavailable)
-  {
 	HWR_CompileShaders();
-  }
 }
 
 static void CV_glpaletterendering_OnChange(void)
@@ -368,8 +366,6 @@ void HWR_Lighting(FSurfaceInfo *Surface, INT32 light_level, extracolormap_t *col
 		poly_color.s.green = (UINT8)green;
 		poly_color.s.blue = (UINT8)blue;
 	}
-
-
 
 	V_CubeApply(&tint_color.s.red, &tint_color.s.green, &tint_color.s.blue);
 	V_CubeApply(&fade_color.s.red, &fade_color.s.green, &fade_color.s.blue);

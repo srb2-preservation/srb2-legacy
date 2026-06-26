@@ -290,6 +290,7 @@ menu_t OP_AllControls2Def; // for 2P
 menu_t OP_ControlsDef;
 menu_t OP_P1ControlsDef, OP_P2ControlsDef, OP_MouseOptionsDef;
 menu_t OP_Mouse2OptionsDef, OP_Joystick1Def, OP_Joystick2Def;
+menu_t OP_CameraOptionsDef, OP_Camera2OptionsDef;
 static void M_VideoModeMenu(INT32 choice);
 static void M_ResolutionMenu(INT32 choice);
 static void M_Setup1PControlsMenu(INT32 choice);
@@ -1054,10 +1055,9 @@ static menuitem_t OP_P1ControlsMenu[] =
 	{IT_SUBMENU | IT_STRING, NULL, "Mouse Options...", NULL,  &OP_MouseOptionsDef, 20},
 	{IT_SUBMENU | IT_STRING, NULL, "Gamepad Options...", NULL,  &OP_Joystick1Def  ,  30},
 
-	{IT_STRING  | IT_CVAR, NULL, "Camera"  , NULL,  &cv_chasecam  ,  50},
-	{IT_STRING  | IT_CVAR, NULL, "Crosshair", NULL,  &cv_crosshair , 60},
+	{IT_SUBMENU | IT_STRING, NULL, "Camera Options...", NULL, &OP_CameraOptionsDef,	50},
 
-	{IT_STRING  | IT_CVAR, NULL, "Analog Control", NULL,  &cv_useranalog,  80},
+	{IT_STRING  | IT_CVAR, NULL, "Analog Control", NULL,  &cv_useranalog,  70},
 };
 
 static menuitem_t OP_P2ControlsMenu[] =
@@ -1065,11 +1065,9 @@ static menuitem_t OP_P2ControlsMenu[] =
 	{IT_CALL    | IT_STRING, NULL, "Control Configuration...", NULL,  M_Setup2PControlsMenu,   10},
 	{IT_SUBMENU | IT_STRING, NULL, "Second Mouse Options...", NULL,  &OP_Mouse2OptionsDef, 20},
 	{IT_SUBMENU | IT_STRING, NULL, "Second Gamepad Options...", NULL,  &OP_Joystick2Def  ,  30},
+	{IT_SUBMENU | IT_STRING, NULL, "Camera Options...", NULL, &OP_Camera2OptionsDef,	50},
 
-	{IT_CVAR | IT_STRING, NULL, "Camera", NULL, &cv_chasecam2,	50},
-	{IT_STRING  | IT_CVAR, NULL, "Crosshair", NULL, &cv_crosshair2, 60},
-
-	{IT_STRING  | IT_CVAR, NULL, "Analog Control", NULL,  &cv_useranalog2,  80},
+	{IT_STRING  | IT_CVAR, NULL, "Analog Control", NULL,  &cv_useranalog2,  70},
 };
 
 static menuitem_t OP_AllControlsMenu[] =
@@ -1244,6 +1242,41 @@ static menuitem_t OP_Mouse2OptionsMenu[] =
 	                      NULL, "Mouse Y Speed", NULL,    &cv_mouseysens2,      80},
 };
 
+static menuitem_t OP_CameraOptionsMenu[] =
+{
+	{IT_STRING  | IT_CVAR, NULL, "Third-person Camera"  , NULL, &cv_chasecam , 10},
+	{IT_STRING  | IT_CVAR, NULL, "Flip Camera with Gravity"  ,  NULL,  &cv_flipcam , 20},
+	{IT_STRING  | IT_CVAR, NULL, "Orbital Looking"  ,   NULL, &cv_cam_orbit , 30},
+	{IT_STRING	|	IT_CVAR, NULL, "Downhill Slope Adjustment",  NULL, &cv_cam_adjust, 40},
+	{IT_STRING	|	IT_CVAR, NULL, "Precise Camera",  NULL, &cv_cam_exact, 50},
+	{IT_STRING	|	IT_CVAR, NULL, "Camera Clipping Style",  NULL, &cv_cam_clipping, 60},
+
+	{IT_STRING	|	IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Distance",  NULL,  &cv_cam_dist, 80},
+	{IT_STRING	| IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Height",  NULL,  &cv_cam_height, 90},
+{IT_STRING  | IT_CVAR | IT_CV_FLOATSLIDER, NULL, "Camera Spacial Speed", NULL, &cv_cam_speed, 100},
+	{IT_STRING  | IT_CVAR | IT_CV_FLOATSLIDER, NULL, "Camera Turning Speed", NULL, &cv_cam_turnmultiplier, 110},
+
+	{IT_STRING  | IT_CVAR, NULL, "Crosshair",  NULL,  &cv_crosshair,  130},
+};
+
+static menuitem_t OP_Camera2OptionsMenu[] =
+{
+	{IT_STRING  | IT_CVAR, NULL, "Third-person Camera"  ,  NULL,  &cv_chasecam2 , 10},
+	{IT_STRING  | IT_CVAR, NULL, "Flip Camera with Gravity"  ,  NULL,  &cv_flipcam2 , 20},
+	{IT_STRING  | IT_CVAR, NULL, "Orbital Looking"  ,  NULL,  &cv_cam2_orbit , 30},
+	{IT_STRING	|	IT_CVAR, NULL, "Downhill Slope Adjustment",  NULL,  &cv_cam2_adjust, 40},
+	{IT_STRING	|	IT_CVAR, NULL, "Precise Camera",  NULL, &cv_cam2_exact, 50},
+	{IT_STRING	|	IT_CVAR, NULL, "Camera Clipping Style",  NULL, &cv_cam2_clipping, 60},
+		
+
+	{IT_STRING	|	IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Distance",  NULL,  &cv_cam2_dist, 80},
+	{IT_STRING	| IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Height",  NULL,  &cv_cam2_height, 90},
+{IT_STRING  | IT_CVAR | IT_CV_FLOATSLIDER, NULL, "Camera Spacial Speed", NULL, &cv_cam2_speed, 100},
+	{IT_STRING  | IT_CVAR | IT_CV_FLOATSLIDER, NULL, "Camera Turning Speed", NULL, &cv_cam2_turnmultiplier, 110},
+
+	{IT_STRING  | IT_CVAR, NULL, "Crosshair",  NULL,  &cv_crosshair2,  130},
+};
+
 enum
 {
 	op_video_resolution = 0,
@@ -1374,10 +1407,11 @@ static menuitem_t OP_OpenGLOptionsMenu[] =
 	{IT_STRING|IT_CVAR,         NULL, "Shaders", NULL, 	     &cv_glshaders,        50},
 	{IT_STRING|IT_CVAR,         NULL, "Lack of Perspective", NULL,  &cv_glshearing,   60},
 	{IT_STRING|IT_CVAR,         NULL, "Palette Rendering", NULL,  &cv_glpaletterendering,   70},
-	{IT_STRING|IT_CVAR,         NULL, "Quality",     NULL,     &cv_scr_depth,        90},
-	{IT_STRING|IT_CVAR,         NULL, "Texture Filter", NULL,   &cv_glfiltermode,     100},
-	{IT_STRING|IT_CVAR,         NULL, "Anisotropic",  NULL,    &cv_glanisotropicmode,110},
-	{IT_STRING|IT_CVAR,         NULL, "OpenGL Loading Screen", NULL,  &cv_glloadingscreen, 120},
+	{IT_STRING|IT_CVAR,         NULL, "Light Dithering", NULL,  &cv_glpaletterendering,   80},
+	{IT_STRING|IT_CVAR,         NULL, "Quality",     NULL,     &cv_scr_depth,        100},
+	{IT_STRING|IT_CVAR,         NULL, "Texture Filter", NULL,   &cv_glfiltermode,     110},
+	{IT_STRING|IT_CVAR,         NULL, "Anisotropic",  NULL,    &cv_glanisotropicmode,120},
+	{IT_STRING|IT_CVAR,         NULL, "OpenGL Loading Screen", NULL,  &cv_glloadingscreen, 130},
 };
 
 #endif
@@ -1417,6 +1451,7 @@ static menuitem_t OP_SoundAdvancedMenu[] =
 	{IT_STRING | IT_CVAR,  NULL,  "Play SFX if Unfocused", NULL,  &cv_playsoundsifunfocused,  OPENMPT_MENUOFFSET+10},
 	{IT_STRING | IT_CVAR,  NULL,  "Play Music if Unfocused", NULL,  &cv_playmusicifunfocused, OPENMPT_MENUOFFSET+20},
 	{IT_STRING | IT_CVAR,  NULL,  "Play Title Screen Music", NULL,  &cv_playtitlescreenmusic, OPENMPT_MENUOFFSET+30},
+	{IT_STRING | IT_CVAR, NULL, "Default 1-Up sound", NULL, &cv_1upsound, OPENMPT_MENUOFFSET+40},
 };
 
 #undef OPENMPT_MENUOFFSET
@@ -2003,7 +2038,7 @@ menu_t MP_PlayerSetupDef =
 	&MP_MainDef,
 	MP_PlayerSetupMenu,
 	M_DrawSetupMultiPlayerMenu,
-	27, 40,
+	19, 26,
 	0,
 	M_QuitMultiPlayerMenu
 };
@@ -2030,6 +2065,13 @@ menu_t OP_JoystickSetDef =
 	0,
 	NULL
 };
+
+menu_t OP_CameraOptionsDef = DEFAULTMENUSTYLE(
+	/*MN_OP_MAIN + (MN_OP_P1CONTROLS << 6) + (MN_OP_P1CAMERA << 12),*/ // Menu SOC :money_mouth:
+	"M_CONTRO", OP_CameraOptionsMenu, &OP_P1ControlsDef, 35, 30);
+menu_t OP_Camera2OptionsDef = DEFAULTMENUSTYLE(
+	/*MN_OP_MAIN + (MN_OP_P2CONTROLS << 6) + (MN_OP_P2CAMERA << 12),*/
+	"M_CONTRO", OP_Camera2OptionsMenu, &OP_P2ControlsDef, 35, 30);
 
 menu_t OP_VideoOptionsDef = DEFAULTSCROLLMENUSTYLE("M_VIDEO", OP_VideoOptionsMenu, &OP_MainDef, 30, 30);
 menu_t OP_VideoModeDef =
@@ -2362,6 +2404,19 @@ static void M_ChangeCvar(INT32 choice)
 {
 	consvar_t *cv = (consvar_t *)currentMenu->menuitems[itemOn].itemaction;
 	char s[20];
+
+	if (choice == -1)
+	{
+		if (cv == &cv_playercolor)
+		{
+			SINT8 skinno = R_SkinAvailable(cv_chooseskin.string);
+			if (skinno != -1)
+				CV_SetValue(cv,skins[skinno].prefcolor);
+			return;
+		}
+		CV_Set(cv,cv->defaultvalue);
+		return;
+	}
 
 	// yea
 	choice = (choice*2-1);
@@ -2854,6 +2909,22 @@ boolean M_Responder(event_t *ev)
  				consvar_t *cv = (consvar_t *)currentMenu->menuitems[itemOn].itemaction;
 				if ((currentMenu->menuitems[itemOn].status & IT_CVARTYPE) == IT_CV_SLIDER)
 					CV_Set(cv, cv->defaultvalue);
+			}
+
+			if (routine && ((currentMenu->menuitems[itemOn].status & IT_TYPE) == IT_ARROWS
+				|| (currentMenu->menuitems[itemOn].status & IT_TYPE) == IT_CVAR))
+			{
+				consvar_t *cv = (consvar_t *)currentMenu->menuitems[itemOn].itemaction;
+
+				if (cv == &cv_chooseskin
+					|| cv == &cv_nextmap
+					|| cv == &cv_newgametype)
+					return true;
+
+				if (currentMenu != &OP_SoundOptionsDef || itemOn > 3)
+					S_StartSound(NULL, sfx_menu1);
+				routine(-1);
+				return true;
 			}
 			// Why _does_ backspace go back anyway?
 			//currentMenu->lastOn = itemOn;
@@ -8802,34 +8873,55 @@ static UINT16     setupm_fakecolor;
 
 static void M_DrawSetupMultiPlayerMenu(void)
 {
-	INT32 mx, my, st, flags = 0;
+	INT32 x, y, cursory = 0, st = 0, flags = 0;
 	spritedef_t *sprdef;
 	spriteframe_t *sprframe;
 	patch_t *patch;
+	UINT8 *colormap;
 	UINT8 frame;
 
-	mx = MP_PlayerSetupDef.x;
-	my = MP_PlayerSetupDef.y;
+	x = MP_PlayerSetupDef.x;
+	y = MP_PlayerSetupDef.y;
 
 	// use generic drawer for cursor, items and title
-	M_DrawGenericMenu();
+	//M_DrawGenericMenu();
+
+	// draw title (or big pic)
+	M_DrawMenuTitle();
+
+	V_DrawString(x, y, V_YELLOWMAP, "Name");
+	if (itemOn == 0)
+		cursory = y;
+	y += 11;
 
 	// draw name string
-	M_DrawTextBox(mx + 90, my - 8, MAXPLAYERNAME, 1);
-	V_DrawString(mx + 98, my, V_ALLOWLOWERCASE, setupm_name);
+	V_DrawFill(x, y, 282/*(MAXPLAYERNAME+1)*8+6*/, 14, 239);
+	V_DrawString(x + 8, y + 3, V_ALLOWLOWERCASE, setupm_name);
+	if (skullAnimCounter < 4 && itemOn == 0)
+		V_DrawCharacter(x + 8 + V_StringWidth(setupm_name, V_ALLOWLOWERCASE), y + 3,
+			'_' | 0x80, false);
+
+	y += 20;
+
+	V_DrawString(x, y, V_YELLOWMAP, "Character");
+	if (itemOn == 1)
+		cursory = y;
 
 	// draw skin string
-	V_DrawString(208, 72,
-		((MP_PlayerSetupMenu[2].status & IT_TYPE) == IT_SPACE ? V_TRANSLUCENT : 0)|V_YELLOWMAP|V_ALLOWLOWERCASE,
-		skins[setupm_fakeskin].realname);
+	V_DrawRightAlignedString(BASEVIDWIDTH - x, y,
+	             ((MP_PlayerSetupMenu[1].status & IT_TYPE) == IT_SPACE ? V_TRANSLUCENT : 0)|(itemOn == 1 ? V_YELLOWMAP : 0)|V_ALLOWLOWERCASE,
+	             skins[setupm_fakeskin].realname);
 
-	// draw the name of the color you have chosen
-	// Just so people don't go thinking that "Default" is Green.
-	V_DrawRightAlignedString(291, my + 96, V_YELLOWMAP|V_ALLOWLOWERCASE, skincolors[setupm_fakecolor].name);
+	if (itemOn == 1 && (MP_PlayerSetupMenu[1].status & IT_TYPE) != IT_SPACE)
+	{
+		V_DrawCharacter(BASEVIDWIDTH - x - 10 - V_StringWidth(skins[setupm_fakeskin].realname, V_ALLOWLOWERCASE) - (skullAnimCounter/5), y,
+			'\x1C' | V_YELLOWMAP, false);
+		V_DrawCharacter(BASEVIDWIDTH - x + 2 + (skullAnimCounter/5), y,
+			'\x1D' | V_YELLOWMAP, false);
+	}
 
-	// draw text cursor for name
-	if (!itemOn && skullAnimCounter < 4) // blink cursor
-		V_DrawCharacter(mx + 98 + V_StringWidth(setupm_name, 0), my, '_', false);
+	x = BASEVIDWIDTH/2;
+	y += 11;
 
 	// anim the player in the box
 	multi_tics -= renderdeltatics;
@@ -8845,6 +8937,10 @@ static void M_DrawSetupMultiPlayerMenu(void)
 			multi_tics += multi_state->tics * FRACUNIT;
 	}
 
+#define charw 74
+
+	// draw box around character
+	V_DrawFill(x-(charw/2), y, charw, 84, 239);
 
 	// skin 0 is default player sprite
 	if (R_SkinAvailable(skins[setupm_fakeskin].name) != -1)
@@ -8852,86 +8948,108 @@ static void M_DrawSetupMultiPlayerMenu(void)
 	else
 		sprdef = &skins[0].spritedef;
 
-	if (!sprdef->numframes) // No frames ??
-		return; // Can't render!
+	if (!setupm_fakecolor || !sprdef->numframes) // should never happen but hey, who knows
+		goto faildraw;
+
+	// ok, draw player sprite for sure now
+	colormap = R_GetTranslationColormap(setupm_fakeskin, setupm_fakecolor, GTC_CACHE);
 
 	frame = multi_state->frame & FF_FRAMEMASK;
 	if (frame >= sprdef->numframes) // Walking animation missing
 		frame = 0; // Try to use standing frame
+
 
 	sprframe = &sprdef->spriteframes[frame];
 	patch = W_CachePatchNum(sprframe->lumppat[0], PU_PATCH);
 	if (sprframe->flip & 1) // Only for first sprite
 		flags |= V_FLIP; // This sprite is left/right flipped!
 
-	// draw box around guy
-	M_DrawTextBox(mx + 90, my + 8, PLBOXW, PLBOXH);
+#define chary (y+64)
 
-	// draw player sprite
-	if (!setupm_fakecolor) // should never happen but hey, who knows
+	V_DrawFixedPatch(
+		x<<FRACBITS,
+		chary<<FRACBITS,
+		(skins[setupm_fakeskin].flags & SF_HIRES) ? skins[setupm_fakeskin].highresscale : FRACUNIT,
+		flags, patch, colormap);
+
+	goto colordraw;
+
+faildraw:
+	sprdef = &sprites[SPR_UNKN];
+	if (!sprdef->numframes) // No frames ??
+		return; // Can't render!
+
+	sprframe = &sprdef->spriteframes[0];
+	patch = W_CachePatchNum(sprframe->lumppat[0], PU_PATCH);
+	if (sprframe->flip & 1) // Only for first sprite
+		flags |= V_FLIP; // This sprite is left/right flipped!
+
+	V_DrawScaledPatch(x, chary, flags, patch);
+
+#undef chary
+
+colordraw:
+	x = MP_PlayerSetupDef.x;
+	y += 75;
+
+	V_DrawString(x, y, V_YELLOWMAP, "Color");
+	if (itemOn == 2)
+		cursory = y;
+
+	// draw color string
+	V_DrawRightAlignedString(BASEVIDWIDTH - x, y,
+	             ((MP_PlayerSetupMenu[2].status & IT_TYPE) == IT_SPACE ? V_TRANSLUCENT : 0)|(itemOn == 2 ? V_YELLOWMAP : 0)|V_ALLOWLOWERCASE,
+	             skincolors[setupm_fakecolor].name);
+
+	if (itemOn == 2 && (MP_PlayerSetupMenu[2].status & IT_TYPE) != IT_SPACE)
 	{
-		if (skins[setupm_fakeskin].flags & SF_HIRES)
-		{
-			V_DrawSciencePatch((mx + 98 + (PLBOXW * 8 / 2)) << FRACBITS,
-				(my + 16 + (PLBOXH * 8) - 12) << FRACBITS,
-				flags, patch,
-				skins[setupm_fakeskin].highresscale);
+		V_DrawCharacter(BASEVIDWIDTH - x - 10 - V_StringWidth(skincolors[setupm_fakecolor].name, V_ALLOWLOWERCASE) - (skullAnimCounter/5), y,
+			'\x1C' | V_YELLOWMAP, false);
+		V_DrawCharacter(BASEVIDWIDTH - x + 2 + (skullAnimCounter/5), y,
+			'\x1D' | V_YELLOWMAP, false);
+	}
+
+	y += 11;
+
+#define indexwidth 8
+	{
+		const INT32 numcolors = (282-charw)/(2*indexwidth); // Number of colors per side
+		INT32 w = indexwidth; // Width of a singular color block
+		INT32 color = setupm_fakecolor;
+		UINT8 h;
+		INT16 i;
+
+		// Draw color in the middle
+		x += numcolors*w;
+		for (h = 0; h < 16; h++)
+			V_DrawFill(x, y+h, charw, 1, skincolors[setupm_fakecolor].ramp[h]);
+
+		//Draw colors from middle to left
+		for (i=0; i<numcolors; i++) {
+			x -= w;
+			// Find accessible color before this one
+			while (!skincolors[color].accessible)
+				color = M_GetColorPrev(color);
+			for (h = 0; h < 16; h++)
+				V_DrawFill(x, y+h, w, 1, skincolors[color].ramp[h]);
+			color = M_GetColorPrev(color);
 		}
-		else
-			V_DrawScaledPatch(mx + 98 + (PLBOXW * 8 / 2), my + 16 + (PLBOXH * 8) - 12, flags, patch);
-	}
-	else
-	{
-		UINT8 *colormap = R_GetTranslationColormap(setupm_fakeskin, setupm_fakecolor, GTC_CACHE);
 
-		if (skins[setupm_fakeskin].flags & SF_HIRES)
-		{
-			V_DrawFixedPatch((mx + 98 + (PLBOXW * 8 / 2)) << FRACBITS,
-				(my + 16 + (PLBOXH * 8) - 12) << FRACBITS,
-				skins[setupm_fakeskin].highresscale,
-				flags, patch, colormap);
+		// Draw colors from middle to right
+		color = M_GetColorNext(setupm_fakecolor);
+		x += numcolors*w + charw;
+		for (i=0; i<numcolors; i++) {
+			// Find accessible color after this one
+			while (!skincolors[color].accessible)
+				color = M_GetColorNext(color);
+			for (h = 0; h < 16; h++)
+				V_DrawFill(x, y+h, w, 1, skincolors[color].ramp[h]);
+			x += w;
+			color = M_GetColorNext(color);
 		}
-		else
-			V_DrawMappedPatch(mx + 98 + (PLBOXW * 8 / 2), my + 16 + (PLBOXH * 8) - 12, flags, patch, colormap);
 	}
-
-	// Draw the palette below!
-	// note: height is always 16
-#define color_width 12
-#define selected_width 80
-
-	int x,y,count,i,j,color;
-	count = 8;
-	x = (BASEVIDWIDTH / 2) - (color_width / 2);
-	y = 148;
-	color = setupm_fakecolor;
-
-	// selected color
-	for (j = 0; j < 16; j++)
-		V_DrawFill(x - (selected_width / 2), y+j, selected_width, 1, skincolors[color].ramp[j]);
-
-	color = M_GetColorPrev(color);
-
-	// prev colors
-	for (i = 0; i < count; i++)
-	{
-		for (j = 0; j < 16; j++)
-			V_DrawFill(x - (i * color_width) - (selected_width / 2), y+j, color_width, 1, skincolors[color].ramp[j]);
-		color = M_GetColorPrev(color);
-	}
-
-	color = M_GetColorNext(setupm_fakecolor);
-
-	// next colors
-	for (i = 0; i < count; i++)
-	{
-		for (j = 0; j < 16; j++)
-			V_DrawFill(x + (i * color_width) + (selected_width / 2), y+j, color_width, 1, skincolors[color].ramp[j]);
-		color = M_GetColorNext(color);
-	}
-
-#undef selected_width
-#undef color_width
+#undef charw
+#undef indexwidth
 
 	x = MP_PlayerSetupDef.x;
 	y += 20;
@@ -8943,8 +9061,12 @@ static void M_DrawSetupMultiPlayerMenu(void)
 			: V_TRANSLUCENT)
 		| ((itemOn == 3) ? V_YELLOWMAP : 0),
 		"Save as default");
-}
+	if (itemOn == 3)
+		cursory = y;
 
+	V_DrawScaledPatch(x - 17, cursory, 0,
+		W_CachePatchName("M_CURSOR", PU_PATCH));
+}
 // Handle 1P/2P MP Setup
 static void M_HandleSetupMultiPlayer(INT32 choice)
 {
@@ -9054,6 +9176,7 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 static void M_SetupMultiPlayer(INT32 choice)
 {
 	(void)choice;
+
 
 	multi_state = &states[mobjinfo[MT_PLAYER].seestate];
 	multi_tics = multi_state->tics*FRACUNIT;

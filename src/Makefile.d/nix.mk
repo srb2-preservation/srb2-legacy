@@ -4,6 +4,8 @@
 
 ifeq (${DEDICATED},1)
 EXENAME?=lsrb2dlegacy
+else ifdef DUMMY
+EXENAME?=lsrb2legacy
 else
 EXENAME?=lsdl2srb2legacy
 endif
