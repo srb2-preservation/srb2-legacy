@@ -2288,6 +2288,19 @@ static void M_ChangeCvar(INT32 choice)
 	consvar_t *cv = (consvar_t *)currentMenu->menuitems[itemOn].itemaction;
 	char s[20];
 
+	if (choice == -1)
+	{
+		if (cv == &cv_playercolor)
+		{
+			SINT8 skinno = R_SkinAvailable(cv_chooseskin.string);
+			if (skinno != -1)
+				CV_SetValue(cv,skins[skinno].prefcolor);
+			return;
+		}
+		CV_Set(cv,cv->defaultvalue);
+		return;
+	}
+
 	// yea
 	choice = (choice*2-1);
 
@@ -2817,6 +2830,22 @@ boolean M_Responder(event_t *ev)
  				consvar_t *cv = (consvar_t *)currentMenu->menuitems[itemOn].itemaction;
 				if ((currentMenu->menuitems[itemOn].status & IT_CVARTYPE) == IT_CV_SLIDER)
 					CV_Set(cv, cv->defaultvalue);
+			}
+
+			if (routine && ((currentMenu->menuitems[itemOn].status & IT_TYPE) == IT_ARROWS
+				|| (currentMenu->menuitems[itemOn].status & IT_TYPE) == IT_CVAR))
+			{
+				consvar_t *cv = (consvar_t *)currentMenu->menuitems[itemOn].itemaction;
+
+				if (cv == &cv_chooseskin
+					|| cv == &cv_nextmap
+					|| cv == &cv_newgametype)
+					return true;
+
+				if (currentMenu != &OP_SoundOptionsDef || itemOn > 3)
+					S_StartSound(NULL, sfx_menu1);
+				routine(-1);
+				return true;
 			}
 			// Why _does_ backspace go back anyway?
 			//currentMenu->lastOn = itemOn;
