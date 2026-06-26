@@ -92,3 +92,8 @@ lib:=../libs/curl
 CURL_opts:=-I$(lib)/include
 CURL_libs:=-L$(lib)/lib$(32) -lcurl
 $(eval $(call _set,CURL))
+
+lib:=../libs/discord-rpc/win$(32)-dynamic
+DISCORDRPC_opts+=-I$(lib)/include
+DISCORDRPC_libs+=-L$(lib)/lib -ldiscord-rpc
+$(eval $(call _set,DISCORDRPC))
