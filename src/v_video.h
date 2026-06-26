@@ -18,7 +18,7 @@
 #include "doomtype.h"
 #include "r_defs.h"
 
-#if defined(__SSE__)
+#if defined(__SSE__) && !defined(__ANDROID__)
 #if defined(__APPLE__)
 #include <Availability.h>
 // 'aligned_alloc' is only available on macOS 10.15 or newer

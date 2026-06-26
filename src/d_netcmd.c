@@ -12,6 +12,10 @@
 ///        commands are executed through the command buffer
 ///	       like console commands, other miscellaneous commands (at the end)
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
+
 #include "doomdef.h"
 
 #include "console.h"
@@ -49,6 +53,10 @@
 #include "m_anigif.h"
 #include "md5.h"
 #include "m_perfstats.h"
+
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
 
 #ifdef NETGAME_DEVMODE
 #define CV_RESTRICT CV_NETVAR
@@ -117,7 +125,9 @@ static void Command_Map_f(void);
 static void Command_ResetCamera_f(void);
 
 static void Command_Addfile(void);
+#ifndef __EMSCRIPTEN__
 static void Command_ListWADS_f(void);
+#endif
 static void Command_RunSOC(void);
 static void Command_Pause(void);
 static void Command_Suicide(void);
@@ -308,7 +318,7 @@ consvar_t cv_teamscramble = CVAR_INIT ("teamscramble", "Off", "Reassign player t
 consvar_t cv_scrambleonchange = CVAR_INIT ("scrambleonchange", "Off", "If enabled, reassign player teams between maps", CV_NETVAR, teamscramble_cons_t, NULL);
 
 consvar_t cv_friendlyfire = CVAR_INIT ("friendlyfire", "Off", "Allow players to hit each other, regardless of their team", CV_NETVAR, CV_OnOff, NULL);
-consvar_t cv_itemfinder = CVAR_INIT ("itemfinder", "Off", "Enables the Emblem Radar, notifying you when there in an emblem nearby", CV_CALL, CV_OnOff, ItemFinder_OnChange);
+consvar_t cv_itemfinder = CVAR_INIT ("itemfinder", "Off", "Enables the Emblem Radar, notifying you when there is an emblem nearby", CV_CALL, CV_OnOff, ItemFinder_OnChange);
 
 // Scoring type options
 consvar_t cv_match_scoring = CVAR_INIT ("matchscoring", "Normal", NULL, CV_NETVAR|CV_CHEAT, match_scoring_cons_t, NULL);
@@ -824,6 +834,13 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_scr_height);
 	CV_RegisterVar(&cv_scr_width_w);
 	CV_RegisterVar(&cv_scr_height_w);
+
+#ifdef NATIVESCREENRES
+	CV_RegisterVar(&cv_nativeres);
+	CV_RegisterVar(&cv_nativeresdiv);
+	CV_RegisterVar(&cv_nativeresfov);
+	CV_RegisterVar(&cv_nativerescompare);
+#endif
 
 	CV_RegisterVar(&cv_soundtest);
 
@@ -3243,7 +3260,11 @@ static void Got_Addfilecmd(UINT8 **cp, INT32 playernum)
 	G_SetGameModified(true);
 }
 
+#ifdef __EMSCRIPTEN__
+void EMSCRIPTEN_KEEPALIVE Command_ListWADS_f(void)
+#else
 static void Command_ListWADS_f(void)
+#endif
 {
 	INT32 i = numwadfiles;
 	char *tempname;

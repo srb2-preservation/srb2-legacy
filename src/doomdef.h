@@ -145,13 +145,14 @@ extern char logfilename[1024];
 #define UPDATE_ALERT
 
 // If you maintain a fork of srb2-legacy, change this.
-#define RELEASES "github.com/P-AS/srb2-legacy/releases\n"
+#define RELEASES "https://github.com/srb2-preservation\n/srb2-legacy/releases\n"
 
 // The string used in the alert that pops up in the event of an update being available.
 // Please change to apply to your modification (we don't want everyone asking where your mod is on SRB2.org!).
 #define UPDATE_ALERT_STRING \
 "A new update is available for SRB2 Legacy.\n"\
 "You can grab the latest release from:\n"\
+"\n"\
 RELEASES \
 "\n"\
 "You are using version: %s\n"\
@@ -170,6 +171,7 @@ RELEASES \
 #define UPDATE_ALERT_STRING_CONSOLE \
 "A new update is available for SRB2 Legacy.\n"\
 "You can grab the latest release from:\n"\
+"\n"\
 RELEASES \
 "\n"\
 "You are using version: %s\n"\
@@ -308,7 +310,13 @@ enum {
 	LE_BRAKVILEATACK   = -6  // Brak's doing his LOS attack, oh noes
 };
 
-// Name of local directory for config files and savegames
+// Use XDG Base Directory Specification (*nix) or Application Support (macOS) by default if defined
+#if (defined (__unix__) || defined (UNIXCOMMON)) && !defined(__ANDROID__)
+#define NATIVEDIR
+#endif
+
+// Name of fallback local directory for config files and savegames
+// Depreciated in favor of NATIVEDIR
 #if (defined (__unix__) || defined (UNIXCOMMON)) && !defined (__CYGWIN__) && !defined (__APPLE__)
 #define DEFAULTDIR ".srb2_21"
 #else
@@ -376,6 +384,17 @@ char *sizeu2(size_t num);
 char *sizeu3(size_t num);
 char *sizeu4(size_t num);
 char *sizeu5(size_t num);
+
+#if defined(__ANDROID__)
+#include "android-jni/ndk_strings.h"
+#define M_sprintf Android_sprintf
+#define M_snprintf Android_snprintf
+#define M_vsnprintf Android_vsnprintf
+#else
+#define M_sprintf sprintf
+#define M_snprintf snprintf
+#define M_vsnprintf vsnprintf
+#endif
 
 // d_main.c
 extern int    VERSION;
@@ -489,12 +508,14 @@ extern const char *compdate, *comptime, *comprevision, *compbranch, *compnote;
 ///	Shuffle's incomplete OpenGL sorting code.
 #define SHUFFLE // This has nothing to do with sorting, why was it disabled?
 
+#if !(defined (__EMSCRIPTEN__) && (__SIZEOF_SIZE_T__ == 4))
 ///	Allow the use of the SOC RESETINFO command.
 ///	\note	Builds that are tight on memory should disable this.
 ///	    	This stops the game from storing backups of the states, sprites, and mobjinfo tables.
 ///	    	Though this info is compressed under normal circumstances, it's still a lot of extra
 ///	    	memory that never gets touched.
 #define ALLOW_RESETDATA
+#endif
 
 #ifndef NONET
 ///	Display a connection screen on join attempts.

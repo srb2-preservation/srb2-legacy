@@ -50,6 +50,8 @@ void HWR_DrawConsoleFill(INT32 x, INT32 y, INT32 w, INT32 h, UINT32 color, INT32
 UINT8 *HWR_GetScreenshot(void);
 boolean HWR_Screenshot(const char *pathname);
 
+float HWR_GetPlayerFov(player_t *player);
+
 void HWR_AddCommands(void);
 void HWR_AddSessionCommands(void);
 void transform(float *cx, float *cy, float *cz);
@@ -67,7 +69,6 @@ void HWR_DrawScreenFinalTexture(int width, int height);
 boolean HWR_UseShader(void);
 void HWR_Lighting(FSurfaceInfo *Surface, INT32 light_level, extracolormap_t *colormap);
 UINT8 HWR_FogBlockAlpha(INT32 light, extracolormap_t *colormap); // Let's see if this can work
-
 
 extern CV_PossibleValue_t glanisotropicmode_cons_t[];
 
@@ -88,7 +89,7 @@ extern consvar_t cv_glbatching;
 extern consvar_t cv_glwireframe;
 extern consvar_t cv_glpaletterendering;
 extern consvar_t cv_glpalettedepth;
-extern consvar_t cv_glcurveshader; 
+extern consvar_t cv_glcurveshader;
 extern consvar_t cv_gllightdither;
 
 extern float gl_viewwidth, gl_viewheight, gl_baseviewwindowy;

@@ -30,6 +30,11 @@
 #endif
 
 #include <time.h>
+
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h> // emscripten_set_main_loop()
+#endif
+
 #include "doomdef.h"
 #include "am_map.h"
 #include "console.h"
@@ -585,15 +590,17 @@ void D_CheckRendererState(void)
 
 tic_t rendergametic;
 
+static void D_RunFrame(void);
+static tic_t oldentertics = 0;
+static tic_t entertic = 0, realtics = 0, rendertimeout = INFTICS;
+static double deltatics = 0.0;
+static double deltasecs = 0.0;
+
+static boolean interp = false;
+static boolean doDisplay = false;
+
 void D_SRB2Loop(void)
 {
-	tic_t entertic = 0, oldentertics = 0, realtics = 0, rendertimeout = INFTICS;
-	double deltatics = 0.0;
-	double deltasecs = 0.0;
-
-	boolean interp = false;
-	boolean doDisplay = false;
-
 	if (dedicated)
 		server = true;
 
@@ -607,14 +614,12 @@ void D_SRB2Loop(void)
 	I_UpdateTime(cv_timescale.value);
 	oldentertics = I_GetTime();
 
-
 	// end of loading screen: CONS_Printf() will no more call FinishUpdate()
 	con_startup = false;
 
 	// make sure to do a d_display to init mode _before_ load a level
 	SCR_SetMode(); // change video mode
 	SCR_Recalc();
-
 
 	// Check and print which version is executed.
 	// Use this as the border between setup and the main game loop being entered.
@@ -637,7 +642,37 @@ void D_SRB2Loop(void)
 	if (gamestate != GS_TITLESCREEN)
 		V_DrawScaledPatch(0, 0, 0, W_CachePatchNum(W_GetNumForName("CONSBACK"), PU_CACHE));
 
+#if defined(__EMSCRIPTEN__)
+	emscripten_set_main_loop(D_RunFrame, 0, 1);
+#else
 	for (;;)
+	{
+		D_RunFrame();
+	}
+#endif
+}
+
+static boolean D_LockFrame = false;
+
+#ifdef __EMSCRIPTEN__
+int EMSCRIPTEN_KEEPALIVE pause_loop(void)
+{
+	D_LockFrame = true;
+	emscripten_pause_main_loop();
+	return 0;
+}
+
+int EMSCRIPTEN_KEEPALIVE resume_loop(void)
+{
+	D_LockFrame = false;
+	emscripten_resume_main_loop();
+	return 0;
+}
+#endif
+
+static void D_RunFrame(void)
+{
+	if (!D_LockFrame)
 	{
 		// capbudget is the minimum precise_t duration of a single loop iteration
 		precise_t capbudget;
@@ -650,9 +685,7 @@ void D_SRB2Loop(void)
 			capbudget = (precise_t) budget;
 		}
 
-
 		I_UpdateTime(cv_timescale.value);
-
 
 		if (lastwipetic)
 		{
@@ -664,7 +697,6 @@ void D_SRB2Loop(void)
 		entertic = I_GetTime();
 		realtics = entertic - oldentertics;
 		oldentertics = entertic;
-
 
 		if (demoplayback && gamestate == GS_LEVEL)
 		{
@@ -777,7 +809,6 @@ void D_SRB2Loop(void)
 
 		LUA_Step();
 
-
 		// Fully completed frame made.
 		finishprecise = I_GetPreciseTime();
 		if (!singletics)
@@ -797,12 +828,15 @@ void D_SRB2Loop(void)
 		deltasecs = (double)((INT64)(finishprecise - enterprecise)) / I_GetPrecisePrecision();
 		deltatics = deltasecs * NEWTICRATE;
 
+#ifndef __EMSCRIPTEN__
 		// Only take screenshots after drawing.
 		if (moviemode)
 			M_SaveFrame();
 		if (takescreenshot)
 			M_DoScreenShot();
+#endif
 	}
+	return;
 }
 
 //
@@ -1035,6 +1069,32 @@ static void IdentifyVersion(void)
 #endif
 }
 
+//
+// Center the title string, then add the date and time of compilation.
+//
+static inline void D_MakeTitleString(char *s)
+{
+	char temp[82];
+	char *t;
+	const char *u;
+	INT32 i;
+
+	for (i = 0, t = temp; i < 82; i++)
+		*t++=' ';
+
+	for (t = temp + (80-strlen(s))/2, u = s; *u != '\0' ;)
+		*t++ = *u++;
+
+	u = compdate;
+	for (t = temp + 1, i = 11; i-- ;)
+		*t++ = *u++;
+	u = comptime;
+	for (t = temp + 71, i = 8; i-- ;)
+		*t++ = *u++;
+
+	temp[80] = '\0';
+	strcpy(s, temp);
+}
 
 //
 // D_SRB2Main
@@ -1114,6 +1174,9 @@ void D_SRB2Main(void)
 
 	{
 		const char *userhome = D_Home(); //Alam: path to home
+#if defined(__ANDROID__)
+		strlcpy(srb2path, I_SharedStorageLocation(), sizeof(srb2path));
+#endif
 
 		if (!userhome)
 		{
@@ -1132,11 +1195,11 @@ void D_SRB2Main(void)
 			if (M_CheckParm("-workdir") && M_IsNextParm())
 				snprintf(srb2home, sizeof srb2home, "%s", M_GetNextParm());
 			else
-#ifdef DEFAULTDIR
-				snprintf(srb2home, sizeof srb2home, "%s" PATHSEP DEFAULTDIR, userhome);
-#else // DEFAULTDIR
+#ifdef NATIVEDIR
+				snprintf(srb2home, sizeof srb2home, "%s", I_ConfigDir());
+#else
 				snprintf(srb2home, sizeof srb2home, "%s", userhome);
-#endif // DEFAULTDIR
+#endif
 			snprintf(downloaddir, sizeof downloaddir, "%s" PATHSEP "DOWNLOAD", srb2home);
 			if (dedicated)
 				snprintf(configfile, sizeof configfile, "%s" PATHSEP "d"CONFIGFILENAME, srb2home);
@@ -1157,7 +1220,27 @@ void D_SRB2Main(void)
 	I_mkdir(srb2home, 0755);
 
 	// Create addons dir
+	// But remove it first on Emscripten
 	snprintf(addonsdir, sizeof addonsdir, "%s%s%s", srb2home, PATHSEP, "addons");
+#ifdef __EMSCRIPTEN__
+	EM_ASM(
+	function force_rmdir(path) {
+		FS.readdir(path).forEach(function(f) {
+		if (f === '.' || f === '..') return;
+
+		fpath = path + '/' + f;
+
+		if (FS.analyzePath(fpath).object.isFolder) {
+			force_rmdir(fpath);
+			FS.rmdir(fpath);
+		} else {
+			FS.unlink(fpath);
+		}
+  	})
+	}
+	if (FS.analyzePath('/home/web_user/.srb2_21/addons').exists) force_rmdir('/home/web_user/.srb2_21/addons');
+	);
+#endif 
 	I_mkdir(addonsdir, 0755);
 
 	// seed M_Random because it is necessary; seed P_Random for scripts that
@@ -1558,13 +1641,14 @@ const char *D_Home(void)
 {
 	const char *userhome = NULL;
 
-#ifdef ANDROID
-	return "/data/data/org.srb2/";
-#endif
-
 	if (M_CheckParm("-home") && M_IsNextParm())
 		userhome = M_GetNextParm();
 	else
+#ifdef ANDROID
+	if (I_SharedStorageLocation())
+		userhome = I_SharedStorageLocation();
+	else
+#endif
 	{
 #if !(defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON))
 		if (FIL_FileOK(CONFIGFILENAME))

@@ -17,6 +17,10 @@
 #include "d_ticcmd.h"
 #include "d_event.h"
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
+
 #ifdef __GNUG__
 #pragma interface
 #endif
@@ -264,10 +268,29 @@ char *I_GetUserName(void);
 */
 INT32 I_mkdir(const char *dirname, INT32 unixright);
 
+/**	\brief Returns the path for SRB2's home folder
+*/
+const char *I_ConfigDir();
+
 /**	\brief Find main WAD
 		\return path to main WAD
 */
 const char *I_LocateWad(void);
+
+/**	\brief Location of the application's storage.
+		\return path to app-specific files
+*/
+const char *I_AppStorageLocation(void);
+
+/**	\brief Location that is considered the home.
+		\return path to shareable media files
+*/
+const char *I_SharedStorageLocation(void);
+
+/**	\brief Location that is removable storage.
+		\return path to removable storage
+*/
+const char *I_RemovableStorageLocation(void);
 
 /**	\brief First Joystick's events
 */
@@ -297,6 +320,27 @@ char *I_GetEnv(const char *name);
 
 INT32 I_PutEnv(char *variable);
 
+/**	\brief Checks if the app has been granted a specific permission.
+		\return 1 if the permission was granted, 0 if not.
+*/
+INT32 I_CheckSystemPermission(const char *permission);
+
+/**	\brief Asks the system for a specific permission.
+		\return 1 if the permission was granted, 0 if not.
+*/
+INT32 I_RequestSystemPermission(const char *permission);
+
+/**	\brief Checks if storage permission was granted.
+		\return 1 if it was, 0 if not.
+*/
+INT32 I_StoragePermission(void);
+
+/**	\brief Checks if the app has storage permission (different from granted.)
+		\return 1 if it was, 0 if not.
+*/
+INT32 I_SystemStoragePermission(void);
+
+
 /** \brief Put data in system clipboard
 */
 INT32 I_ClipboardCopy(const char *data, size_t size);
@@ -312,6 +356,45 @@ void I_CursedWindowMovement(int xd, int yd);
 /** \brief Get the current platform
 */
 const char *I_GetPlatform(void);
+
+/** \brief Mount IndexedDB filesystem for WASM on program start, does nothing elsewhere
+*/
+FUNCINLINE static ATTRINLINE void I_MountIDBFS(void)
+{
+#ifdef __EMSCRIPTEN__
+	EM_ASM(
+		try
+		{
+			if (!FS.analyzePath('/home').exists) FS.mkdir('/home');
+			if (!FS.analyzePath('/home/web_user').exists) FS.mkdir('/home/web_user');
+			FS.mount(IDBFS, {}, '/home/web_user'); // Emscripten home directory
+			FS.syncfs(true, function (err) {
+			console.log(err);
+			Module.ccall("main_program", 'number', [], [], {async: true});
+        	});
+		}
+		catch (err)
+		{
+			console.log(err);
+			Module.ccall("main_program", 'number', [], [], {async: true});
+		}
+    	);
+#endif
+}
+
+/** \brief Sync IndexedDB filesystem with in memory fileystem for WASM, does nothing elsewhere
+ * \todo use autoPersist in FS.mount
+*/
+FUNCINLINE static ATTRINLINE void I_SyncIDBFS(void)
+{
+#ifdef __EMSCRIPTEN__
+	EM_ASM(
+		FS.syncfs(function (err) {
+		console.log(err); }
+	);
+	);
+#endif
+}
 
 /** \brief Open A URL
 */

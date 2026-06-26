@@ -56,8 +56,10 @@
 # NOOPENMPT=1 - Disable module (tracker) music support.
 # NOMIXER=1 - Disable SDL Mixer (audio playback).
 # NOTHREADS=1 - Disable multithreading.
-# NOEXECINFO=1 - Disable stack trace dump support
-# NOLTO=1 - Disable link time optimizations
+# NOEXECINFO=1 - Disable stack trace dump support.
+# NOLTO=1 - Disable link time optimizations.
+# NATIVESCREENRES=1 - Enable additional resolution options 
+#                     menu from the Android port.
 #
 # Netplay incompatible
 # --------------------

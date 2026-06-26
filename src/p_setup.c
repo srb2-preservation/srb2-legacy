@@ -2707,7 +2707,8 @@ boolean P_SetupLevel(boolean skipprecip, boolean reloadinggamestate)
 		G_StopMetalDemo();
 
 	// Clear CECHO messages
-	HU_ClearCEcho();
+	if(!reloadinggamestate)
+		HU_ClearCEcho();
 
 	if (mapheaderinfo[gamemap-1]->runsoc[0] != '#')
 		P_RunSOC(mapheaderinfo[gamemap-1]->runsoc);
@@ -2748,7 +2749,7 @@ boolean P_SetupLevel(boolean skipprecip, boolean reloadinggamestate)
 
 	// Special stage fade to white
 	// This is handled BEFORE sounds are stopped.
-	if (rendermode != render_none && G_IsSpecialStage(gamemap))
+	if (rendermode != render_none && G_IsSpecialStage(gamemap) && !reloadinggamestate)
 	{
 		tic_t starttime = I_GetTime();
 		tic_t endtime = starttime + (3*TICRATE)/2;

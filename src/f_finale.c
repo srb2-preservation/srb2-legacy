@@ -797,10 +797,18 @@ void F_IntroDrawer(void)
 
 			// Stay on black for a bit. =)
 			{
-				tic_t quittime;
-				quittime = I_GetTime() + NEWTICRATE*2; // Shortened the quit time, used to be 2 seconds
-				while (quittime > I_GetTime())
+				tic_t nowtime, quittime, lasttime;
+				nowtime = lasttime = I_GetTime();
+				quittime = nowtime + NEWTICRATE*2; // Shortened the quit time, used to be 2 seconds
+				while (quittime > nowtime)
 				{
+					while (!((nowtime = I_GetTime()) - lasttime))
+					{
+						I_Sleep(cv_sleep.value);
+						I_UpdateTime(cv_timescale.value);
+					}
+					lasttime = nowtime;
+
 					I_OsPolling();
 					I_UpdateNoBlit();
 					M_Drawer(); // menu is drawn even on top of wipes
@@ -809,6 +817,7 @@ void F_IntroDrawer(void)
 			}
 
 			D_StartTitle();
+			wipegamestate = GS_INTRO;
 			return;
 		}
 		F_NewCutscene(introtext[++intro_scenenum]);

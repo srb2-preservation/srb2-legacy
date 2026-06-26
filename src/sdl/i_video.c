@@ -56,7 +56,6 @@
 #include "../m_menu.h"
 #include "../d_main.h"
 #include "../s_sound.h"
-#include "../i_sound.h"  // midi pause/unpause
 #include "../i_joy.h"
 #include "../st_stuff.h"
 #include "../hu_stuff.h"
@@ -480,7 +479,12 @@ static void VID_Command_Mode_f (void)
 	if (modenum >= VID_NumModes())
 		CONS_Printf(M_GetText("Video mode not present\n"));
 	else
+	{
+#ifdef NATIVESCREENRES
+		CV_StealthSetValue(&cv_nativeres, false);
+#endif
 		setmodeneeded = modenum+1; // request vid mode change
+	}
 }
 
 static inline void SDLJoyRemap(event_t *event)
@@ -572,7 +576,7 @@ static void Impl_HandleWindowEvent(SDL_WindowEvent evt)
 		// Tell game we got focus back, resume music if necessary
 		window_notinfocus = false;
 		if (!paused)
-			I_ResumeSong(); //resume it
+			S_ResumeAudio(); //resume it
 
 		if (!firsttimeonmouse)
 		{
@@ -747,6 +751,20 @@ static void Impl_HandleMouseWheelEvent(SDL_MouseWheelEvent evt)
 	}
 }
 
+#if defined(__ANDROID__)
+static boolean IsJoystickAccelerometer(SDL_Joystick *joy)
+{
+	return (!strcmp(SDL_JoystickName(joy), "Android Accelerometer"));
+}
+
+static boolean CanUseAccelerometer(SDL_Joystick *joy)
+{
+	if (IsJoystickAccelerometer(joy))
+		return (!(menuactive || paused || con_destlines || chat_on || gamestate != GS_LEVEL));
+	return true;
+}
+#endif
+
 static void Impl_HandleJoystickAxisEvent(SDL_JoyAxisEvent evt)
 {
 	event_t event;
@@ -762,16 +780,26 @@ static void Impl_HandleJoystickAxisEvent(SDL_JoyAxisEvent evt)
 	if (evt.which == joyid[0])
 	{
 		event.type = ev_joystick;
+#if defined(__ANDROID__)
+		if (!CanUseAccelerometer(JoyInfo.dev))
+			return;
+#endif
 	}
 	else if (evt.which == joyid[1])
 	{
 		event.type = ev_joystick2;
+#if defined(__ANDROID__)
+		if (!CanUseAccelerometer(JoyInfo2.dev))
+			return;
+#endif
 	}
-	else return;
+	else
+		return;
+
 	//axis
 	if (evt.axis > JOYAXISSET*2)
 		return;
-	//vaule
+	//value
 	if (evt.axis%2)
 	{
 		event.data1 = evt.axis / 2;
@@ -1098,8 +1126,10 @@ void I_OsPolling(void)
 {
 	SDL_Keymod mod;
 
+#ifndef __EMSCRIPTEN__
 	if (consolevent)
 		I_GetConsoleEvents();
+#endif
 	if (SDL_WasInit(SDL_INIT_JOYSTICK) == SDL_INIT_JOYSTICK)
 	{
 		SDL_JoystickUpdate();
@@ -1117,8 +1147,13 @@ void I_OsPolling(void)
 	capslock = false;
 	if (mod & KMOD_LSHIFT) shiftdown |= 1;
 	if (mod & KMOD_RSHIFT) shiftdown |= 2;
+#ifdef __APPLE__
+	if (mod & KMOD_LGUI)    ctrldown |= 1;
+	if (mod & KMOD_RGUI)    ctrldown |= 2;
+#else
 	if (mod & KMOD_LCTRL)   ctrldown |= 1;
 	if (mod & KMOD_RCTRL)   ctrldown |= 2;
+#endif
 	if (mod & KMOD_LALT)     altdown |= 1;
 	if (mod & KMOD_RALT)     altdown |= 2;
 	if (mod & KMOD_CAPS) capslock = true;
@@ -1489,7 +1524,6 @@ static SDL_bool Impl_CreateContext(void)
 	return SDL_TRUE;
 }
 
-
 void VID_CheckGLLoaded(rendermode_t oldrender)
 {
 #ifdef HWRENDER
@@ -1620,14 +1654,48 @@ INT32 VID_SetMode(INT32 modeNum)
 	vid.recalc = 1;
 	vid.bpp = 1;
 
-	if (modeNum < 0)
-		modeNum = 0;
-	if (modeNum >= MAXWINMODES)
-		modeNum = MAXWINMODES-1;
+#ifdef NATIVESCREENRES
+	if (cv_nativeres.value)
+	{
+		int i;
+		SDL_DisplayMode resolution;
 
-	vid.width = windowedModes[modeNum][0];
-	vid.height = windowedModes[modeNum][1];
-	vid.modenum = modeNum;
+		for (i = 0; i < SDL_GetNumVideoDisplays(); i++)
+		{
+			int nodisplay = SDL_GetCurrentDisplayMode(i, &resolution);
+			if (!nodisplay)
+			{
+				vid.width = (INT32)(resolution.w) / (cv_nativeresdiv.value);
+				vid.height = (INT32)(resolution.h) / (cv_nativeresdiv.value);
+
+				if (vid.width > MAXVIDWIDTH)
+					vid.width = MAXVIDWIDTH;
+				else if (vid.width < BASEVIDWIDTH)
+					vid.width = BASEVIDWIDTH;
+
+				if (vid.height > MAXVIDHEIGHT)
+					vid.height = MAXVIDHEIGHT;
+				else if (vid.height < BASEVIDHEIGHT)
+					vid.height = BASEVIDHEIGHT;
+
+				break;
+			}
+		}
+
+		vid.modenum = VID_GetModeForSize(cv_scr_width.value, cv_scr_height.value);
+	}
+	else
+#endif
+	{
+		if (modeNum < 0)
+			modeNum = 0;
+		if (modeNum >= MAXWINMODES)
+			modeNum = MAXWINMODES-1;
+
+		vid.width = windowedModes[modeNum][0];
+		vid.height = windowedModes[modeNum][1];
+		vid.modenum = modeNum;
+	}
 
 	//Impl_SetWindowName("SRB2 "VERSIONSTRING);
 	src_rect.w = vid.width;
@@ -1803,7 +1871,11 @@ void I_StartupGraphics(void)
 #endif
 	Impl_SetWindowIcon();
 
+#ifdef __EMSCRIPTEN__
+	VID_SetMode(VID_GetModeForSize(BASEVIDWIDTH*2, BASEVIDHEIGHT*2));
+#else
 	VID_SetMode(VID_GetModeForSize(BASEVIDWIDTH, BASEVIDHEIGHT));
+#endif
 
 	if (M_CheckParm("-nomousegrab"))
 		mousegrabok = SDL_FALSE;

@@ -14,6 +14,7 @@
 #include "d_main.h" // for srb2home
 #include "g_game.h"
 #include "sounds.h"
+#include "s_sound.h"
 #include "info.h"
 #include "d_think.h"
 #include "m_argv.h"
@@ -7083,6 +7084,23 @@ struct {
 	{"GT_HIDEANDSEEK",GT_HIDEANDSEEK},
 	{"GT_CTF",GT_CTF},
 
+	// Jingles (jingletype_t)
+	{"JT_NONE",JT_NONE},
+	{"JT_OTHER",JT_OTHER},
+	{"JT_MASTER",JT_MASTER},
+	{"JT_1UP",JT_1UP},
+	{"JT_SHOES",JT_SHOES},
+	{"JT_INV",JT_INV},
+	{"JT_MINV",JT_MINV},
+	{"JT_DROWN",JT_DROWN},
+	{"JT_SUPER",JT_SUPER},
+	{"JT_GOVER",JT_GOVER},
+	{"JT_NIGHTSTIMEOUT",JT_NIGHTSTIMEOUT},
+	{"JT_SSTIMEOUT",JT_SSTIMEOUT},
+	// {"JT_LCLEAR",JT_LCLEAR},
+	// {"JT_RACENT",JT_RACENT},
+	// {"JT_CONTSC",JT_CONTSC},
+
 	// Player state (playerstate_t)
 	{"PST_LIVE",PST_LIVE}, // Playing or camping.
 	{"PST_DEAD",PST_DEAD}, // Dead on the ground, view follows killer.
@@ -7172,6 +7190,24 @@ struct {
 	{"FF_RIPPLE",FF_RIPPLE},                   ///< Ripple the flats
 	{"FF_COLORMAPONLY",FF_COLORMAPONLY},       ///< Only copy the colormap, not the lightlevel
 	{"FF_GOOWATER",FF_GOOWATER},               ///< Used with ::FF_SWIMMABLE. Makes thick bouncey goop.
+
+		// PolyObject flags
+	{"POF_CLIPLINES",POF_CLIPLINES},               ///< Test against lines for collision
+	{"POF_CLIPPLANES",POF_CLIPPLANES},             ///< Test against tops and bottoms for collision
+	{"POF_SOLID",POF_SOLID},                       ///< Clips things.
+	{"POF_TESTHEIGHT",POF_TESTHEIGHT},             ///< Test line collision with heights
+	{"POF_RENDERSIDES",POF_RENDERSIDES},           ///< Renders the sides.
+	{"POF_RENDERTOP",POF_RENDERTOP},               ///< Renders the top.
+	{"POF_RENDERBOTTOM",POF_RENDERBOTTOM},         ///< Renders the bottom.
+	{"POF_RENDERPLANES",POF_RENDERPLANES},         ///< Renders top and bottom.
+	{"POF_RENDERALL",POF_RENDERALL},               ///< Renders everything.
+	{"POF_INVERT",POF_INVERT},                     ///< Inverts collision (like a cage).
+	{"POF_INVERTPLANES",POF_INVERTPLANES},         ///< Render inside planes.
+	{"POF_INVERTPLANESONLY",POF_INVERTPLANESONLY}, ///< Only render inside planes.
+	{"POF_PUSHABLESTOP",POF_PUSHABLESTOP},         ///< Pushables will stop movement.
+	{"POF_LDEXEC",POF_LDEXEC},                     ///< This PO triggers a linedef executor.
+	{"POF_ONESIDE",POF_ONESIDE},                   ///< Only use the first side of the linedef.
+	{"POF_NOSPECIALS",POF_NOSPECIALS},             ///< Don't apply sector specials.
 
 	// Slope flags
 	{"SL_NOPHYSICS",SL_NOPHYSICS},      // Don't do momentum adjustment with this slope
@@ -8064,7 +8100,12 @@ static inline int lib_getenum(lua_State *L)
 	} else if (fastcmp(word,"VERSIONSTRING")) {
 		lua_pushstring(L, VERSIONSTRING);
 		return 1;
-	} else if (fastcmp(word, "token")) {
+	}
+	else if (fastcmp(word,"CUSTOMVERSION")) {
+		lua_pushstring(L, customversionstring);
+		return 1;
+	} 
+	else if (fastcmp(word, "token")) {
 		lua_pushinteger(L, token);
 		return 1;
 	}

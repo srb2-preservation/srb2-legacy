@@ -19,9 +19,10 @@ Alternatively, you can also use [srb2bld](https://mb.srb2.org/addons/srb2bld-srb
 
 Nightly builds can be obtained below
 
-- [Windows](https://nightly.link/P-AS/srb2-legacy/workflows/windows/next)
-- [Linux](https://nightly.link/P-AS/srb2-legacy/workflows/ubuntu/next)
-- [macOS](https://nightly.link/P-AS/srb2-legacy/workflows/macos/next)
+- [Windows](https://nightly.link/srb2-preservation/srb2-legacy/workflows/windows/next)
+- [Linux](https://nightly.link/srb2-preservation/srb2-legacy/workflows/ubuntu/next)
+- [macOS](https://nightly.link/srb2-preservation/srb2-legacy/workflows/macos/next)
+- [Android](https://nightly.link/srb2-preservation/srb2-legacy/workflows/android/next)
 
 ## Interact
 - Join the [srb2-preservation Matrix space](https://matrix.to/#/#srb2-preservation:merrycorps.xyz)

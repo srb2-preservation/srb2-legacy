@@ -47,6 +47,7 @@
 #include "md5.h"
 #include "r_fps.h"
 #include "m_perfstats.h"
+#include "s_sound.h"
 
 #ifdef CLIENT_LOADINGSCREEN
 // cl loading screen
@@ -549,6 +550,17 @@ static void GetPackets(void);
 
 static cl_mode_t cl_mode = CL_SEARCHING;
 
+// simply checks for any of the main wads
+static boolean CL_CheckMainWads(const char *file_name)
+{
+	if ((strcmp(file_name, "srb2.srb") && strcmp(file_name, "srb2.wad") && strcmp(file_name, "zones.dta")
+			&& strcmp(file_name, "player.dta") && strcmp(file_name, "rings.dta") && strcmp(file_name, "patch.dta")
+			&& strcmp(file_name, "music.dta")
+		))
+		return false;
+	else
+		return true;
+}
 
 static void CL_DrawPlayerList(void)
 {
@@ -606,6 +618,7 @@ static void CL_DrawAddonList(void)
 #define maxcharlen (30 + 3)
 #define charsonside 15
 
+	INT32 index = addonlist_scroll;
 	for (i = addonlist_scroll; i < fileneedednum; i++)
 	{
 		if (i & 1)
@@ -614,10 +627,13 @@ static void CL_DrawAddonList(void)
 		fileneeded_t addon_file = fileneeded[i];
 		strncpy(file_name, addon_file.filename, MAX_WADPATH);
 
+		if (CL_CheckMainWads(file_name))
+			continue;
+
 		if ((UINT8)(strlen(file_name) + 1) > maxcharlen)
-			V_DrawThinString(x, y, V_ALLOWLOWERCASE|V_6WIDTHSPACE, va("\x82%d\x80 %.*s...%s", i + 1, charsonside, file_name, file_name + strlen(file_name) - ((charsonside + 1))) );
+			V_DrawThinString(x, y, V_ALLOWLOWERCASE|V_6WIDTHSPACE, va("\x82%d\x80 %.*s...%s", index + 1, charsonside, file_name, file_name + strlen(file_name) - ((charsonside + 1))) );
 		else
-			V_DrawThinString(x, y, V_ALLOWLOWERCASE|V_6WIDTHSPACE, va("\x82%d\x80 %s", i + 1, file_name));
+			V_DrawThinString(x, y, V_ALLOWLOWERCASE|V_6WIDTHSPACE, va("\x82%d\x80 %s", index + 1, file_name));
 
 		const char *filesize_str;
 		if (addon_file.totalsize >= 1024*1024)
@@ -630,6 +646,7 @@ static void CL_DrawAddonList(void)
 
 		y += 9;
 		count++;
+		index++;
 
 		if (count == filenumcount)
 			break;
@@ -637,7 +654,15 @@ static void CL_DrawAddonList(void)
 
 	UINT32 totalsize = 0;
 	for (INT32 j = 0; j < fileneedednum; j++)
+	{
+		fileneeded_t addon_file = fileneeded[j];
+		strncpy(file_name, addon_file.filename, MAX_WADPATH);
+
+		if (CL_CheckMainWads(file_name))
+			continue;
+
 		totalsize += fileneeded[j].totalsize;
+	}
 
 	const char *totalsize_str;
 	if (totalsize >= 1024*1024)
@@ -649,12 +674,21 @@ static void CL_DrawAddonList(void)
 	V_DrawRightAlignedString(BASEVIDWIDTH - 12, 74, V_YELLOWMAP|V_ALLOWLOWERCASE, totalsize_str);
 
 
-	if (fileneedednum >= filenumcount)
+	INT32 realfileneedednum = fileneedednum;
+	for (INT32 i = 0; i < fileneedednum; i++) {
+		fileneeded_t addon_file = fileneeded[i];
+		strncpy(file_name, addon_file.filename, MAX_WADPATH);
+
+		if (CL_CheckMainWads(file_name))
+			realfileneedednum--;
+	}
+
+	if (realfileneedednum >= filenumcount)
 	{
 		INT32 ccstime = I_GetTime();
 		if (addonlist_scroll)
 			V_DrawRightAlignedThinString(BASEVIDWIDTH - 8, 84 - ((ccstime % 9) / 5), V_YELLOWMAP, "\x1A");
-		if (addonlist_scroll != (fileneedednum - filenumcount))
+		if (addonlist_scroll != (realfileneedednum - filenumcount))
 			V_DrawRightAlignedThinString(BASEVIDWIDTH - 8, (84 + 90) + ((ccstime % 9) / 5), V_YELLOWMAP, "\x1B");
 	}
 #undef filenumcount
@@ -743,9 +777,19 @@ static inline void CL_DrawConnectionStatus(void)
 			V_DrawThinString(12 + 80, 38, V_ALLOWLOWERCASE, va("%s", serverlist[joinnode].info.maptitle));
 			V_DrawThinString(12 + 80, 48, V_ALLOWLOWERCASE, va("%s", Gametype_Names[serverlist[joinnode].info.gametype]));
 
-			if (fileneedednum > 0)
+			char file_name[MAX_WADPATH+1];
+			INT32 realfileneedednum = fileneedednum;
+			for (INT32 i = 0; i < fileneedednum; i++) {
+				fileneeded_t addon_file = fileneeded[i];
+				strncpy(file_name, addon_file.filename, MAX_WADPATH);
+
+				if (CL_CheckMainWads(file_name))
+					realfileneedednum--;
+			}
+
+			if (realfileneedednum > 0)
 			{
-				V_DrawThinString(12 + 80, 58, V_ALLOWLOWERCASE|V_YELLOWMAP, va("%i Addons", fileneedednum));
+				V_DrawThinString(12 + 80, 58, V_ALLOWLOWERCASE|V_YELLOWMAP, va("%i Addon%s", realfileneedednum, (realfileneedednum == 1) ? "" : "s"));
 			}
 			else
 			{
@@ -760,7 +804,7 @@ static inline void CL_DrawConnectionStatus(void)
 
 			if (serverlist[joinnode].info.cheatsenabled)
 			{
-				V_DrawRightAlignedThinString(BASEVIDWIDTH - 12, 58, V_ALLOWLOWERCASE|V_GREENMAP, "Cheats");
+				V_DrawRightAlignedThinString(BASEVIDWIDTH - 12, 48, V_ALLOWLOWERCASE|V_GREENMAP, "Cheats");
 			}
 
 			V_DrawFill(8, 72, BASEVIDWIDTH - 16, 112, 239);
@@ -775,7 +819,7 @@ static inline void CL_DrawConnectionStatus(void)
 			V_DrawThinString(16, BASEVIDHEIGHT - 12, V_ALLOWLOWERCASE, va("[%sESC/B%s] = Abort", "\x82", "\x80"));
 
 
-			if (fileneedednum > 0)
+			if (realfileneedednum > 0)
 				V_DrawCenteredThinString(BASEVIDWIDTH/2, BASEVIDHEIGHT - 11, V_ALLOWLOWERCASE, va("[""\x82""SPACE/X""\x80""] = %s",
 					(addonlist_show ? "Players" : "Addons")));
 			V_DrawRightAlignedThinString(BASEVIDWIDTH - 12, BASEVIDHEIGHT - 12, V_ALLOWLOWERCASE, va("[%sENTER/A%s] = Join", "\x82", "\x80"));
@@ -1939,7 +1983,7 @@ static void Command_ClearBans(void)
 static void Ban_Load_File(boolean warning)
 {
 	FILE *f;
-	size_t i;
+	//size_t i;
 	const char *address, *mask;
 	char buffer[MAX_WADPATH];
 
@@ -1960,7 +2004,7 @@ static void Ban_Load_File(boolean warning)
 		return;
 	}
 
-	for (i=0; fgets(buffer, (int)sizeof(buffer), f); i++)
+	for (/*i=0*/ ; fgets(buffer, (int)sizeof(buffer), f); /*i++*/)
 	{
 		address = strtok(buffer, " \t\r\n");
 		mask = strtok(NULL, " \t\r\n");
