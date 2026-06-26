@@ -2385,7 +2385,17 @@ static void M_GoBack(INT32 choice)
 			Z_Free(levelselect.rows);
 			levelselect.rows = NULL;
 			menuactive = false;
+			I_UpdateMouseGrab();
 			D_StartTitle();
+		}
+		else if (currentMenu == &SP_PlayerDef)
+		{
+			if (!Playing())
+			{
+				S_StopMusic();
+				S_ChangeMusicInternal("titles", looptitle);
+			}
+			M_SetupNextMenu(currentMenu->prevMenu);
 		}
 		else
 			M_SetupNextMenu(currentMenu->prevMenu);
