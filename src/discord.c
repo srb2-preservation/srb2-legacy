@@ -530,10 +530,10 @@ void DRPC_UpdatePresence(void)
 		switch (ms_RoomId)
 		{
 			case -1: discordPresence.state = "Private"; break; // Private server
-			case 33: discordPresence.state = "Standard"; break;
-			case 28: discordPresence.state = "Casual"; break;
-			case 38: discordPresence.state = "Custom Gametypes"; break;
-			case 31: discordPresence.state = "OLDC"; break;
+			case 1: discordPresence.state = "Standard"; break;
+			case 2: discordPresence.state = "Action"; break;
+			case 3: discordPresence.state = "Other"; break;
+			//case 31: discordPresence.state = "OLDC"; break;
 			default: discordPresence.state = "Unknown Room"; break; // HOW
 		}
 
