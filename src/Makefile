@@ -235,10 +235,8 @@ libs+=-static
 endif
 
 ifdef HAVE_DISCORDRPC
-LIBS+=-ldiscord-rpc
-CFLAGS+=-DHAVE_DISCORDRPC
-OBJS+=$(OBJDIR)/discord.o
-OBJS+=$(OBJDIR)/discord_pass.o
+libs+=-ldiscord-rpc
+opts+=-DHAVE_DISCORDRPC
 endif
 
 # build with profiling information
