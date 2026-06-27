@@ -2976,7 +2976,7 @@ static const char *I_GetXDGDataDirs(void)
 // I_ConfigDir
 // from dsda-doom
 //
-const char *I_ConfigDir()
+const char *I_ConfigDir(void)
 {
 #ifdef NATIVEDIR
 	static char *base = NULL;
