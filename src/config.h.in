@@ -19,8 +19,9 @@
 #ifdef USE_PATCH_DTA
 #define ASSET_HASH_PATCH_DTA  "${SRB2_ASSET_patch.dta_HASH}"
 #endif
-#endif
 #define ASSET_HASH_LEGACY_PK3 "${SRB2_ASSET_legacy.pk3_HASH}"
+#endif
+
 
 #define SRB2_COMP_REVISION    "${SRB2_COMP_REVISION}"
 #define SRB2_COMP_BRANCH      "${SRB2_COMP_BRANCH}"
