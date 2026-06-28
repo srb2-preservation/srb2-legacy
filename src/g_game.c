@@ -993,14 +993,14 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 	else
 	{
 		if (turnright)
-			cmd->angleturn = (INT16)(cmd->angleturn - angleturn[tspeed]);
+			cmd->angleturn = (INT16)(cmd->angleturn - (FixedMul(angleturn[tspeed]<<FRACBITS, cv_cam_turnmultiplier.value)>>FRACBITS));
 		else if (turnleft)
-			cmd->angleturn = (INT16)(cmd->angleturn + angleturn[tspeed]);
+			cmd->angleturn = (INT16)(cmd->angleturn + (FixedMul(angleturn[tspeed]<<FRACBITS, cv_cam_turnmultiplier.value)>>FRACBITS));
 
 		if (analogjoystickmove && axis != 0)
 		{
 			// JOYAXISRANGE should be 1023 (divide by 1024)
-			cmd->angleturn = (INT16)(cmd->angleturn - ((axis * angleturn[1]) >> 10)); // ANALOG!
+			cmd->angleturn = (INT16)(cmd->angleturn - (FixedMul(((axis * angleturn[1]) >> 10)<<FRACBITS, cv_cam_turnmultiplier.value)>>FRACBITS)); // ANALOG!
 		}
 	}
 
@@ -1303,14 +1303,14 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 	else
 	{
 		if (turnright)
-			cmd->angleturn = (INT16)(cmd->angleturn - angleturn[tspeed]);
+			cmd->angleturn = (INT16)(cmd->angleturn - (FixedMul(angleturn[tspeed]<<FRACBITS, cv_cam2_turnmultiplier.value)>>FRACBITS));
 		else if (turnleft)
-			cmd->angleturn = (INT16)(cmd->angleturn + angleturn[tspeed]);
+			cmd->angleturn = (INT16)(cmd->angleturn + (FixedMul(angleturn[tspeed]<<FRACBITS, cv_cam2_turnmultiplier.value)>>FRACBITS));
 
 		if (analogjoystickmove && axis != 0)
 		{
 			// JOYAXISRANGE should be 1023 (divide by 1024)
-			cmd->angleturn = (INT16)(cmd->angleturn - ((axis * angleturn[1]) >> 10)); // ANALOG!
+			cmd->angleturn = (INT16)(cmd->angleturn - (FixedMul(((axis * angleturn[1]) >> 10)<<FRACBITS, cv_cam2_turnmultiplier.value)>>FRACBITS)); // ANALOG!
 		}
 	}
 
