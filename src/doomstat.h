@@ -262,6 +262,8 @@ typedef struct
 	UINT8 levelflags;     ///< LF_flags:  merged eight booleans into one UINT8 for space, see below
 	UINT8 menuflags;      ///< LF2_flags: options that affect record attack / nights mode menus
 
+	char selectheading[22]; ///< Level select heading. Allows for controllable grouping.
+
 	// NiGHTS stuff.
 	UINT8 numGradedMares;   ///< Internal. For grade support.
 	nightsgrades_t *grades; ///< NiGHTS grades. Allocated dynamically for space reasons. Be careful.
@@ -288,6 +290,7 @@ typedef struct
 #define LF2_RECORDATTACK   4 ///< Show this map in Time Attack
 #define LF2_NIGHTSATTACK   8 ///< Show this map in NiGHTS mode menu
 #define LF2_NOVISITNEEDED 16 ///< Available in time attack/nights mode without visiting the level
+#define LF2_WIDEICON      32 ///< If you're in a circumstance where it fits, use a wide map icon
 
 // Save override
 #define SAVE_NEVER   -1
@@ -337,7 +340,7 @@ enum GameType
 
 	NUMGAMETYPES
 };
-// If you alter this list, update dehacked.c, and Gametype_Names in g_game.c
+// If you alter this list, update dehacked.c, and gametype_cons_t and MISC_ChangeGameTypeMenu in m_menu.c
 
 // String names for gametypes
 extern const char *Gametype_Names[NUMGAMETYPES];
@@ -429,6 +432,7 @@ extern UINT16 extralifetics;
 
 extern UINT8 introtoplay;
 extern UINT8 creditscutscene;
+extern UINT8 useBlackRock;
 
 extern UINT8 use1upSound;
 extern UINT8 maxXtraLife; // Max extra lives from rings

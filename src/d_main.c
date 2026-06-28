@@ -996,10 +996,13 @@ static inline void D_CleanFile(void)
 // Identify the SRB2 version, and IWAD file to use.
 // ==========================================================================
 
+boolean legacypk3_loaded;
+
 static void IdentifyVersion(void)
 {
 	char *srb2wad1, *srb2wad2;
 	const char *srb2waddir = NULL;
+	legacypk3_loaded = false;
 
 #if defined (__unix__) || defined (UNIXCOMMON) || defined (HAVE_SDL)
 	// change to the directory where 'srb2.srb' is found
@@ -1069,6 +1072,12 @@ static void IdentifyVersion(void)
 	// Add our crappy patches to fix our bugs
 	D_AddFile(va(pandf,srb2waddir,"patch.dta"));
 #endif
+
+	if (FIL_ReadFileOK(va(pandf,srb2waddir,"legacy.pk3"))) 
+	{
+		D_AddFile(va(pandf,srb2waddir,"legacy.pk3"));
+		legacypk3_loaded = true;
+	}
 
 #if !defined (HAVE_SDL) || defined (HAVE_MIXER)
 	{
@@ -1372,7 +1381,10 @@ void D_SRB2Main(void)
 #ifdef USE_PATCH_DTA
 	W_VerifyFileMD5(mainwads++, ASSET_HASH_PATCH_DTA); // patch.dta
 #endif
-	// don't check music.dta because people like to modify it, and it doesn't matter if they do
+	if(legacypk3_loaded)
+		W_VerifyFileMD5(mainwads++, ASSET_HASH_LEGACY_PK3); // legacy.pk3
+	
+	// don't check music.dta because peowple like to modify it, and it doesn't matter if they do
 	// ...except it does if they slip maps in there, and that's what W_VerifyNMUSlumps is for.
 	//mainwads++; // music.dta does not increment mainwads (see <= 2.1.21)
 
@@ -1386,12 +1398,14 @@ void D_SRB2Main(void)
 	mainwads++; // patch.dta
 #endif
 	//mainwads++; // music.dta does not increment mainwads (see <= 2.1.21)
+	if(legacypk3_loaded)
+		mainwads++;
 
 #endif //ifndef DEVELOP
 
 	mainwadstally = packetsizetally;
 
-	cht_Init();
+	cht_Init(); 
 
 	//---------------------------------------------------- READY SCREEN
 	// we need to check for dedicated before initialization of some subsystems

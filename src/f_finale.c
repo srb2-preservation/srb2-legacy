@@ -34,6 +34,8 @@
 #include "y_inter.h"
 #include "m_cond.h"
 
+#include "lua_hud.h"
+
 // Stage of animation:
 // 0 = text, 1 = art screen
 static INT32 finalecount;
@@ -1500,8 +1502,6 @@ void F_StartTitleScreen(void)
 // (no longer) De-Demo'd Title Screen
 void F_TitleScreenDrawer(void)
 {
-	boolean hidepics;
-
 	if (modeattacking)
 		return; // We likely came here from retrying. Don't do a damn thing.
 
@@ -1520,8 +1520,8 @@ void F_TitleScreenDrawer(void)
 		return;
 
 	// rei|miru: use title pics?
-	hidepics = curhidepics;
-	if (hidepics)
+	hidetitlepics = curhidepics;
+	if (hidetitlepics)
 		return;
 
 	V_DrawScaledPatch(30, 14, 0, ttwing);
@@ -1560,6 +1560,9 @@ void F_TitleScreenDrawer(void)
 	}
 
 	V_DrawScaledPatch(48, 142, 0,ttbanner);
+
+luahook:
+	LUAh_TitleHUD();
 }
 
 // separate animation timer for backgrounds, since we also count
