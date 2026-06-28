@@ -2975,6 +2975,10 @@ static void readmaincfg(MYFILE *f)
 				looptitle = (value || word2[0] == 'T' || word2[0] == 'Y');
 				titlechanged = true;
 			}
+			else if (fastcmp(word, "HIDETITLEPICS"))
+			{
+				hidetitlepics = (boolean)(value || word2[0] == 'T' || word2[0] == 'Y');
+			}
 			else if (fastcmp(word, "TITLESCROLLSPEED"))
 			{
 
