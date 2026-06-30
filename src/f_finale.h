@@ -38,6 +38,7 @@ void F_TitleDemoTicker(void);
 void F_GameEndDrawer(void);
 void F_IntroDrawer(void);
 void F_TitleScreenDrawer(void);
+void F_SkyScroll(const char *patchname);
 
 void F_GameEvaluationDrawer(void);
 void F_StartGameEvaluation(void);
@@ -65,17 +66,36 @@ void F_WaitingPlayersTicker(void);
 void F_WaitingPlayersDrawer(void);
 
 extern boolean hidetitlepics;
-extern INT32 titlescrollspeed;
+extern INT32 titlescrollxspeed;
+extern INT32 titlescrollyspeed;
+// Current menu parameters
+extern char curbgname[8];
+extern SINT8 curfadevalue;
+extern boolean curhidepics;
+extern INT32 curbgcolor;
+extern INT32 curbgxspeed;
+extern INT32 curbgyspeed;
+extern boolean curbghide;
+
+#define TITLEBACKGROUNDACTIVE (curfadevalue >= 0 || curbgname[0])
+
+void F_InitMenuPresValues(void);
+void F_MenuPresTicker(void);
 
 //
 // WIPE
 //
+#define FORCEWIPE -3
+#define FORCEWIPEOFF -2
+
 extern boolean WipeInAction;
 extern INT32 lastwipetic;
 
 void F_WipeStartScreen(void);
 void F_WipeEndScreen(void);
 void F_RunWipe(UINT8 wipetype, boolean drawMenu);
+tic_t F_GetWipeLength(UINT8 wipetype);
+boolean F_WipeExists(UINT8 wipetype);
 
 enum
 {
