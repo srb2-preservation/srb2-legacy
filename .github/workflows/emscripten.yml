@@ -53,7 +53,7 @@ jobs:
 
       - name: Build
         run: |
-          git clone https://git.do.srb2.org/STJr/srb2assets-public.git -b SRB2_2.1 assets/installer
+          git clone https://codeberg.org/chromaticpipe/assets.git -b legacy assets/installer
           curl https://github.com/srb2-preservation/assets/raw/refs/heads/legacypk3/legacy.pk3 -o assets/installer/legacy.pk3
 
           mkdir build
