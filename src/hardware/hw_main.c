@@ -4396,7 +4396,7 @@ static inline void HWR_DrawPrecipitationSprite(gl_vissprite_t *spr)
 	GLPatch_t *gpatch; // sprite patch converted to hardware
 	FSurfaceInfo Surf;
 
-	if (P_MobjWasRemoved(spr->mobj))
+	if (!spr->mobj)
 		return;
 
 	if (!spr->mobj->subsector)
