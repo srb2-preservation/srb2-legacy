@@ -1665,7 +1665,7 @@ static menuitem_t OP_LegacyOptionsMenu[] =
 static menuitem_t OP_LegacyCreditsMenu[] = // This barely fits on green resolution
 {
 	{IT_HEADER|IT_STRING, NULL, "Contributors:", NULL,  NULL, 7},
-	{IT_STRING, NULL, "PAS", NULL,  NULL, 22},
+	{IT_STRING, NULL, "PAS", NULL,  NULL, 22}, 
 	{IT_STRING, NULL, "chromaticpipe", NULL,  NULL, 32},
 	{IT_STRING, NULL, "Hanicef", NULL,  NULL, 42},
 	{IT_STRING, NULL, "Lugent",  NULL, NULL, 52},
