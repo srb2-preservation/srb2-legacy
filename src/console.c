@@ -557,6 +557,7 @@ static void CON_MoveConsole(void)
 {
 	static fixed_t fracmovement = 0;
 
+
 	// instant
 	if (!cons_speed.value)
 	{
@@ -565,7 +566,7 @@ static void CON_MoveConsole(void)
 	}
 
 	// Not instant - Increment fracmovement fractionally
-	fracmovement += FixedMul(cons_speed.value*vid.fdupy, (cv_uncappedhud.value ? renderdeltatics : FRACUNIT));
+	fracmovement += FixedMul(cons_speed.value*vid.fdupy, renderdeltatics);
 
 	if (con_curlines < con_destlines) // Move the console downwards
 	{
