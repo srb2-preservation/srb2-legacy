@@ -834,6 +834,84 @@ void F_IntroDrawer(void)
 
 	intro_curtime = introscenetime[intro_scenenum] - timetonext;
 
+	/*if (rendermode != render_none)
+	{
+		if (intro_scenenum == 5 && intro_curtime == 5*TICRATE)
+		{
+			patch_t *radar = W_CachePatchName("RADAR", PU_PATCH);
+
+			F_WipeStartScreen();
+			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
+			V_DrawScaledPatch(0, 0, 0, radar);
+			W_UnlockCachedPatch(radar);
+			V_DrawString(8, 128, 0, cutscene_disptext);
+
+			F_WipeEndScreen();
+			F_RunWipe(99,true);
+		}
+		else if (intro_scenenum == 7 && intro_curtime == 6*TICRATE) // Force a wipe here
+		{
+			patch_t *grass = W_CachePatchName("SGRASS5", PU_PATCH);
+
+			F_WipeStartScreen();
+			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
+			V_DrawScaledPatch(0, 0, 0, grass);
+			W_UnlockCachedPatch(grass);
+			V_DrawString(8, 128, 0, cutscene_disptext);
+
+			F_WipeEndScreen();
+			F_RunWipe(99,true);
+		}
+		else if (intro_scenenum == 12 && intro_curtime == 7*TICRATE)
+		{
+			patch_t *confront = W_CachePatchName("CONFRONT", PU_PATCH);
+
+			F_WipeStartScreen();
+			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
+			V_DrawSmallScaledPatch(0, 0, 0, confront);
+			W_UnlockCachedPatch(confront);
+			V_DrawString(8, 128, 0, cutscene_disptext);
+
+			F_WipeEndScreen();
+			F_RunWipe(99,true);
+		}
+		if (intro_scenenum == 14 && intro_curtime == 7*TICRATE)
+		{
+			patch_t *sdo = W_CachePatchName("SONICDO2", PU_PATCH);
+
+			F_WipeStartScreen();
+			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
+			V_DrawSmallScaledPatch(0, 0, 0, sdo);
+			W_UnlockCachedPatch(sdo);
+			V_DrawString(224, 8, 0, cutscene_disptext);
+
+			F_WipeEndScreen();
+			F_RunWipe(99,true);
+		}
+	}*/
+
+	F_IntroDrawScene();
+}
+
+//
+// F_IntroTicker
+//
+void F_IntroTicker(void)
+{
+	// advance animation
+	finalecount++;
+
+	if (finalecount % 3 == 0)
+		roidtics--;
+
+	timetonext--;
+
+	F_WriteText();
+
+	// check for skipping
+	if (keypressed)
+		keypressed = false;
+
 	if (rendermode != render_none)
 	{
 		if (intro_scenenum == 5 && intro_curtime == 5*TICRATE)
@@ -889,28 +967,6 @@ void F_IntroDrawer(void)
 			F_RunWipe(99,true);
 		}
 	}
-
-	F_IntroDrawScene();
-}
-
-//
-// F_IntroTicker
-//
-void F_IntroTicker(void)
-{
-	// advance animation
-	finalecount++;
-
-	if (finalecount % 3 == 0)
-		roidtics--;
-
-	timetonext--;
-
-	F_WriteText();
-
-	// check for skipping
-	if (keypressed)
-		keypressed = false;
 }
 
 //
