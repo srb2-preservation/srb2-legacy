@@ -425,7 +425,7 @@ void HWR_DrawCroppedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscal
 
 	v[0].t = v[1].t = ((sy  )/(float)SHORT(gpatch->height))*gpatch->max_t;
 	if (sy + h > SHORT(gpatch->height))
-		v[2].t = v[3].t = gpatch->max_t;
+		v[2].t = v[3].t = gpatch->max_t - ((sy+h)/(float)(gpatch->height))*gpatch->max_t;
 	else
 		v[2].t = v[3].t = ((sy+h)/(float)SHORT(gpatch->height))*gpatch->max_t;
 
