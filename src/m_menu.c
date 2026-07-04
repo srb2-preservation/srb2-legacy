@@ -2837,12 +2837,22 @@ boolean M_Responder(event_t *ev)
 			M_NextOpt();
 			S_StartSound(NULL, sfx_menu1);
 			coolalphatimer = 9;
+			if (currentMenu == &SP_PlayerDef)
+			{
+				Z_Free(char_notes);
+				char_notes = NULL;
+			}
 			return true;
 
 		case KEY_UPARROW:
 			M_PrevOpt();
 			S_StartSound(NULL, sfx_menu1);
 			coolalphatimer = 9;
+			if (currentMenu == &SP_PlayerDef)
+			{
+				Z_Free(char_notes);
+				char_notes = NULL;
+			}
 			return true;
 
 		case KEY_LEFTARROW:
