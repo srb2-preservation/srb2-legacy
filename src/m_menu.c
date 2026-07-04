@@ -151,6 +151,7 @@ static saveinfo_t savegameinfo[MAXSAVEGAMES]; // Extra info about the save games
 INT16 startmap; // Mario, NiGHTS, or just a plain old normal game?
 
 static INT16 itemOn = 1; // menu item skull is on, Hack by Tails 09-18-2002
+static boolean lastdirection = true; // toaster - Only You Can Prevent Hacks - true is for forward, false is for backwards
 static INT16 skullAnimCounter = 10; // skull animation counter
 
 static  boolean setupcontrols_secondaryplayer;
@@ -2506,6 +2507,7 @@ static void M_ResetCvars(INT32 choice)
 static void M_NextOpt(void)
 {
 	INT16 oldItemOn = itemOn; // prevent infinite loop
+	lastdirection = true;
 
 	do
 	{
@@ -2520,6 +2522,7 @@ static void M_NextOpt(void)
 static void M_PrevOpt(void)
 {
 	INT16 oldItemOn = itemOn; // prevent infinite loop
+	lastdirection = false;
 
 	do
 	{
@@ -6725,7 +6728,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 {
 	const INT32 my = 24;
 	patch_t *patch;
-	INT32 i, o, j;
+	INT32 i, o, j, prev, next;
 	char *picname;
 
 	// Black BG
@@ -6735,79 +6738,126 @@ static void M_DrawSetupChoosePlayerMenu(void)
 	// Character select profile images!1
 	M_DrawTextBox(0, my, 16, 20);
 
-	if (abs(itemOn*128*FRACUNIT - char_scroll) > 256*FRACUNIT)
-		char_scroll = itemOn*128*FRACUNIT;
-	else if (itemOn*128*FRACUNIT - char_scroll > 128*FRACUNIT)
-		char_scroll += FixedMul(48*FRACUNIT, renderdeltatics);
-	else if (itemOn*128*FRACUNIT - char_scroll < -128*FRACUNIT)
-		char_scroll -= FixedMul(48*FRACUNIT, renderdeltatics);
-	else if (itemOn*128*FRACUNIT > char_scroll+FixedMul(16*FRACUNIT, renderdeltatics))
-		char_scroll += FixedMul(16*FRACUNIT, renderdeltatics);
-	else if (itemOn*128*FRACUNIT < char_scroll-FixedMul(16*FRACUNIT, renderdeltatics))
-		char_scroll -= FixedMul(16*FRACUNIT, renderdeltatics);
+	i = (itemOn*128 - char_scroll/FRACUNIT);
+
+	if (abs(i) > 128)
+	{
+		o = (lastdirection) ? -1 : 1;
+		char_scroll = (itemOn + o)*128*FRACUNIT;
+		i = -o*128;
+	}
+
+	if (abs(i) > 1)
+		char_scroll += FixedMul(i*FRACUNIT>>2, renderdeltatics);
 	else // close enough.
 		char_scroll = itemOn*128*FRACUNIT; // just be exact now.
-	i = (char_scroll+16*FRACUNIT)/(128*FRACUNIT);
-	o = ((char_scroll/FRACUNIT)+16)%128;
 
-	// prev character
-	if (i-1 >= 0 && PlayerMenu[i-1].status != IT_DISABLED
-	&& o < 32)
+	o = ((char_scroll / FRACUNIT) + 16);
+	if (lastdirection)
+		o += 128; // This one-directional hack is to prevent visual glitches when going from the (currentMenu->numitems)nd character to the 1st character.
+	i = (o / 128);
+	o = (o % 128);
+
+	// subtract 1 from i to counteract the +128 from the prior hack, if we made it happen
+	if (lastdirection)
 	{
-		picname = description[i-1].picname;
-		if (picname[0] == '\0')
+		j = i;
+		do
 		{
-			picname = strtok(Z_StrDup(description[i-1].skinname), "&");
-			for (j = 0; j < numskins; j++)
-				if (stricmp(skins[j].name, picname) == 0)
-				{
-					Z_Free(picname);
-					picname = skins[j].charsel;
-					break;
-				}
-			if (j == numskins) // AAAAAAAAAA
-				picname = skins[0].charsel;
-		}
-		patch = W_CachePatchName(picname, PU_PATCH);
-		if (SHORT(patch->width) >= 256)
-			V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT/2, 0, patch, 0, SHORT(patch->height) + 2*(o-32), SHORT(patch->width), 32 - o);
-		else
-			V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT, 0, patch, 0, SHORT(patch->height) + o - 32, SHORT(patch->width), 32 - o);
-		W_UnlockCachedPatch(patch);
+			i--;
+			if (i < 0)
+				i = (currentMenu->numitems - 1);
+		} while (i != j && PlayerMenu[i].status == IT_DISABLED); // Skip over all disabled characters.
 	}
 
-	// next character
-	if (i+1 < currentMenu->numitems && PlayerMenu[i+1].status != IT_DISABLED
-	&& o < 128)
+	// Get prev character...
+	prev = i;
+	do
 	{
-		picname = description[i+1].picname;
-		if (picname[0] == '\0')
+		prev--;
+		if (prev < 0)
+			prev = (currentMenu->numitems - 1);
+	} while (prev != i && PlayerMenu[prev].status == IT_DISABLED); // Skip over all disabled characters.
+
+	if (prev != i) // If there's more than one character available...
+	{
+		// Let's get the next character now.
+		next = i;
+		do
 		{
-			picname = strtok(Z_StrDup(description[i+1].skinname), "&");
-			for (j = 0; j < numskins; j++)
-				if (stricmp(skins[j].name, picname) == 0)
+			next++;
+			if (next >= currentMenu->numitems)
+				next = 0;
+		} while (next != i && PlayerMenu[next].status == IT_DISABLED); // Skip over all disabled characters.
+
+		// Draw prev character if it's visible and its number isn't greater than the current one
+		if ((o < 32) && !((prev == next) && prev > i)) // (prev != i) was previously a part of this, but we don't need to check again after above.
+		{
+			picname = description[prev].picname;
+			if (picname[0] == '\0')
+			{
+				picname = strtok(Z_StrDup(description[prev].skinname), "&");
+				for (j = 0; j < numskins; j++)
+					if (stricmp(skins[j].name, picname) == 0)
+					{
+						Z_Free(picname);
+						picname = skins[j].charsel;
+						break;
+					}
+				if (j == numskins) // AAAAAAAAAA
 				{
 					Z_Free(picname);
-					picname = skins[j].charsel;
-					break;
+					picname = skins[0].charsel;
 				}
-			if (j == numskins) // AAAAAAAAAA
-				picname = skins[0].charsel;
+				strncpy(description[prev].picname, picname, 8); // Only iterate once.
+			}
+			patch = W_CachePatchName(picname, PU_PATCH);
+			if (SHORT(patch->width) >= 256)
+				V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT/2, 0, patch, 0, SHORT(patch->height) - 64 + o*2, SHORT(patch->width), SHORT(patch->height));
+			else
+				V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT, 0, patch, 0, SHORT(patch->height) - 32 + o, SHORT(patch->width), SHORT(patch->height));
+			W_UnlockCachedPatch(patch);
 		}
-		patch = W_CachePatchName(picname, PU_PATCH);
-		if (SHORT(patch->width) >= 256)
-			V_DrawCroppedPatch(8<<FRACBITS, (my + 168 - o)<<FRACBITS, FRACUNIT/2, 0, patch, 0, 0, SHORT(patch->width)/2, o);
-		else
-			V_DrawCroppedPatch(8<<FRACBITS, (my + 168 - o)<<FRACBITS, FRACUNIT, 0, patch, 0, 0, SHORT(patch->width), o);
-		W_UnlockCachedPatch(patch);
+
+		// Draw next character if it's visible and its number isn't less than the current one
+		if ((o < 128) && !((prev == next) && next < i)) // (next != i) was previously a part of this, but it's implicitly true if (prev != i) is true.
+		{
+			picname = description[next].picname;
+			if (picname[0] == '\0')
+			{
+				picname = strtok(Z_StrDup(description[next].skinname), "&");
+				for (j = 0; j < numskins; j++)
+					if (stricmp(skins[j].name, picname) == 0)
+					{
+						Z_Free(picname);
+						picname = skins[j].charsel;
+						break;
+					}
+				if (j == numskins) // AAAAAAAAAA
+				{
+					Z_Free(picname);
+					picname = skins[0].charsel;
+				}
+				strncpy(description[next].picname, picname, 8); // Only iterate once.
+			}
+			patch = W_CachePatchName(picname, PU_PATCH);
+			if (SHORT(patch->width) >= 256)
+				V_DrawCroppedPatch(8<<FRACBITS, (my + 168 - o)<<FRACBITS, FRACUNIT/2, 0, patch, 0, 0, SHORT(patch->width), o*2);
+			else
+				V_DrawCroppedPatch(8<<FRACBITS, (my + 168 - o)<<FRACBITS, FRACUNIT, 0, patch, 0, 0, SHORT(patch->width), o);
+			W_UnlockCachedPatch(patch);
+		}
+
+		// current character
+		if (PlayerMenu[i].status == IT_DISABLED) // Prevent flickering.
+			i = (lastdirection) ? prev : next; // This actually causes duplication at slow scroll speeds (<16FU per tic), but thankfully we always go quickly.
 	}
 
-	// current character
-	if (i < currentMenu->numitems && PlayerMenu[i].status != IT_DISABLED)
+	if (PlayerMenu[i].status != IT_DISABLED)
 	{
 		picname = description[i].picname;
 		if (picname[0] == '\0')
-		{
+			{
 			picname = strtok(Z_StrDup(description[i].skinname), "&");
 			for (j = 0; j < numskins; j++)
 				if (stricmp(skins[j].name, picname) == 0)
@@ -6817,8 +6867,12 @@ static void M_DrawSetupChoosePlayerMenu(void)
 					break;
 				}
 			if (j == numskins) // AAAAAAAAAA
+			{
+				Z_Free(picname);
 				picname = skins[0].charsel;
-		}
+			}
+			strncpy(description[i].picname, picname, 8); // Only iterate once.
+			}
 		patch = W_CachePatchName(picname, PU_PATCH);
 		if (o >= 0 && o <= 32)
 		{
