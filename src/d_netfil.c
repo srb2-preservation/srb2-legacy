@@ -351,7 +351,6 @@ INT32 CL_CheckFiles(void)
 {
 	INT32 i, j;
 	char wadfilename[MAX_WADPATH];
-	size_t packetsize = 0;
 	size_t filestoload = 0;
 	boolean downloadrequired = false;
 
@@ -422,8 +421,6 @@ INT32 CL_CheckFiles(void)
 				return 4;
 			}
 		}
-
-		packetsize += nameonlylength(fileneeded[i].filename) + 22;
 		fileneeded[i].status = findfile(fileneeded[i].filename, fileneeded[i].md5sum, true);
 		CONS_Debug(DBG_NETPLAY, "found %d\n", fileneeded[i].status);
 		return 4;
