@@ -26,6 +26,7 @@ typedef enum
 
 typedef enum
 {
+	FS_NOTCHECKED,
 	FS_NOTFOUND,
 	FS_FOUND,
 	FS_REQUESTED,
@@ -61,7 +62,7 @@ void D_ParseFileneeded(INT32 fileneedednum_parm, UINT8 *fileneededstr, UINT16 fi
 void CL_PrepareDownloadSaveGame(const char *tmpsave);
 
 INT32 CL_CheckFiles(void);
-void CL_LoadServerFiles(void);
+boolean CL_LoadServerFiles(void);
 void SV_SendRam(INT32 node, void *data, size_t size, freemethod_t freemethod,
 	UINT8 fileid);
 

@@ -534,6 +534,7 @@ typedef enum
 	CL_CHECKFILES,
 	CL_DOWNLOADFILES,
 	CL_ASKJOIN,
+	CL_LOADFILES,
 	CL_WAITJOINRESPONSE,
 #ifdef JOININGAME
 	CL_DOWNLOADSAVEGAME,
@@ -744,7 +745,10 @@ static inline void CL_DrawConnectionStatus(void)
 				cltext = M_GetText("Checking server files...");
 				break;
 			case CL_ASKFULLFILELIST:
-				cltext = M_GetText("This server has a LOT of files!");
+				cltext = M_GetText("Checking server addon list ...");
+				break;
+			case CL_LOADFILES:
+				cltext = M_GetText("Loading server addons...");
 				break;
 			case CL_ASKJOIN:
 			case CL_WAITJOINRESPONSE:
@@ -1438,9 +1442,14 @@ static boolean CL_ServerConnectionCheckFiles(void)
 {
 	INT32 i;
 
-	CONS_Printf(M_GetText("Checking files...\n"));
+	//CONS_Printf(M_GetText("Checking files...\n"));
 	i = CL_CheckFiles();
-	if (i == 3) // too many files
+
+	if (i == 4) // still checking ...
+	{
+		return true;
+	}
+	else if (i == 3) // too many files
 	{
 		D_QuitNetGame();
 		CL_Reset();
@@ -1469,7 +1478,7 @@ static boolean CL_ServerConnectionCheckFiles(void)
 		return false;
 	}
 	else if (i == 1)
-		cl_mode = CL_ASKJOIN;
+		cl_mode = CL_LOADFILES;
 	else
 	{
 		// must download something
@@ -1601,10 +1610,7 @@ static boolean CL_ServerConnectionTicker(const char *tmpsave, tic_t *oldtic, tic
 
 		case CL_ASKFULLFILELIST:
 			if (cl_lastcheckedfilecount == UINT16_MAX) // All files retrieved
-			{
-				if (!CL_ServerConnectionCheckFiles())
-					return false;
-			}
+				cl_mode = CL_VIEWSERVER;
 			else if (fileneedednum != cl_lastcheckedfilecount || *asksent + NEWTICRATE < I_GetTime())
 			{
 				if (CL_AskFileList(fileneedednum))
@@ -1628,11 +1634,14 @@ static boolean CL_ServerConnectionTicker(const char *tmpsave, tic_t *oldtic, tic
 			if (waitmore)
 				break; // exit the case
 
-			cl_mode = CL_ASKJOIN; // don't break case continue to cljoin request now
-			/* FALLTHRU */
+			cl_mode = CL_LOADFILES; // don't break case continue to cljoin request now
+			break;
+
+		case CL_LOADFILES:
+			if (!CL_LoadServerFiles())
+				break;
 
 		case CL_ASKJOIN:
-			CL_LoadServerFiles();
 #ifdef JOININGAME
 			// prepare structures to save the file
 			// WARNING: this can be useless in case of server not in GS_LEVEL
