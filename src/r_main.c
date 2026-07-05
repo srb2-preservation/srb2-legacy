@@ -186,7 +186,6 @@ consvar_t cv_soniccd = CVAR_INIT ("soniccd", "Off", NULL, CV_NETVAR, CV_OnOff, N
 consvar_t cv_allowmlook = CVAR_INIT ("allowmlook", "Yes", NULL, CV_NETVAR, CV_YesNo, NULL);
 consvar_t cv_showhud = CVAR_INIT ("showhud", "Yes", "Whether or not to show the Heads-Up Display", CV_CALL,  CV_YesNo, R_SetViewSize);
 consvar_t cv_translucenthud = CVAR_INIT ("translucenthud", "10", "How opaque the HUD is, lower values make the HUD more transparent", CV_SAVE, translucenthud_cons_t, NULL);
-consvar_t cv_uncappedhud = CVAR_INIT ("uncappedhud", "Yes", NULL, CV_SAVE, CV_YesNo, NULL);
 consvar_t cv_modernpause = CVAR_INIT ("modernpause", "On", "Use a blue textbox or a graphic when the game is paused", CV_SAVE, CV_OnOff, NULL);
 
 consvar_t cv_translucency = CVAR_INIT ("translucency", "On", NULL, CV_SAVE, CV_OnOff, NULL);
@@ -393,11 +392,6 @@ angle_t R_PointToAngleEx(INT32 x2, INT32 y2, INT32 x1, INT32 y1)
 		(x1 = -x1) > (y1 = -y1) ? ANGLE_180+tantoangle[SlopeDivEx(y1,x1)] :    // octant 4
 		ANGLE_270-tantoangle[SlopeDivEx(x1,y1)] :                              // octant 5
 		0;
-}
-
-INT32 R_GetHudUncap(boolean menu)
-{
-	return cv_uncappedhud.value ? ((menu) ? (rendertimefrac_unpaused & FRACMASK) : (rendertimefrac & FRACMASK) ) : 0; // Ternary operators are FUN -chromaticpipe
 }
 
 //
@@ -1839,6 +1833,7 @@ void R_RegisterEngineStuff(void)
 	CV_RegisterVar(&cv_cam_speed);
 	CV_RegisterVar(&cv_cam_rotate);
 	CV_RegisterVar(&cv_cam_rotspeed);
+	CV_RegisterVar(&cv_cam_turnmultiplier);
 	CV_RegisterVar(&cv_cam_orbit);
 	CV_RegisterVar(&cv_cam_adjust);
 
@@ -1848,8 +1843,15 @@ void R_RegisterEngineStuff(void)
 	CV_RegisterVar(&cv_cam2_speed);
 	CV_RegisterVar(&cv_cam2_rotate);
 	CV_RegisterVar(&cv_cam2_rotspeed);
+	CV_RegisterVar(&cv_cam2_turnmultiplier);
 	CV_RegisterVar(&cv_cam2_orbit);
 	CV_RegisterVar(&cv_cam2_adjust);
+
+	CV_RegisterVar(&cv_cam_clipping);
+	CV_RegisterVar(&cv_cam2_clipping);
+
+	CV_RegisterVar(&cv_cam_exact);
+	CV_RegisterVar(&cv_cam2_exact);
 
 	CV_RegisterVar(&cv_viewroll);
 	CV_RegisterVar(&cv_quakeiiiarena);
@@ -1858,7 +1860,6 @@ void R_RegisterEngineStuff(void)
 
 	CV_RegisterVar(&cv_showhud);
 	CV_RegisterVar(&cv_translucenthud);
-	CV_RegisterVar(&cv_uncappedhud);
 	CV_RegisterVar(&cv_modernpause);
 
 	CV_RegisterVar(&cv_maxportals);

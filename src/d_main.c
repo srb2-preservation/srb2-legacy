@@ -30,6 +30,11 @@
 #endif
 
 #include <time.h>
+
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h> // emscripten_set_main_loop()
+#endif
+
 #include "doomdef.h"
 #include "am_map.h"
 #include "console.h"
@@ -582,15 +587,17 @@ void D_CheckRendererState(void)
 
 tic_t rendergametic;
 
+static void D_RunFrame(void);
+static tic_t oldentertics = 0;
+static tic_t entertic = 0, realtics = 0, rendertimeout = INFTICS;
+static double deltatics = 0.0;
+static double deltasecs = 0.0;
+
+static boolean interp = false;
+static boolean doDisplay = false;
+
 void D_SRB2Loop(void)
 {
-	tic_t entertic = 0, oldentertics = 0, realtics = 0, rendertimeout = INFTICS;
-	double deltatics = 0.0;
-	double deltasecs = 0.0;
-
-	boolean interp = false;
-	boolean doDisplay = false;
-
 	if (dedicated)
 		server = true;
 
@@ -604,14 +611,12 @@ void D_SRB2Loop(void)
 	I_UpdateTime(cv_timescale.value);
 	oldentertics = I_GetTime();
 
-
 	// end of loading screen: CONS_Printf() will no more call FinishUpdate()
 	con_startup = false;
 
 	// make sure to do a d_display to init mode _before_ load a level
 	SCR_SetMode(); // change video mode
 	SCR_Recalc();
-
 
 	// Check and print which version is executed.
 	// Use this as the border between setup and the main game loop being entered.
@@ -634,7 +639,37 @@ void D_SRB2Loop(void)
 	if (gamestate != GS_TITLESCREEN)
 		V_DrawScaledPatch(0, 0, 0, W_CachePatchNum(W_GetNumForName("CONSBACK"), PU_CACHE));
 
+#if defined(__EMSCRIPTEN__)
+	emscripten_set_main_loop(D_RunFrame, 0, 1);
+#else
 	for (;;)
+	{
+		D_RunFrame();
+	}
+#endif
+}
+
+static boolean D_LockFrame = false;
+
+#ifdef __EMSCRIPTEN__
+int EMSCRIPTEN_KEEPALIVE pause_loop(void)
+{
+	D_LockFrame = true;
+	emscripten_pause_main_loop();
+	return 0;
+}
+
+int EMSCRIPTEN_KEEPALIVE resume_loop(void)
+{
+	D_LockFrame = false;
+	emscripten_resume_main_loop();
+	return 0;
+}
+#endif
+
+static void D_RunFrame(void)
+{
+	if (!D_LockFrame)
 	{
 		// capbudget is the minimum precise_t duration of a single loop iteration
 		precise_t capbudget;
@@ -647,9 +682,7 @@ void D_SRB2Loop(void)
 			capbudget = (precise_t) budget;
 		}
 
-
 		I_UpdateTime(cv_timescale.value);
-
 
 		if (lastwipetic)
 		{
@@ -661,7 +694,6 @@ void D_SRB2Loop(void)
 		entertic = I_GetTime();
 		realtics = entertic - oldentertics;
 		oldentertics = entertic;
-
 
 		if (demoplayback && gamestate == GS_LEVEL)
 		{
@@ -774,7 +806,6 @@ void D_SRB2Loop(void)
 
 		LUA_Step();
 
-
 		// Fully completed frame made.
 		finishprecise = I_GetPreciseTime();
 		if (!singletics)
@@ -794,12 +825,15 @@ void D_SRB2Loop(void)
 		deltasecs = (double)((INT64)(finishprecise - enterprecise)) / I_GetPrecisePrecision();
 		deltatics = deltasecs * NEWTICRATE;
 
+#ifndef __EMSCRIPTEN__
 		// Only take screenshots after drawing.
 		if (moviemode)
 			M_SaveFrame();
 		if (takescreenshot)
 			M_DoScreenShot();
+#endif
 	}
+	return;
 }
 
 //
@@ -941,10 +975,13 @@ static inline void D_CleanFile(void)
 // Identify the SRB2 version, and IWAD file to use.
 // ==========================================================================
 
+boolean legacypk3_loaded;
+
 static void IdentifyVersion(void)
 {
 	char *srb2wad1, *srb2wad2;
 	const char *srb2waddir = NULL;
+	legacypk3_loaded = false;
 
 #if defined (__unix__) || defined (UNIXCOMMON) || defined (HAVE_SDL)
 	// change to the directory where 'srb2.srb' is found
@@ -1014,6 +1051,12 @@ static void IdentifyVersion(void)
 	// Add our crappy patches to fix our bugs
 	D_AddFile(va(pandf,srb2waddir,"patch.dta"));
 #endif
+
+	if (FIL_ReadFileOK(va(pandf,srb2waddir,"legacy.pk3"))) 
+	{
+		D_AddFile(va(pandf,srb2waddir,"legacy.pk3"));
+		legacypk3_loaded = true;
+	}
 
 #if !defined (HAVE_SDL) || defined (HAVE_MIXER)
 	{
@@ -1158,11 +1201,11 @@ void D_SRB2Main(void)
 			if (M_CheckParm("-workdir") && M_IsNextParm())
 				snprintf(srb2home, sizeof srb2home, "%s", M_GetNextParm());
 			else
-#if defined(DEFAULTDIR) && !defined(__ANDROID__)
-				snprintf(srb2home, sizeof srb2home, "%s" PATHSEP DEFAULTDIR, userhome);
-#else // DEFAULTDIR
+#ifdef NATIVEDIR
+				snprintf(srb2home, sizeof srb2home, "%s", I_ConfigDir());
+#else
 				snprintf(srb2home, sizeof srb2home, "%s", userhome);
-#endif // DEFAULTDIR
+#endif
 			snprintf(downloaddir, sizeof downloaddir, "%s" PATHSEP "DOWNLOAD", srb2home);
 			if (dedicated)
 				snprintf(configfile, sizeof configfile, "%s" PATHSEP "d"CONFIGFILENAME, srb2home);
@@ -1183,7 +1226,27 @@ void D_SRB2Main(void)
 	I_mkdir(srb2home, 0755);
 
 	// Create addons dir
+	// But remove it first on Emscripten
 	snprintf(addonsdir, sizeof addonsdir, "%s%s%s", srb2home, PATHSEP, "addons");
+#ifdef __EMSCRIPTEN__
+	EM_ASM(
+	function force_rmdir(path) {
+		FS.readdir(path).forEach(function(f) {
+		if (f === '.' || f === '..') return;
+
+		fpath = path + '/' + f;
+
+		if (FS.analyzePath(fpath).object.isFolder) {
+			force_rmdir(fpath);
+			FS.rmdir(fpath);
+		} else {
+			FS.unlink(fpath);
+		}
+  	})
+	}
+	if (FS.analyzePath('/home/web_user/.srb2_21/addons').exists) force_rmdir('/home/web_user/.srb2_21/addons');
+	);
+#endif 
 	I_mkdir(addonsdir, 0755);
 
 	// seed M_Random because it is necessary; seed P_Random for scripts that
@@ -1290,7 +1353,10 @@ void D_SRB2Main(void)
 #ifdef USE_PATCH_DTA
 	W_VerifyFileMD5(mainwads++, ASSET_HASH_PATCH_DTA); // patch.dta
 #endif
-	// don't check music.dta because people like to modify it, and it doesn't matter if they do
+	if(legacypk3_loaded)
+		W_VerifyFileMD5(mainwads++, ASSET_HASH_LEGACY_PK3); // legacy.pk3
+	
+	// don't check music.dta because peowple like to modify it, and it doesn't matter if they do
 	// ...except it does if they slip maps in there, and that's what W_VerifyNMUSlumps is for.
 	//mainwads++; // music.dta does not increment mainwads (see <= 2.1.21)
 
@@ -1304,11 +1370,13 @@ void D_SRB2Main(void)
 	mainwads++; // patch.dta
 #endif
 	//mainwads++; // music.dta does not increment mainwads (see <= 2.1.21)
+	if(legacypk3_loaded)
+		mainwads++;
 
 #endif //ifndef DEVELOP
 
 
-	cht_Init();
+	cht_Init(); 
 
 	//---------------------------------------------------- READY SCREEN
 	// we need to check for dedicated before initialization of some subsystems

@@ -783,10 +783,10 @@ static void ST_drawInput(void)
 
 	if(stplyr->pflags & PF_NIGHTSMODE)
 		y += 8;
-	else if (modeattacking || !LUA_HudEnabled(hud_lives))
+	else if ((modeattacking || !LUA_HudEnabled(hud_lives)) || !G_GametypeUsesLives())
 		y += 24;
-	else if (G_RingSlingerGametype() && LUA_HudEnabled(hud_powerstones))
-		y -= 5;
+	/*else if (G_RingSlingerGametype() && LUA_HudEnabled(hud_powerstones))
+		y -= 5;*/
 
 	// O backing
 	V_DrawFill(x, y-1, 16, 16, inputflags|20);
@@ -945,11 +945,11 @@ static void ST_drawInput(void)
 	x -= 2;
 	y -= 13;
 
-		if (stplyr->pflags & PF_ANALOGMODE)
-		{
-			V_DrawThinString(x, y, inputflags, "ANALOG");
-			y -= 8;
-		}
+	if (stplyr->pflags & PF_ANALOGMODE)
+	{
+		V_DrawThinString(x, y, inputflags, "ANALOG");
+		y -= 8;
+	}
 	if (!demosynced) // should always be last, so it doesn't push anything else around
 		V_DrawThinString(x, y, inputflags|((leveltime & 4) ? V_YELLOWMAP : V_REDMAP), "BAD DEMO!!");
 }
@@ -966,6 +966,9 @@ static void ST_drawLevelTitle(void)
 
 	INT32 lvlttly;
 	INT32 zoney;
+
+	if (!LUA_HudEnabled(hud_stagetitle))
+		goto luahook;
 
 	if (!(timeinmap > 2 && timeinmap-3 < 110))
 		return;
@@ -1013,6 +1016,9 @@ static void ST_drawLevelTitle(void)
 
 	if (lvlttly+48 < 200)
 		V_DrawCenteredString(subttlxpos, lvlttly+48, V_ALLOWLOWERCASE, subttl);
+
+luahook:
+	LUAh_TitleCardHUD();
 }
 
 static void ST_drawFirstPersonHUD(void)

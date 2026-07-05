@@ -1004,6 +1004,7 @@ void Got_Filetxpak(void)
 		&& strcmp(filename, "rings.dta")
 		&& strcmp(filename, "patch.dta")
 		&& strcmp(filename, "music.dta")
+		&& strcmp(filename, "legacy.pk3")
 		))
 		I_Error("Tried to download \"%s\"", filename);
 

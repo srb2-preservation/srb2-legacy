@@ -452,7 +452,7 @@ static void readPlayer(MYFILE *f, INT32 num)
 					You MAY disable previous entries if you so desire...
 					But try to enable something that's already enabled and you will be sent to a free slot.
 
-					Because of this, you are allowed to edit any previous entrys you like, but only if you
+					Because of this, you are allowed to edit any previous entries you like, but only if you
 					signal that you are purposely doing so by disabling and then reenabling the slot.
 
 					... Or use MENUPOSITION first, that works too. Hell, you could edit multiple character
@@ -1007,6 +1007,12 @@ static void readlevelheader(MYFILE *f, INT32 num)
 			{
 				deh_strlcpy(mapheaderinfo[num-1]->lvlttl, word2,
 					sizeof(mapheaderinfo[num-1]->lvlttl), va("Level header %d: levelname", num));
+					strlcpy(mapheaderinfo[num-1]->selectheading, word2, sizeof(mapheaderinfo[num-1]->selectheading)); // not deh_ so only complains once
+			}
+			else if (fastcmp(word, "SELECTHEADING"))
+			{
+				deh_strlcpy(mapheaderinfo[num-1]->selectheading, word2,
+					sizeof(mapheaderinfo[num-1]->selectheading), va("Level header %d: selectheading", num));
 			}
 			else if (fastcmp(word, "SCRIPTNAME"))
 			{
@@ -1249,6 +1255,14 @@ static void readlevelheader(MYFILE *f, INT32 num)
 				else
 					mapheaderinfo[num-1]->menuflags &= ~LF2_NOVISITNEEDED;
 			}
+			else if (fastcmp(word, "WIDEICON"))
+			{
+				if (i || word2[0] == 'T' || word2[0] == 'Y')
+					mapheaderinfo[num-1]->menuflags |= LF2_WIDEICON;
+				else
+					mapheaderinfo[num-1]->menuflags &= ~LF2_WIDEICON;
+			}
+
 			else
 				deh_warning("Level header %d: unknown word '%s'", num, word);
 		}
@@ -2951,11 +2965,19 @@ static void readmaincfg(MYFILE *f)
 				if (creditscutscene > 128)
 					creditscutscene = 128;
 			}
+			else if (fastcmp(word, "USEBLACKROCK"))
+			{
+				useBlackRock = (UINT8)(value || word2[0] == 'T' || word2[0] == 'Y');
+			}
 			else if (fastcmp(word, "LOOPTITLE"))
 			{
 
 				looptitle = (value || word2[0] == 'T' || word2[0] == 'Y');
 				titlechanged = true;
+			}
+			else if (fastcmp(word, "HIDETITLEPICS"))
+			{
+				hidetitlepics = (boolean)(value || word2[0] == 'T' || word2[0] == 'Y');
 			}
 			else if (fastcmp(word, "TITLESCROLLSPEED"))
 			{
@@ -6956,6 +6978,8 @@ struct {
 	{"LF2_RECORDATTACK",LF2_RECORDATTACK},
 	{"LF2_NIGHTSATTACK",LF2_NIGHTSATTACK},
 	{"LF2_NOVISITNEEDED",LF2_NOVISITNEEDED},
+	{"LF2_WIDEICON",LF2_WIDEICON},
+
 
 	// Save override
 	{"SAVE_NEVER",SAVE_NEVER},
@@ -7084,6 +7108,23 @@ struct {
 	{"GT_HIDEANDSEEK",GT_HIDEANDSEEK},
 	{"GT_CTF",GT_CTF},
 
+	// Jingles (jingletype_t)
+	{"JT_NONE",JT_NONE},
+	{"JT_OTHER",JT_OTHER},
+	{"JT_MASTER",JT_MASTER},
+	{"JT_1UP",JT_1UP},
+	{"JT_SHOES",JT_SHOES},
+	{"JT_INV",JT_INV},
+	{"JT_MINV",JT_MINV},
+	{"JT_DROWN",JT_DROWN},
+	{"JT_SUPER",JT_SUPER},
+	{"JT_GOVER",JT_GOVER},
+	{"JT_NIGHTSTIMEOUT",JT_NIGHTSTIMEOUT},
+	{"JT_SSTIMEOUT",JT_SSTIMEOUT},
+	// {"JT_LCLEAR",JT_LCLEAR},
+	// {"JT_RACENT",JT_RACENT},
+	// {"JT_CONTSC",JT_CONTSC},
+
 	// Player state (playerstate_t)
 	{"PST_LIVE",PST_LIVE}, // Playing or camping.
 	{"PST_DEAD",PST_DEAD}, // Dead on the ground, view follows killer.
@@ -7173,6 +7214,24 @@ struct {
 	{"FF_RIPPLE",FF_RIPPLE},                   ///< Ripple the flats
 	{"FF_COLORMAPONLY",FF_COLORMAPONLY},       ///< Only copy the colormap, not the lightlevel
 	{"FF_GOOWATER",FF_GOOWATER},               ///< Used with ::FF_SWIMMABLE. Makes thick bouncey goop.
+
+		// PolyObject flags
+	{"POF_CLIPLINES",POF_CLIPLINES},               ///< Test against lines for collision
+	{"POF_CLIPPLANES",POF_CLIPPLANES},             ///< Test against tops and bottoms for collision
+	{"POF_SOLID",POF_SOLID},                       ///< Clips things.
+	{"POF_TESTHEIGHT",POF_TESTHEIGHT},             ///< Test line collision with heights
+	{"POF_RENDERSIDES",POF_RENDERSIDES},           ///< Renders the sides.
+	{"POF_RENDERTOP",POF_RENDERTOP},               ///< Renders the top.
+	{"POF_RENDERBOTTOM",POF_RENDERBOTTOM},         ///< Renders the bottom.
+	{"POF_RENDERPLANES",POF_RENDERPLANES},         ///< Renders top and bottom.
+	{"POF_RENDERALL",POF_RENDERALL},               ///< Renders everything.
+	{"POF_INVERT",POF_INVERT},                     ///< Inverts collision (like a cage).
+	{"POF_INVERTPLANES",POF_INVERTPLANES},         ///< Render inside planes.
+	{"POF_INVERTPLANESONLY",POF_INVERTPLANESONLY}, ///< Only render inside planes.
+	{"POF_PUSHABLESTOP",POF_PUSHABLESTOP},         ///< Pushables will stop movement.
+	{"POF_LDEXEC",POF_LDEXEC},                     ///< This PO triggers a linedef executor.
+	{"POF_ONESIDE",POF_ONESIDE},                   ///< Only use the first side of the linedef.
+	{"POF_NOSPECIALS",POF_NOSPECIALS},             ///< Don't apply sector specials.
 
 	// Slope flags
 	{"SL_NOPHYSICS",SL_NOPHYSICS},      // Don't do momentum adjustment with this slope
@@ -8065,7 +8124,12 @@ static inline int lib_getenum(lua_State *L)
 	} else if (fastcmp(word,"VERSIONSTRING")) {
 		lua_pushstring(L, VERSIONSTRING);
 		return 1;
-	} else if (fastcmp(word, "token")) {
+	}
+	else if (fastcmp(word,"CUSTOMVERSION")) {
+		lua_pushstring(L, customversionstring);
+		return 1;
+	} 
+	else if (fastcmp(word, "token")) {
 		lua_pushinteger(L, token);
 		return 1;
 	}

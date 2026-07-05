@@ -3473,10 +3473,7 @@ boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled
 			dummy.z = thiscam->z;
 			dummy.height = thiscam->height;
 			if (!resetcalled && !(player->pflags & PF_NOCLIP) && !P_CheckSight(&dummy, player->mo)) // TODO: "P_CheckCameraSight" instead.
-			{
 				P_ResetCamera(player, thiscam);
-				resetcalled = true;
-			}
 			else
 			{
 				fixed_t camspeed = P_AproxDistance(thiscam->momx, thiscam->momy);
@@ -3506,7 +3503,7 @@ boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled
 		// adjust height
 		thiscam->z += thiscam->momz + player->mo->pmomz;
 
-		if (!itsatwodlevel && !(player->pflags & PF_NOCLIP))
+		if (!itsatwodlevel && !(player->pflags & PF_NOCLIP) && !P_IsCameraNoclip(thiscam))
 		{
 			// clip movement
 			if (thiscam->z <= thiscam->floorz) // hit the floor

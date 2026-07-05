@@ -42,6 +42,7 @@
 #include "i_system.h"
 #include "md5.h"
 #include "lua_script.h"
+#include "lua_hook.h"
 #ifdef SCANTHINGS
 #include "p_setup.h" // P_ScanThings
 #endif
@@ -810,6 +811,8 @@ UINT16 W_InitFile(const char *filename)
 	default:
 		break;
 	}
+
+	LUAh_AddonLoaded();
 
 	W_InvalidateLumpnumCache();
 	return wadfile->numlumps;
@@ -1752,12 +1755,12 @@ void W_VerifyFileMD5(UINT16 wadfilenum, const char *matchmd5)
 	{
 		char actualmd5text[2*MD5_LEN+1];
 		PrintMD5String(wadfiles[wadfilenum]->md5sum, actualmd5text);
-/*#ifdef _DEBUG
+#ifdef _DEBUG
 		CONS_Printf
 #else
 		I_Error
 #endif
-			(M_GetText("File is corrupt or has been modified: %s (found md5: %s, wanted: %s)\n"), wadfiles[wadfilenum]->filename, actualmd5text, matchmd5);*/
+			(M_GetText("File is corrupt or has been modified: %s (found md5: %s, wanted: %s)\n"), wadfiles[wadfilenum]->filename, actualmd5text, matchmd5);
 	}
 #endif
 }

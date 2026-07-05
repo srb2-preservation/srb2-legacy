@@ -47,7 +47,7 @@ extern fixed_t renderdeltatics;
 // The current render is a new logical tic
 extern boolean renderisnewtic;
 
-INT32 R_GetHudUncap(boolean menu);
+
 
 //
 // Lighting LUT.
@@ -220,7 +220,7 @@ extern ps_metric_t ps_numpolyobjects;
 // REFRESH - the actual rendering functions.
 //
 
-extern consvar_t cv_showhud, cv_translucenthud, cv_uncappedhud, cv_modernpause;
+extern consvar_t cv_showhud, cv_translucenthud, cv_modernpause;
 extern consvar_t cv_homremoval;
 extern consvar_t cv_chasecam, cv_chasecam2;
 extern consvar_t cv_flipcam, cv_flipcam2;

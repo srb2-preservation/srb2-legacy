@@ -56,7 +56,6 @@
 #include "../m_menu.h"
 #include "../d_main.h"
 #include "../s_sound.h"
-#include "../i_sound.h"  // midi pause/unpause
 #include "../i_joy.h"
 #include "../st_stuff.h"
 #include "../hu_stuff.h"
@@ -187,6 +186,7 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen, SDL_bool 
 		{
 			wasfullscreen = SDL_TRUE;
 			SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+			I_SetBorderlessWindow();
 		}
 		else // windowed mode
 		{
@@ -194,6 +194,7 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen, SDL_bool 
 			{
 				wasfullscreen = SDL_FALSE;
 				SDL_SetWindowFullscreen(window, 0);
+				I_SetBorderlessWindow();
 			}
 			// Reposition window only in windowed mode
 			SDL_SetWindowSize(window, width, height);
@@ -215,6 +216,7 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen, SDL_bool 
 		if (fullscreen)
 		{
 			SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+			I_SetBorderlessWindow();
 		}
 	}
 
@@ -577,7 +579,7 @@ static void Impl_HandleWindowEvent(SDL_WindowEvent evt)
 		// Tell game we got focus back, resume music if necessary
 		window_notinfocus = false;
 		if (!paused)
-			I_ResumeSong(); //resume it
+			S_ResumeAudio(); //resume it
 
 		if (!firsttimeonmouse)
 		{
@@ -1127,8 +1129,10 @@ void I_OsPolling(void)
 {
 	SDL_Keymod mod;
 
+#ifndef __EMSCRIPTEN__
 	if (consolevent)
 		I_GetConsoleEvents();
+#endif
 	if (SDL_WasInit(SDL_INIT_JOYSTICK) == SDL_INIT_JOYSTICK)
 	{
 		SDL_JoystickUpdate();
@@ -1745,6 +1749,8 @@ static SDL_bool Impl_CreateWindow(SDL_bool fullscreen)
 		return SDL_FALSE;
 	}
 
+	I_SetBorderlessWindow();
+
 	return Impl_CreateContext();
 }
 
@@ -1870,7 +1876,11 @@ void I_StartupGraphics(void)
 #endif
 	Impl_SetWindowIcon();
 
+#ifdef __EMSCRIPTEN__
+	VID_SetMode(VID_GetModeForSize(BASEVIDWIDTH*2, BASEVIDHEIGHT*2));
+#else
 	VID_SetMode(VID_GetModeForSize(BASEVIDWIDTH, BASEVIDHEIGHT));
+#endif
 
 	if (M_CheckParm("-nomousegrab"))
 		mousegrabok = SDL_FALSE;

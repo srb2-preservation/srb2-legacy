@@ -29,6 +29,10 @@
 #include "../config.h.in"
 #endif
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
+
 #include <signal.h>
 
 #ifdef _WIN32
@@ -54,6 +58,9 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #ifdef __GNUC__
 #include <unistd.h>
 #endif
+#ifdef __EMSCRIPTEN__
+#undef HAVE_TERMIOS // do not read on /dev/tty, JavaScript alert() are blocking
+#endif
 #if defined (__unix__) || defined (UNIXCOMMON)
 #include <poll.h>
 #include <fcntl.h>
@@ -77,7 +84,7 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 
 #if defined (__unix__) || defined(__APPLE__) || (defined (UNIXCOMMON) && !defined (__HAIKU__))
 #include <time.h>
-#if defined (__linux__)
+#if defined (__linux__) || defined(__EMSCRIPTEN__)
 #include <sys/vfs.h>
 #else
 #include <sys/param.h>
@@ -87,8 +94,10 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #ifdef FREEBSD
 #include <kvm.h>
 #endif
+#ifndef EMSCRIPTEN
 #include <nlist.h>
 #include <sys/sysctl.h>
+#endif
 #endif
 #endif
 
@@ -104,7 +113,9 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #include <errno.h>
 #include <sys/wait.h>
 #ifndef __HAIKU__ // haiku's crash dialog is just objectively better
+#ifndef __EMSCRIPTEN__ // WASM does not support fork()
 #define NEWSIGNALHANDLER
+#endif
 #endif
 #endif
 
@@ -148,22 +159,6 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #endif
 #include <time.h>
 #define UNIXBACKTRACE
-#endif
-
-// Locations for searching the srb2.srb
-#if defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON)
-#define DEFAULTWADLOCATION1 "/usr/local/share/games/SRB2legacy"
-#define DEFAULTWADLOCATION2 "/usr/local/games/SRB2legacy"
-#define DEFAULTWADLOCATION3 "/usr/share/games/SRB2legacy"
-#define DEFAULTWADLOCATION4 "/usr/games/SRB2legacy"
-#define DEFAULTSEARCHPATH1 "/usr/local/games"
-#define DEFAULTSEARCHPATH2 "/usr/games"
-#define DEFAULTSEARCHPATH3 "/usr/local"
-#elif defined (_WIN32)
-#define DEFAULTWADLOCATION1 "c:\\games\\srb2legacy"
-#define DEFAULTWADLOCATION2 "\\games\\srb2legacy"
-#define DEFAULTSEARCHPATH1 "c:\\games"
-#define DEFAULTSEARCHPATH2 "\\games"
 #endif
 
 /**	\brief WAD file to look for
@@ -976,8 +971,12 @@ void I_OutputMsg(const char *fmt, ...)
 	}
 #endif
 
+#ifdef __EMSCRIPTEN__
+	fprintf(stdout, "%s", txt);
+#else
 	if (!framebuffer)
 		fprintf(stderr, "%s", txt);
+#endif
 #ifdef HAVE_TERMIOS
 	if (consolevent)
 	{
@@ -2326,7 +2325,7 @@ void I_Sleep(UINT32 ms)
 
 void I_SleepDuration(precise_t duration)
 {
-#if defined(__linux__) || defined(__FreeBSD__) || defined(__HAIKU__) || defined(__OpenBSD__)
+#if defined(__linux__) || defined(__FreeBSD__) || defined(__HAIKU__) || defined(__OpenBSD__) || defined(__EMSCRIPTEN__)
 	UINT64 precision = I_GetPrecisePrecision();
 	precise_t dest = I_GetPreciseTime() + duration;
 #ifdef __OpenBSD__
@@ -2540,6 +2539,13 @@ void I_Quit(void)
 		free(myargv); // Deallocate allocated memory
 death:
 	W_Shutdown();
+#ifdef __EMSCRIPTEN__
+	emscripten_cancel_main_loop();
+	EM_ASM({
+		noExitRuntime = false;
+		window.location.reload();
+	});
+#endif
 	exit(0);
 }
 
@@ -2746,7 +2752,7 @@ void I_ShutdownSystem(void)
 void I_GetDiskFreeSpace(INT64 *freespace)
 {
 #if defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON)
-#if defined (SOLARIS) || defined (__HAIKU__)
+#if defined (SOLARIS) || defined (__HAIKU__) || defined (__EMSCRIPTEN__)
 	*freespace = INT32_MAX;
 	return;
 #else // Both Linux and BSD have this, apparently.
@@ -2928,6 +2934,88 @@ const char *I_ClipboardPaste(void)
 	return (const char *)&clipboard_modified;
 }
 
+#ifdef NATIVEDIR
+#ifndef __APPLE__
+// Reference for XDG directories:
+// <https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html>
+// from dsda-doom
+const char *I_GetXDGDataHome(const char *userhome)
+{
+	static char *datahome = 0;
+
+	if (!datahome)
+	{
+		const char *xdgdatahome = I_GetEnv("XDG_DATA_HOME");
+
+		if (!xdgdatahome || !*xdgdatahome)
+		{
+			size_t datahomesize = strlen(userhome) + strlen("/.local/share") + 1;
+			datahome = malloc(datahomesize);
+			snprintf(datahome, datahomesize, "%s%s%s", userhome, userhome[strlen(userhome)-1] != '/' ? "/" : "", ".local/share");
+		}
+		else
+		{
+			datahome = strdup(xdgdatahome);
+		}
+	}
+	return datahome;
+}
+#endif
+
+static const char *I_GetXDGDataDirs(void)
+{
+	const char *datadirs = I_GetEnv("XDG_DATA_DIRS");
+
+	if (!datadirs || !*datadirs)
+		return "/usr/local/share/:/usr/share/";
+	return datadirs;
+}
+#endif
+
+//
+// I_ConfigDir
+// from dsda-doom
+//
+const char *I_ConfigDir(void)
+{
+#ifdef NATIVEDIR
+	static char *base = NULL;
+
+	if (!base)
+	{
+		const char *home = D_Home();
+
+		// First, try legacy directory.
+		size_t basesize = strlen(home) + 1 + strlen(DEFAULTDIR) + 1;
+		base = malloc(basesize);
+		snprintf(base, basesize, "%s/" DEFAULTDIR, home);
+
+#ifndef __EMSCRIPTEN__
+		if (FIL_FileExists(base) == 0)
+		{
+			// Legacy directory is not accessible. Use XDG directory.
+			free(base);
+
+#ifdef __APPLE__
+			basesize = strlen(home) + strlen("/Library/Application Support/srb2-legacy") + 1;
+			base = malloc(basesize);
+			snprintf(base, basesize, "%s/Library/Application Support/srb2-legacy", home);
+#else
+			const char *xdgdatahome = I_GetXDGDataHome(home);
+			basesize = strlen(xdgdatahome) + strlen("/srb2-legacy") + 1;
+			base = malloc(basesize);
+			snprintf(base, basesize, "%s/srb2-legacy", xdgdatahome);
+#endif
+		}
+#endif
+	}
+
+	return base;
+#else
+	return NULL;
+#endif
+}
+
 /**	\brief	The isWadPathOk function
 
 	\param	path	string path to check
@@ -2963,6 +3051,7 @@ static boolean isWadPathOk(const char *path)
 	return false;
 }
 
+#ifdef NATIVEDIR
 static void pathonly(char *s)
 {
 	size_t j;
@@ -3006,6 +3095,7 @@ static const char *searchWad(const char *searchDir)
 	}
 	return NULL;
 }
+#endif
 
 /**	\brief go through all possible paths and look for srb2.srb
 
@@ -3014,7 +3104,10 @@ static const char *searchWad(const char *searchDir)
 static const char *locateWad(void)
 {
 	const char *envstr;
+#if defined(NATIVEDIR) || defined(__ANDROID__)
 	const char *WadPath;
+#endif
+
 #if defined(__ANDROID__)
 	// Access the shared storage location
 	WadPath = I_SharedStorageLocation();
@@ -3083,89 +3176,57 @@ static const char *locateWad(void)
 		return returnWadPath;
 	}
 #endif
-#ifdef ANDROID
+#ifdef __ANDROID__
 	return "/storage/emulated/0/SRB2 Legacy";
 #endif
 
-	// examine default dirs
-#ifdef DEFAULTWADLOCATION1
-	I_OutputMsg(","DEFAULTWADLOCATION1);
-	strcpy(returnWadPath, DEFAULTWADLOCATION1);
-	if (isWadPathOk(returnWadPath))
-		return returnWadPath;
-#endif
-#ifdef DEFAULTWADLOCATION2
-	I_OutputMsg(","DEFAULTWADLOCATION2);
-	strcpy(returnWadPath, DEFAULTWADLOCATION2);
-	if (isWadPathOk(returnWadPath))
-		return returnWadPath;
-#endif
-#ifdef DEFAULTWADLOCATION3
-	I_OutputMsg(","DEFAULTWADLOCATION3);
-	strcpy(returnWadPath, DEFAULTWADLOCATION3);
-	if (isWadPathOk(returnWadPath))
-		return returnWadPath;
-#endif
-#ifdef DEFAULTWADLOCATION4
-	I_OutputMsg(","DEFAULTWADLOCATION4);
-	strcpy(returnWadPath, DEFAULTWADLOCATION4);
-	if (isWadPathOk(returnWadPath))
-		return returnWadPath;
-#endif
-#ifdef DEFAULTWADLOCATION5
-	I_OutputMsg(","DEFAULTWADLOCATION5);
-	strcpy(returnWadPath, DEFAULTWADLOCATION5);
-	if (isWadPathOk(returnWadPath))
-		return returnWadPath;
-#endif
-#ifdef DEFAULTWADLOCATION6
-	I_OutputMsg(","DEFAULTWADLOCATION6);
-	strcpy(returnWadPath, DEFAULTWADLOCATION6);
-	if (isWadPathOk(returnWadPath))
-		return returnWadPath;
-#endif
-#ifdef DEFAULTWADLOCATION7
-	I_OutputMsg(","DEFAULTWADLOCATION7);
-	strcpy(returnWadPath, DEFAULTWADLOCATION7);
-	if (isWadPathOk(returnWadPath))
-		return returnWadPath;
-#endif
-#ifndef NOHOME
-	// find in $HOME
-	I_OutputMsg(",HOME/" DEFAULTDIR);
-	if ((envstr = I_GetEnv("HOME")) != NULL)
+#ifdef NATIVEDIR
+	// examine $XDG_DATA_DIRS/games/srb2-legacy and $XDG_DATA_DIRS/srb2-legacy
+	// by default this includes:
+	// - /usr/local/share/games/srb2-legacy
+	// - /usr/share/games/srb2-legacy
+	// - /usr/local/share/srb2-legacy
+	// - /usr/share/srb2-legacy
+	char *ptr, *slash, *datadirs = strdup(I_GetXDGDataDirs());
+
+	ptr = strtok(datadirs, ":");
+	while (ptr)
 	{
-		char *tmp = malloc(strlen(envstr) + 1 + sizeof(DEFAULTDIR));
-		strcpy(tmp, envstr);
-		strcat(tmp, "/");
-		strcat(tmp, DEFAULTDIR);
-		WadPath = searchWad(tmp);
-		free(tmp);
+		slash = ptr[strlen(ptr)-1] != '/' ? "/" : "";
+
+		I_OutputMsg(",%s%sgames/srb2-legacy", ptr, slash);
+		snprintf(returnWadPath, sizeof(returnWadPath), "%s%sgames/srb2-legacy", ptr, slash);
+		if (isWadPathOk(returnWadPath))
+		{
+			free(datadirs);
+			return returnWadPath;
+		}
+
+		I_OutputMsg(",%s%ssrb2-legacy", ptr, slash);
+		snprintf(returnWadPath, sizeof(returnWadPath), "%s%ssrb2-legacy", ptr, slash);
+		if (isWadPathOk(returnWadPath))
+		{
+			free(datadirs);
+			return returnWadPath;
+		}
+
+		ptr = strtok(NULL, ":");
+	}
+	free(datadirs);
+
+#ifndef NOHOME
+	// find in config dir
+	envstr = I_ConfigDir();
+	I_OutputMsg(",%s", envstr);
+	if (envstr != NULL)
+	{
+		WadPath = searchWad(envstr);
 		if (WadPath)
 			return WadPath;
 	}
 #endif
-#ifdef DEFAULTSEARCHPATH1
-	// find in /usr/local
-	I_OutputMsg(", in:"DEFAULTSEARCHPATH1);
-	WadPath = searchWad(DEFAULTSEARCHPATH1);
-	if (WadPath)
-		return WadPath;
 #endif
-#ifdef DEFAULTSEARCHPATH2
-	// find in /usr/games
-	I_OutputMsg(", in:"DEFAULTSEARCHPATH2);
-	WadPath = searchWad(DEFAULTSEARCHPATH2);
-	if (WadPath)
-		return WadPath;
-#endif
-#ifdef DEFAULTSEARCHPATH3
-	// find in ???
-	I_OutputMsg(", in:"DEFAULTSEARCHPATH3);
-	WadPath = searchWad(DEFAULTSEARCHPATH3);
-	if (WadPath)
-		return WadPath;
-#endif
+
 	// if nothing was found
 	return NULL;
 }

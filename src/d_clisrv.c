@@ -554,7 +554,7 @@ static boolean CL_CheckMainWads(const char *file_name)
 {
 	if ((strcmp(file_name, "srb2.srb") && strcmp(file_name, "srb2.wad") && strcmp(file_name, "zones.dta")
 			&& strcmp(file_name, "player.dta") && strcmp(file_name, "rings.dta") && strcmp(file_name, "patch.dta")
-			&& strcmp(file_name, "music.dta")
+			&& strcmp(file_name, "music.dta") && strcmp(file_name, "legacy.pk3")
 		))
 		return false;
 	else

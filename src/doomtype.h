@@ -68,7 +68,8 @@
 	#define gconst
 #endif
 
-#if defined (_WIN32) || defined (__HAIKU__)
+
+#if defined (_WIN32) || defined (__HAIKU__) || defined(__EMSCRIPTEN__)
 #define HAVE_DOSSTR_FUNCS
 #endif
 

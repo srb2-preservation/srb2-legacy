@@ -310,7 +310,13 @@ enum {
 	LE_BRAKVILEATACK   = -6  // Brak's doing his LOS attack, oh noes
 };
 
-// Name of local directory for config files and savegames
+// Use XDG Base Directory Specification (*nix) or Application Support (macOS) by default if defined
+#if (defined (__unix__) || defined (UNIXCOMMON)) && !defined(__ANDROID__)
+#define NATIVEDIR
+#endif
+
+// Name of fallback local directory for config files and savegames
+// Depreciated in favor of NATIVEDIR
 #if (defined (__unix__) || defined (UNIXCOMMON)) && !defined (__CYGWIN__) && !defined (__APPLE__)
 #define DEFAULTDIR ".srb2_21"
 #else
@@ -502,12 +508,14 @@ extern const char *compdate, *comptime, *comprevision, *compbranch, *compnote;
 ///	Shuffle's incomplete OpenGL sorting code.
 #define SHUFFLE // This has nothing to do with sorting, why was it disabled?
 
+#if !(defined (__EMSCRIPTEN__) && (__SIZEOF_SIZE_T__ == 4))
 ///	Allow the use of the SOC RESETINFO command.
 ///	\note	Builds that are tight on memory should disable this.
 ///	    	This stops the game from storing backups of the states, sprites, and mobjinfo tables.
 ///	    	Though this info is compressed under normal circumstances, it's still a lot of extra
 ///	    	memory that never gets touched.
 #define ALLOW_RESETDATA
+#endif
 
 #ifndef NONET
 ///	Display a connection screen on join attempts.
