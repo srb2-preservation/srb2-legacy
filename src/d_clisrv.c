@@ -1641,6 +1641,7 @@ static boolean CL_ServerConnectionTicker(const char *tmpsave, tic_t *oldtic, tic
 			if (!CL_LoadServerFiles())
 				break;
 
+			/* FALLTHRU */
 		case CL_ASKJOIN:
 #ifdef JOININGAME
 			// prepare structures to save the file
