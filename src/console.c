@@ -134,7 +134,8 @@ static CV_PossibleValue_t backcolor_cons_t[] = {{0, "White"}, 		{1, "Black"},		{
 												{9, "Gold"},		{10,"Yellow"},		{11,"Emerald"},
 												{12,"Green"},		{13,"Cyan"},		{14,"Steel"},
 												{15,"Periwinkle"},	{16,"Blue"},		{17,"Purple"},
-												{18,"Lavender"}, {19,"Gray"},
+												{18,"Lavender"}, {19,"Gray"}, 
+												{19, "Grey"}, // Fancy some tea, sir?
 												{0, NULL}};
 
 consvar_t cons_backcolor = CVAR_INIT ("con_backcolor", "Green", "Color of the console background",  CV_CALL|CV_SAVE, backcolor_cons_t, CONS_backcolor_Change);

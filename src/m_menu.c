@@ -2069,10 +2069,10 @@ menu_t OP_JoystickSetDef =
 
 menu_t OP_CameraOptionsDef = DEFAULTMENUSTYLE(
 	/*MN_OP_MAIN + (MN_OP_P1CONTROLS << 6) + (MN_OP_P1CAMERA << 12),*/ // Menu SOC :money_mouth:
-	"M_CONTRO", OP_CameraOptionsMenu, &OP_P1ControlsDef, 35, 30);
+	"M_CONTRO", OP_CameraOptionsMenu, &OP_P1ControlsDef, 30, 30);
 menu_t OP_Camera2OptionsDef = DEFAULTMENUSTYLE(
 	/*MN_OP_MAIN + (MN_OP_P2CONTROLS << 6) + (MN_OP_P2CAMERA << 12),*/
-	"M_CONTRO", OP_Camera2OptionsMenu, &OP_P2ControlsDef, 35, 30);
+	"M_CONTRO", OP_Camera2OptionsMenu, &OP_P2ControlsDef, 30, 30);
 
 menu_t OP_VideoOptionsDef = DEFAULTSCROLLMENUSTYLE("M_VIDEO", OP_VideoOptionsMenu, &OP_MainDef, 30, 30);
 menu_t OP_VideoModeDef =
