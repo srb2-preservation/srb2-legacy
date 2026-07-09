@@ -1480,6 +1480,8 @@ static menuitem_t OP_ScreenshotOptionsMenu[] =
 	// Shows when GIF is selected
 	{IT_STRING|IT_CVAR, NULL, "Region Optimizing", NULL,  &cv_gif_optimize,              80},
 	{IT_STRING|IT_CVAR, NULL, "Downscaling", NULL,       &cv_gif_downscale,             85},
+	{IT_STRING|IT_CVAR, NULL, "Maximum Filesize", NULL,       &cv_gif_maxsize,             90},
+	{IT_STRING|IT_CVAR, NULL, "Rolling GIFs", NULL,       &cv_gif_rolling,             95},
 	// Shows when APNG is selected
 	{IT_STRING|IT_CVAR, NULL, "Memory Level", NULL,       &cv_zlib_memorya,              80},
 	{IT_STRING|IT_CVAR, NULL, "Compression Level", NULL,  &cv_zlib_levela,               85},
@@ -1493,9 +1495,9 @@ enum
 	op_movie_folder = 9,
 	op_screenshot_capture = 10,
 	op_screenshot_gif_start = 11,
-	op_screenshot_gif_end = 12,
-	op_screenshot_apng_start = 13,
-	op_screenshot_apng_end = 16,
+	op_screenshot_gif_end = 14,
+	op_screenshot_apng_start = 15,
+	op_screenshot_apng_end = 18,
 };
 
 static menuitem_t OP_EraseDataMenu[] =
