@@ -14,6 +14,7 @@
 ///        which by-the-way: the patents have expired for over ten years ago.
 
 #include "m_anigif.h"
+#include "m_misc.h"
 #include "d_main.h"
 #include "z_zone.h"
 #include "v_video.h"
@@ -26,8 +27,18 @@
 // GIFs are always little-endian
 #include "byteptr.h"
 
+// in MB
+CV_PossibleValue_t gif_maxsize_cons_t[] = {
+	{1, "MIN"},
+	{500, "MAX"},
+	{0, "Don\'t cap"},
+{0, NULL}};
+
 consvar_t cv_gif_optimize = CVAR_INIT ("gif_optimize", "On", NULL, CV_SAVE, CV_OnOff, NULL);
 consvar_t cv_gif_downscale =  CVAR_INIT("gif_downscale", "On", NULL, CV_SAVE, CV_OnOff, NULL);
+
+consvar_t cv_gif_maxsize =  CVAR_INIT ("gif_maxsize", "10", "Maximum size a GIF can reach before it is finalized", CV_SAVE, gif_maxsize_cons_t, NULL);
+consvar_t cv_gif_rolling =  CVAR_INIT ("gif_rolling", "Off", "Record additional GIFs after filesize limit is set", CV_SAVE, CV_OnOff, NULL);
 
 #ifdef HAVE_ANIGIF
 static boolean gif_optimize = false; // So nobody can do something dumb
@@ -676,11 +687,14 @@ void GIF_frame(void)
 //
 INT32 GIF_close(void)
 {
+	float gif_size;
+
 	if (!gif_out)
 		return 0;
 
 	// final terminator.
 	fwrite(";", 1, 1, gif_out);
+	gif_size = GIF_GetSizeMB();
 	fclose(gif_out);
 	gif_out = NULL;
 
@@ -696,7 +710,15 @@ INT32 GIF_close(void)
 		Z_Free(giflzw_hashTable);
 	giflzw_hashTable = NULL;
 
-	CONS_Printf(M_GetText("Animated gif closed; wrote %d frames\n"), gif_frames);
+	CONS_Printf(M_GetText("Animated gif closed; wrote %d frames (%0.2f MB)\n"),
+		gif_frames, gif_size);
 	return 1;
+}
+float GIF_GetSizeMB(void)
+{
+	const float kMb = 1024.f * 1024.f;
+	float size = (moviemode == MM_GIF) ? ftell(gif_out) : 0;
+
+	return size / kMb;
 }
 #endif //ifdef HAVE_ANIGIF

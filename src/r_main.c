@@ -204,6 +204,8 @@ consvar_t cv_maxportals = CVAR_INIT ("maxportals", "2",  NULL, CV_SAVE, maxporta
 
 consvar_t cv_secbright = CVAR_INIT("r_secbright", "0", "Sets minimum sector brightness (0-255), useful for dark areas", CV_SAVE, secbright_cons_t, NULL);
 
+consvar_t cv_moviemodeinfo = CVAR_INIT ("moviemodeinfo", "Yes", "Show info about movie being recorded on the heads-up display", CV_SAVE, CV_YesNo, NULL);
+
 
 void SplitScreen_OnChange(void)
 {
@@ -1861,6 +1863,7 @@ void R_RegisterEngineStuff(void)
 	CV_RegisterVar(&cv_showhud);
 	CV_RegisterVar(&cv_translucenthud);
 	CV_RegisterVar(&cv_modernpause);
+	CV_RegisterVar(&cv_moviemodeinfo);
 
 	CV_RegisterVar(&cv_maxportals);
 

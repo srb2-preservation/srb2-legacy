@@ -163,6 +163,7 @@ consvar_t cv_apng_delay = CVAR_INIT ("apng_speed", "1/2x", NULL, CV_SAVE, apng_d
 boolean takescreenshot = false; // Take a screenshot this tic
 
 moviemode_t moviemode = MM_OFF;
+static INT32 movieframesrecorded = 0;
 
 /** Returns the map number for a map identified by the last two characters in
   * its name.
@@ -1146,6 +1147,8 @@ void M_StartMovie(void)
 	else if (moviemode == MM_SCREENSHOT)
 		CONS_Printf(M_GetText("Movie mode enabled (%s).\n"), "screenshots");
 
+	 movieframesrecorded = 0;
+
 	//singletics = (moviemode != MM_OFF);
 #endif
 }
@@ -1167,7 +1170,31 @@ void M_SaveFrame(void)
 			takescreenshot = true;
 			return;
 		case MM_GIF:
+			movieframesrecorded++;
+
+			float old_size = GIF_GetSizeMB();
 			GIF_frame();
+
+			// size cap
+			if (cv_gif_maxsize.value)
+			{
+				float cur_size = GIF_GetSizeMB();
+				float diff = (cur_size - old_size) * 8;
+
+				if (cur_size >= (cv_gif_maxsize.value * 1024 * 1024) - diff)
+				{
+					M_StopMovie();
+
+					// re-record
+					if (cv_gif_rolling.value)
+					{
+						M_StartMovie();
+						return;
+					}
+
+					CONS_Alert(CONS_NOTICE, M_GetText("Max movie size reached\n"));
+				}
+			}
 			return;
 		case MM_APNG:
 #ifdef USE_APNG
@@ -1178,6 +1205,8 @@ void M_SaveFrame(void)
 					moviemode = MM_OFF;
 					return;
 				}
+
+				movieframesrecorded++;
 
 				if (rendermode == render_soft)
 				{
@@ -1250,6 +1279,33 @@ void M_StopMovie(void)
 	I_SyncIDBFS();
 	CONS_Printf(M_GetText("Movie mode disabled.\n"));
 #endif
+}
+
+INT32 M_RecordedFrames(void)
+{
+	return movieframesrecorded;
+}
+
+float M_SavedSize(void)
+{
+	if (!moviemode)
+		return 0;
+	
+	switch (moviemode)
+	{	
+		case MM_GIF:
+			return GIF_GetSizeMB();
+		case MM_APNG:
+#ifdef USE_APNG
+		return ftell(apng_FILE);
+#else
+		return 0;
+#endif
+		default:
+			return 0;
+	}
+	// bruh
+	return 0;
 }
 
 // ==========================================================================
