@@ -1,3 +1,9 @@
+# 2.1.29 R1
+### Bug/Regression fixes
+- Fix sky culling in the OpenGL renderer https://github.com/srb2-preservation/srb2-legacy/commit/996a6daa3c07603c515ea136909fa5679363db4a 
+
+**Full Changelog**: https://github.com/srb2-preservation/srb2-legacy/compare/SRB2_release_2.1.29...SRB2_release_2.1.29R1
+
 # 2.1.29
 ### Major new additions
 

@@ -383,12 +383,6 @@ void HWR_DrawCroppedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscal
 	fwidth = w;
 	fheight = h;
 
-	if (fwidth > w - sx)
-		fwidth = w - sx;
-
-	if (fheight > h - sy)
-		fheight = h - sy;
-
 	if (fwidth > SHORT(gpatch->width))
 		fwidth = SHORT(gpatch->width);
 
@@ -423,10 +417,18 @@ void HWR_DrawCroppedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscal
 
 	v[0].z = v[1].z = v[2].z = v[3].z = 1.0f;
 
-	v[0].s = v[3].s = ((sx)/(float)SHORT(gpatch->width) )*gpatch->max_s;
-	v[2].s = v[1].s = ((w )/(float)SHORT(gpatch->width) )*gpatch->max_s;
-	v[0].t = v[1].t = ((sy)/(float)SHORT(gpatch->height))*gpatch->max_t;
-	v[2].t = v[3].t = ((h )/(float)SHORT(gpatch->height))*gpatch->max_t;
+	v[0].s = v[3].s = ((sx  )/(float)SHORT(gpatch->width) )*gpatch->max_s;
+	if (sx + w > SHORT(gpatch->width))
+		v[2].s = v[1].s = gpatch->max_s - ((sx+w)/(float)(gpatch->width))*gpatch->max_s;
+	else
+		v[2].s = v[1].s = ((sx+w)/(float)SHORT(gpatch->width) )*gpatch->max_s;
+
+	v[0].t = v[1].t = ((sy  )/(float)SHORT(gpatch->height))*gpatch->max_t;
+	if (sy + h > SHORT(gpatch->height))
+		v[2].t = v[3].t = gpatch->max_t - ((sy+h)/(float)(gpatch->height))*gpatch->max_t;
+	else
+		v[2].t = v[3].t = ((sy+h)/(float)SHORT(gpatch->height))*gpatch->max_t;
+
 
 	flags = PF_Translucent|PF_NoDepthTest;
 

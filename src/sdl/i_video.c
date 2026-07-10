@@ -56,7 +56,6 @@
 #include "../m_menu.h"
 #include "../d_main.h"
 #include "../s_sound.h"
-#include "../i_sound.h"  // midi pause/unpause
 #include "../i_joy.h"
 #include "../st_stuff.h"
 #include "../hu_stuff.h"
@@ -187,6 +186,7 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen, SDL_bool 
 		{
 			wasfullscreen = SDL_TRUE;
 			SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+			I_SetBorderlessWindow();
 		}
 		else // windowed mode
 		{
@@ -194,6 +194,7 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen, SDL_bool 
 			{
 				wasfullscreen = SDL_FALSE;
 				SDL_SetWindowFullscreen(window, 0);
+				I_SetBorderlessWindow();
 			}
 			// Reposition window only in windowed mode
 			SDL_SetWindowSize(window, width, height);
@@ -215,6 +216,7 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen, SDL_bool 
 		if (fullscreen)
 		{
 			SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+			I_SetBorderlessWindow();
 		}
 	}
 
@@ -577,7 +579,7 @@ static void Impl_HandleWindowEvent(SDL_WindowEvent evt)
 		// Tell game we got focus back, resume music if necessary
 		window_notinfocus = false;
 		if (!paused)
-			I_ResumeSong(); //resume it
+			S_ResumeAudio(); //resume it
 
 		if (!firsttimeonmouse)
 		{
@@ -1746,6 +1748,8 @@ static SDL_bool Impl_CreateWindow(SDL_bool fullscreen)
 		CONS_Printf(M_GetText("Couldn't create window: %s\n"), SDL_GetError());
 		return SDL_FALSE;
 	}
+
+	I_SetBorderlessWindow();
 
 	return Impl_CreateContext();
 }

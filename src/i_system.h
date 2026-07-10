@@ -268,6 +268,10 @@ char *I_GetUserName(void);
 */
 INT32 I_mkdir(const char *dirname, INT32 unixright);
 
+/**	\brief Returns the path for SRB2's home folder
+*/
+const char *I_ConfigDir(void);
+
 /**	\brief Find main WAD
 		\return path to main WAD
 */

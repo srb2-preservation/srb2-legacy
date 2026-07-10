@@ -286,7 +286,7 @@ FUNCNORETURN static ATTRNORETURN void CorruptMapError(const char *msg)
 static void P_ClearSingleMapHeaderInfo(INT16 i)
 {
 	const INT16 num = (INT16)(i-1);
-
+	mapheaderinfo[num]->selectheading[0] = '\0';
 	mapheaderinfo[num]->lvlttl[0] = '\0';
 
 	mapheaderinfo[num]->subttl[0] = '\0';

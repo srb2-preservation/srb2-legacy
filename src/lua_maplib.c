@@ -16,6 +16,7 @@
 #include "p_setup.h"
 #include "z_zone.h"
 #include "p_slopes.h"
+#include "p_polyobj.h"
 #include "r_main.h"
 
 #include "lua_script.h"
@@ -69,6 +70,7 @@ enum subsector_e {
 	subsector_sector,
 	subsector_numlines,
 	subsector_firstline,
+	subsector_polyList
 };
 
 static const char *const subsector_opt[] = {
@@ -76,6 +78,7 @@ static const char *const subsector_opt[] = {
 	"sector",
 	"numlines",
 	"firstline",
+	"polyList",
 	NULL};
 
 static int subsector_fields_ref = LUA_NOREF;
@@ -97,6 +100,7 @@ enum line_e {
 	line_backsector,
 	line_firsttag,
 	line_nexttag,
+	line_polyobj,
 	line_text,
 	line_callcount
 };
@@ -118,6 +122,7 @@ static const char *const line_opt[] = {
 	"backsector",
 	"firsttag",
 	"nexttag",
+	"polyobj",
 	"text",
 	"callcount",
 	NULL};
@@ -392,6 +397,42 @@ static int lib_iterateSectorFFloors(lua_State *L)
 	return 0;
 }
 
+// iterates through a subsector's polyList! (for polyobj_t)
+static int lib_iterateSubSectorPolylist(lua_State *L)
+{
+	polyobj_t *state = NULL;
+	polyobj_t *po = NULL;
+
+	INLEVEL
+
+	if (lua_gettop(L) < 2)
+		return luaL_error(L, "Don't call subsector.polyList() directly, use it as 'for polyobj in subsector.polyList do <block> end'.");
+
+	if (!lua_isnil(L, 1))
+		state = *((polyobj_t **)luaL_checkudata(L, 1, META_POLYOBJ));
+	else
+		return 0; // no polylist to iterate through sorry!
+
+	lua_settop(L, 2);
+	lua_remove(L, 1); // remove state now.
+
+	if (!lua_isnil(L, 1))
+	{
+		po = *((polyobj_t **)luaL_checkudata(L, 1, META_POLYOBJ));
+		po = (polyobj_t *)(po->link.next);
+	}
+	else
+		po = state; // state is used as the "start" of the polylist
+
+	if (po)
+	{
+		LUA_PushUserdata(L, po, META_POLYOBJ);
+		return 1;
+	}
+	return 0;
+}
+
+
 static int sector_iterate(lua_State *L)
 {
 	lua_pushvalue(L, lua_upvalueindex(1)); // iterator function, or the "generator"
@@ -651,6 +692,11 @@ static int subsector_get(lua_State *L)
 	case subsector_firstline:
 		lua_pushinteger(L, subsector->firstline);
 		return 1;
+	case subsector_polyList: // polyList
+		lua_pushcfunction(L, lib_iterateSubSectorPolylist);
+		LUA_PushUserdata(L, subsector->polyList, META_POLYOBJ);
+		lua_pushcclosure(L, sector_iterate, 2); // push lib_iterateSubSectorPolylist and subsector->polyList as upvalues for the function
+		return 1;
 	}
 	return 0;
 }
@@ -741,6 +787,9 @@ static int line_get(lua_State *L)
 		return 1;
 	case line_nexttag:
 		lua_pushinteger(L, line->nexttag);
+		return 1;
+	case line_polyobj:
+		LUA_PushUserdata(L, line->polyobj, META_POLYOBJ);
 		return 1;
 	case line_text:
 		lua_pushstring(L, line->text);

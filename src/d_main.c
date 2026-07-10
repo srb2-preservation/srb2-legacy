@@ -70,7 +70,7 @@
 #include "m_cond.h" // condition initialization
 #include "fastcmp.h"
 #include "keys.h"
-#include "filesrch.h" // refreshdirmenu, mainwadstally
+#include "filesrch.h" // refreshdirmenu
 #include "r_fps.h"
 #include "m_perfstats.h"
 #include "m_random.h"
@@ -496,6 +496,8 @@ static void D_Display(void)
 	PS_STOP_TIMING(ps_uitime);
 
 	CON_Drawer();
+
+	ST_MovieInfoDrawer();
 
 	//
 	// wipe update
@@ -975,10 +977,13 @@ static inline void D_CleanFile(void)
 // Identify the SRB2 version, and IWAD file to use.
 // ==========================================================================
 
+boolean legacypk3_loaded;
+
 static void IdentifyVersion(void)
 {
 	char *srb2wad1, *srb2wad2;
 	const char *srb2waddir = NULL;
+	legacypk3_loaded = false;
 
 #if defined (__unix__) || defined (UNIXCOMMON) || defined (HAVE_SDL)
 	// change to the directory where 'srb2.srb' is found
@@ -1048,6 +1053,12 @@ static void IdentifyVersion(void)
 	// Add our crappy patches to fix our bugs
 	D_AddFile(va(pandf,srb2waddir,"patch.dta"));
 #endif
+
+	if (FIL_ReadFileOK(va(pandf,srb2waddir,"legacy.pk3"))) 
+	{
+		D_AddFile(va(pandf,srb2waddir,"legacy.pk3"));
+		legacypk3_loaded = true;
+	}
 
 #if !defined (HAVE_SDL) || defined (HAVE_MIXER)
 	{
@@ -1192,11 +1203,11 @@ void D_SRB2Main(void)
 			if (M_CheckParm("-workdir") && M_IsNextParm())
 				snprintf(srb2home, sizeof srb2home, "%s", M_GetNextParm());
 			else
-#if defined(DEFAULTDIR) && !defined(__ANDROID__)
-				snprintf(srb2home, sizeof srb2home, "%s" PATHSEP DEFAULTDIR, userhome);
-#else // DEFAULTDIR
+#ifdef NATIVEDIR
+				snprintf(srb2home, sizeof srb2home, "%s", I_ConfigDir());
+#else
 				snprintf(srb2home, sizeof srb2home, "%s", userhome);
-#endif // DEFAULTDIR
+#endif
 			snprintf(downloaddir, sizeof downloaddir, "%s" PATHSEP "DOWNLOAD", srb2home);
 			if (dedicated)
 				snprintf(configfile, sizeof configfile, "%s" PATHSEP "d"CONFIGFILENAME, srb2home);
@@ -1222,17 +1233,17 @@ void D_SRB2Main(void)
 #ifdef __EMSCRIPTEN__
 	EM_ASM(
 	function force_rmdir(path) {
-  		FS.readdir(path).forEach(function(f) {
-   		if (f === '.' || f === '..') return;
+		FS.readdir(path).forEach(function(f) {
+		if (f === '.' || f === '..') return;
 
-    	fpath = path + '/' + f;
+		fpath = path + '/' + f;
 
 		if (FS.analyzePath(fpath).object.isFolder) {
-      		force_rmdir(fpath);
-      		FS.rmdir(fpath);
-    	} else {
-      		FS.unlink(fpath);
-    	}
+			force_rmdir(fpath);
+			FS.rmdir(fpath);
+		} else {
+			FS.unlink(fpath);
+		}
   	})
 	}
 	if (FS.analyzePath('/home/web_user/.srb2_21/addons').exists) force_rmdir('/home/web_user/.srb2_21/addons');
@@ -1344,7 +1355,10 @@ void D_SRB2Main(void)
 #ifdef USE_PATCH_DTA
 	W_VerifyFileMD5(mainwads++, ASSET_HASH_PATCH_DTA); // patch.dta
 #endif
-	// don't check music.dta because people like to modify it, and it doesn't matter if they do
+	if(legacypk3_loaded)
+		W_VerifyFileMD5(mainwads++, ASSET_HASH_LEGACY_PK3); // legacy.pk3
+	
+	// don't check music.dta because peowple like to modify it, and it doesn't matter if they do
 	// ...except it does if they slip maps in there, and that's what W_VerifyNMUSlumps is for.
 	//mainwads++; // music.dta does not increment mainwads (see <= 2.1.21)
 
@@ -1358,12 +1372,13 @@ void D_SRB2Main(void)
 	mainwads++; // patch.dta
 #endif
 	//mainwads++; // music.dta does not increment mainwads (see <= 2.1.21)
+	if(legacypk3_loaded)
+		mainwads++;
 
 #endif //ifndef DEVELOP
 
-	mainwadstally = packetsizetally;
 
-	cht_Init();
+	cht_Init(); 
 
 	//---------------------------------------------------- READY SCREEN
 	// we need to check for dedicated before initialization of some subsystems

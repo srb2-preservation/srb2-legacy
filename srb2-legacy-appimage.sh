@@ -20,7 +20,7 @@ done
 if [ "$noassets" == true ]; then
 	echo "Skipping asset cloning"
 else
-	git clone https://git.do.srb2.org/STJr/srb2assets-public.git -b SRB2_2.1 assets/appimage
+	git clone https://codeberg.org/chromaticpipe/assets.git -b legacy assets/appimage
 	cd assets/appimage
 	git lfs pull
 	echo -e "Downloaded assets: \n\n$(git lfs ls-files)"

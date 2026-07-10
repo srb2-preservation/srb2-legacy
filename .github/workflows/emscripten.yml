@@ -53,7 +53,7 @@ jobs:
 
       - name: Build
         run: |
-          git clone https://github.com/srb2-preservation/srb2assets -b legacy assets/installer
+          git clone https://codeberg.org/chromaticpipe/assets.git -b legacy assets/installer
 
           mkdir build
           cd build
@@ -75,9 +75,6 @@ jobs:
         with:
           # Upload not entire repository
           path: "build/bin/"
-
       - name: Deploy to GitHub Pages
         id: deployment
-        # Always test building, but only deploy if it's from the master or next branch
-        if: ${{ github.ref == 'refs/heads/master' || github.ref == 'refs/heads/next' }}
         uses: actions/deploy-pages@v5.0.0

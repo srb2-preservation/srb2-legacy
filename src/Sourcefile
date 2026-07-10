@@ -81,6 +81,7 @@ lua_playerlib.c
 lua_skinlib.c
 lua_thinkerlib.c
 lua_maplib.c
+lua_polyobjlib.c
 lua_blockmaplib.c
 lua_hudlib.c
 lua_hudlib_drawlist.c
