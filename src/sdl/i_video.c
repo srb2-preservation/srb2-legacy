@@ -1242,6 +1242,8 @@ void I_FinishUpdate(void)
 	if (marathonmode)
 		SCR_DisplayMarathonInfo();
 
+	ST_MovieInfoDrawer();
+
 	if (rendermode == render_soft && screens[0])
 	{
 		SDL_LockSurface(vidSurface);

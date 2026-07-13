@@ -497,8 +497,6 @@ static void D_Display(void)
 
 	CON_Drawer();
 
-	ST_MovieInfoDrawer();
-
 	//
 	// wipe update
 	//
