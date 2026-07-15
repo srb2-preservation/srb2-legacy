@@ -977,7 +977,7 @@ static void R_SplitSprite(vissprite_t *sprite, mobj_t *thing)
 		newsprite->cut |= SC_TOP;
 		if (!(sector->lightlist[i].caster->flags & FF_NOSHADE))
 		{
-			lightnum = max((*sector->lightlist[i].lightlevel >> LIGHTSEGSHIFT), cv_secbright.value);
+			lightnum = max(*sector->lightlist[i].lightlevel , cv_secbright.value)  >> LIGHTSEGSHIFT;
 
 			if (lightnum < 0)
 				spritelights = scalelight[0];
@@ -1384,7 +1384,7 @@ static void R_ProjectSprite(mobj_t *thing)
 				break;
 			}
 		}
-		lightnum = max((*thing->subsector->sector->lightlist[light].lightlevel >> LIGHTSEGSHIFT), cv_secbright.value);
+		lightnum = max(*thing->subsector->sector->lightlist[light].lightlevel , cv_secbright.value) >> LIGHTSEGSHIFT;
 
 		if (lightnum < 0)
 			spritelights = scalelight[0];
@@ -1729,7 +1729,7 @@ void R_AddSprites(sector_t *sec, INT32 lightlevel)
 	{
 		if (sec->heightsec == -1) lightlevel = sec->lightlevel;
 
-		lightnum = max((lightlevel >> LIGHTSEGSHIFT), cv_secbright.value);
+		lightnum = max(lightlevel, cv_secbright.value) >> LIGHTSEGSHIFT;
 
 		if (lightnum < 0)
 			spritelights = scalelight[0];
