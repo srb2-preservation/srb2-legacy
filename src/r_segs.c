@@ -396,7 +396,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 				//rlight->height -= (x1 - ds->x1)*rlight->heightstep;
 			rlight->startheight = rlight->height; // keep starting value here to reset for each repeat
 			rlight->lightlevel = *light->lightlevel;
-			rlight->extra_colormap = light->extra_colormap;
+			rlight->extra_colormap = *light->extra_colormap;
 			rlight->flags = light->flags;
 
 			if (rlight->flags & FF_FOG || (rlight->extra_colormap && rlight->extra_colormap->fog))
@@ -827,7 +827,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 			}
 
 			rlight->lightlevel = *light->lightlevel;
-			rlight->extra_colormap = light->extra_colormap;
+			rlight->extra_colormap = *light->extra_colormap;
 
 			// Check if the current light effects the colormap/lightlevel
 			if (pfloor->flags & FF_FOG)
@@ -2590,7 +2590,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			}
 
 			rlight->lightlevel = *light->lightlevel;
-			rlight->extra_colormap = light->extra_colormap;
+			rlight->extra_colormap = *light->extra_colormap;
 			p++;
 		}
 
