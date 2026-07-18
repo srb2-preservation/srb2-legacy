@@ -1109,6 +1109,7 @@ void R_ClearColormaps(void)
 	// Purged by PU_LEVEL, just overwrite the pointer
 	extra_colormaps = R_CreateDefaultColormap(true);
 #ifdef HWRENDER
+if(rendermode == render_opengl && vid.glstate == VID_GL_LIBRARY_LOADED)
 	HWR_ClearLightTables();
 #endif
 }
