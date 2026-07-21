@@ -260,6 +260,7 @@ static void M_ModeAttackRetry(INT32 choice);
 static void M_ModeAttackEndGame(INT32 choice);
 static void M_SetGuestReplay(INT32 choice);
 static void M_ChoosePlayer(INT32 choice);
+static void M_ChooseMarathonPlayer(void);
 static void M_Marathon(INT32 choice);
 static void M_StartMarathon(INT32 choice);
 menu_t SP_LevelStatsDef;
@@ -880,7 +881,7 @@ enum
 // Marathon
 static menuitem_t SP_MarathonMenu[] =
 {
-	{IT_STRING|IT_CVAR,        NULL, "Player",    NULL,    &cv_chooseskin,             90},
+	{IT_STRING|IT_CVAR,        NULL, "Character",    NULL,    &cv_chooseskin,             90},
 	{IT_STRING|IT_CVAR,        NULL, "Category",  NULL, &cv_dummymarathon,            100},
 	{IT_STRING|IT_CVAR,        NULL, "Timer",     NULL, &cv_dummyloadless,            110},
 	{IT_STRING|IT_CVAR,        NULL, "Cutscenes", NULL, &cv_dummycutscenes,           120},
@@ -1667,24 +1668,25 @@ static menuitem_t OP_LegacyOptionsMenu[] =
 
 static menuitem_t OP_LegacyCreditsMenu[] = // This barely fits on green resolution
 {
-	{IT_HEADER|IT_STRING, NULL, "Contributors:", NULL,  NULL, 7},
-	{IT_STRING, NULL, "PAS", NULL,  NULL, 22}, 
-	{IT_STRING, NULL, "chromaticpipe", NULL,  NULL, 32},
-	{IT_STRING, NULL, "Hanicef", NULL,  NULL, 42},
-	{IT_STRING, NULL, "Lugent",  NULL, NULL, 52},
-	{IT_STRING, NULL, "tempowad", NULL,  NULL, 62},
-	{IT_STRING, NULL, "tatokis", NULL,  NULL, 72},
-	{IT_STRING, NULL, "luigi budd", NULL,  NULL, 82}, // Enhanced server info screen
-	{IT_STRING, NULL, "Lamibe", NULL,  NULL, 92},
-	{IT_STRING, NULL, "UnitickDelta", NULL,  NULL, 102}, // Software sky barreling
-	{IT_STRING, NULL, "Bewer", NULL,  NULL, 112}, // SRB2Kart text colormaps
-	{IT_STRING, NULL, "alufolie91", NULL,  NULL, 122},
-	{IT_STRING, NULL, "xdf", NULL,  NULL, 132}, // Marathon mode
-	{IT_HEADER|IT_STRING, NULL, "Special Thanks:", NULL,  NULL, 142},
-	{IT_STRING, NULL, "Upstream SRB2 Contributors", NULL, NULL, 152},
-	{IT_STRING, NULL, "SRB2 Classic", NULL, NULL, 162},
-	{IT_STRING, NULL, "SRB2Kart-Saturn", NULL, NULL, 172},
-	{IT_STRING, NULL, "SRB2EventZ", NULL, NULL,  182}, // Netgame testing and feature ideas
+	{IT_HEADER|IT_STRING, NULL, "Contributors:", NULL,  NULL, 3},
+	{IT_STRING, NULL, "PAS", NULL,  NULL, 11}, 
+	{IT_STRING, NULL, "chromaticpipe", NULL,  NULL, 16},
+	{IT_STRING, NULL, "Hanicef", NULL,  NULL, 21},
+	{IT_STRING, NULL, "Lugent",  NULL, NULL, 26},
+	{IT_STRING, NULL, "tempowad", NULL,  NULL, 31},
+	{IT_STRING, NULL, "tatokis", NULL,  NULL, 36},
+	{IT_STRING, NULL, "luigi budd", NULL,  NULL, 41}, // Enhanced server info screen
+	{IT_STRING, NULL, "Lamibe", NULL,  NULL, 46},
+	{IT_STRING, NULL, "UnitickDelta", NULL,  NULL, 51}, // Software sky barreling
+	{IT_STRING, NULL, "Bewer", NULL,  NULL, 56}, // SRB2Kart text colormaps
+	{IT_STRING, NULL, "alufolie91", NULL,  NULL, 61},
+	{IT_STRING, NULL, "xdf", NULL,  NULL, 66}, // Marathon mode
+	{IT_STRING, NULL, "A-Star100", NULL,  NULL, 71}, // PR #183 on Github
+	{IT_HEADER|IT_STRING, NULL, "Special Thanks:", NULL,  NULL, 76},
+	{IT_STRING, NULL, "Upstream SRB2 Contributors", NULL, NULL, 81},
+	{IT_STRING, NULL, "SRB2 Classic", NULL, NULL, 86},
+	{IT_STRING, NULL, "SRB2Kart-Saturn", NULL, NULL, 91},
+	{IT_STRING, NULL, "SRB2EventZ", NULL, NULL,  96}, // Netgame testing and feature ideas
 };
 
 static void M_LegacyCreditsToolTips(void)
@@ -2153,7 +2155,7 @@ menu_t OP_ScreenshotOptionsDef = DEFAULTSCROLLMENUSTYLE("M_DATA", OP_ScreenshotO
 menu_t OP_AddonsOptionsDef = DEFAULTMENUSTYLE("M_ADDONS", OP_AddonsOptionsMenu, &OP_MainDef, 30, 30);
 menu_t OP_EraseDataDef = DEFAULTMENUSTYLE("M_DATA", OP_EraseDataMenu, &OP_DataOptionsDef, 60, 30);
 menu_t OP_LegacyOptionsDef = DEFAULTMENUSTYLE(NULL, OP_LegacyOptionsMenu, &OP_MainDef, 30, 30);
-menu_t OP_LegacyCreditsDef = DEFAULTMENUSTYLE(NULL, OP_LegacyCreditsMenu, &OP_LegacyOptionsDef, 30, 0);
+menu_t OP_LegacyCreditsDef = DEFAULTSCROLLMENUSTYLE(NULL, OP_LegacyCreditsMenu, &OP_LegacyOptionsDef, 30, 0);
 
 // ==========================================================================
 // CVAR ONCHANGE EVENTS GO HERE
@@ -6937,6 +6939,20 @@ static void M_ChoosePlayer(INT32 choice)
 	levelselect.rows = NULL;
 }
 
+// M_ChoosePlayer but stripped down and fixed for Marathon run
+static void M_ChooseMarathonPlayer(void)
+{
+	boolean ultmode = (cv_dummymarathon.value == 1);
+
+	M_ClearMenus(true);
+
+	lastmapsaved = 0;
+	gamecomplete = false;
+
+	G_DeferedInitNew(ultmode, G_BuildMapName(startmap), (UINT8)cv_chooseskin.value-1, false, fromlevelselect);
+	COM_BufAddText("dummyconsvar 1\n"); // G_DeferedInitNew doesn't do this
+}
+
 // ===============
 // STATISTICS MENU
 // ===============
@@ -7275,7 +7291,7 @@ void M_DrawTimeAttackMenu(void)
 		y = 32+lsheadingheight;
 		V_DrawSmallScaledPatch(208, y, 0, PictureOfLevel);
 
-		if (itemOn == talevel)
+		if (itemOn == talevel && currentMenu == &SP_TimeAttackDef)
 		{
 			/* Draw arrows !! */
 			y = y + 25 - 4;
@@ -7284,7 +7300,6 @@ void M_DrawTimeAttackMenu(void)
 			V_DrawCharacter(208 + 80 + 2 + (skullAnimCounter/5), y,
 					'\x1D' | V_YELLOWMAP, false);
 		}
-
 
 		V_DrawString(104 - 72, 32+lsheadingheight/2, 0, "* LEVEL RECORDS *");
 		
@@ -7921,7 +7936,7 @@ static void M_StartMarathon(INT32 choice)
 		marathonmode |= MA_NOCUTSCENES;
 	if (cv_dummyloadless.value)
 		marathonmode |= MA_INGAME;
-	M_ChoosePlayer(cv_chooseskin.value-1);
+	M_ChooseMarathonPlayer();
 	M_ClearMenus(true);
 }
 
