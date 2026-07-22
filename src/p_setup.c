@@ -1415,6 +1415,7 @@ static void P_LoadRawSideDefs2(void *data)
 				// Perhaps we should just call it instead of doing the calculations here.
 				sd->colormap_data = R_CreateColormap(msd->toptexture, msd->midtexture,
 					msd->bottomtexture);
+				sd->sector->extra_colormap = sd->sector->spawn_extra_colormap = sd->colormap_data;
 				sd->toptexture = sd->midtexture = sd->bottomtexture = 0;
 				break;
 
