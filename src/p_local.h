@@ -451,6 +451,9 @@ void P_ResetStarposts(void);
 boolean P_CanPickupItem(player_t *player, boolean weapon);
 void P_DoNightsScore(player_t *player);
 
+// SRB2 TAS Build
+boolean P_GetBossInfo(int* bossHealth, boolean* bossFlashing);
+
 //
 // P_SPEC
 //

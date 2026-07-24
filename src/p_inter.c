@@ -3245,6 +3245,47 @@ void P_PlayerRingBurst(player_t *player, INT32 num_rings)
 	return;
 }
 
+// SRB2 TAS Build
+// Get boss information
+boolean P_GetBossInfo(int* bossHealth, boolean* bossFlashing)
+{
+	// Search through all the thinkers for enemies.
+	mobj_t* mo;
+	thinker_t* think;
+
+	boolean bossActive = false;
+	*bossHealth = 0;
+	*bossFlashing = false;
+
+	for (think = thinkercap.next; think != &thinkercap; think = think->next)
+	{
+		// https://git.do.srb2.org/STJr/SRB2/-/commit/a9110c0645f674cb7075062d839ee2a623dc5c12
+		if (think->function != (actionf_p1)P_MobjThinker) // Not a mobj thinker
+			continue;
+
+		if (think->function == (actionf_p1)P_RemoveThinkerDelayed)
+			continue;
+
+		mo = (mobj_t*)think;
+
+		// Check if this is a boss
+		if (mo->flags & MF_BOSS)
+		{
+			bossActive = true;
+			*bossHealth = mo->health;
+
+			// Check if the boss is flashing
+			if (mo->flags2 & MF2_FRET) {
+				*bossFlashing = true;
+			}
+
+			break; // No need to continue searching
+		}
+	}
+
+	return bossActive;
+}
+
 void P_PlayerWeaponPanelBurst(player_t *player)
 {
 	mobj_t *mo;
