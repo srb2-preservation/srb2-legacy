@@ -34,3 +34,4 @@ flatpak/build
 *.flatpak
 .vscode/settings.json
 dsibuild/
+.ccls-cache/
