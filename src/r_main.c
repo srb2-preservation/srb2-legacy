@@ -178,7 +178,7 @@ consvar_t cv_flipcam2 = CVAR_INIT ("flipcam2", "No", "Flip the camera with chang
 
 consvar_t cv_shadow = CVAR_INIT ("shadow", "Off", NULL, CV_SAVE, CV_OnOff, NULL);
 consvar_t cv_shadowoffs = CVAR_INIT ("offsetshadows", "Off", NULL, CV_SAVE, CV_OnOff, NULL);
-#ifdef _NDS
+#ifdef __NDS__
 consvar_t cv_skybox = CVAR_INIT ("skybox", "On", NULL, CV_SAVE, CV_OnOff, NULL);
 #else
 consvar_t cv_skybox = CVAR_INIT ("skybox", "Off", NULL, CV_SAVE, CV_OnOff, NULL);
@@ -193,7 +193,7 @@ consvar_t cv_translucenthud = CVAR_INIT ("translucenthud", "10", "How opaque the
 consvar_t cv_uncappedhud = CVAR_INIT ("uncappedhud", "Yes", NULL, CV_SAVE, CV_YesNo, NULL);
 consvar_t cv_modernpause = CVAR_INIT ("modernpause", "On", "Use a blue textbox or a graphic when the game is paused", CV_SAVE, CV_OnOff, NULL);
 
-#ifdef _NDS
+#ifdef __NDS__
 consvar_t cv_translucency = CVAR_INIT ("translucency", "Off", NULL, CV_SAVE, CV_OnOff, NULL);
 #else
 consvar_t cv_translucency = CVAR_INIT ("translucency", "On", NULL, CV_SAVE, CV_OnOff, NULL);

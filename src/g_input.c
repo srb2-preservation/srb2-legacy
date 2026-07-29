@@ -612,7 +612,7 @@ INT32 G_KeyStringtoNum(const char *keystr)
 	return 0;
 }
 
-#ifdef _NDS
+#ifdef __NDS__
 void G_Controldefault(void)
 {
 	gamecontrol[gc_forward    ][0] = KEY_UPARROW;

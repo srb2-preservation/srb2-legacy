@@ -33,7 +33,7 @@ static double tictimer;
 
 
 // nds backend has its own I_GetTime
-#ifndef _NDS
+#ifndef __NDS__
 tic_t I_GetTime(void)
 {
 	return g_time.time;

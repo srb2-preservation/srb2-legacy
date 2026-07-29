@@ -42,7 +42,7 @@ typedef unsigned char   FBOOLEAN;
 // ==========================================================================
 
 // byte value for paletted graphics, which represent the transparent color
-#ifdef _NDS
+#ifdef __NDS__
 // NDS is hardwired to use zero as transparent color
 #define HWR_PATCHES_CHROMAKEY_COLORINDEX   0
 #define HWR_CHROMAKEY_EQUIVALENTCOLORINDEX 1

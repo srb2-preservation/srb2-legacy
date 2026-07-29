@@ -25,7 +25,7 @@
 #define ANGLETOFINESHIFT 19 // 0x100000000 to 0x2000
 #define FINEANGLE_C(x) ((FixedAngle((x)*FRACUNIT)>>ANGLETOFINESHIFT) & FINEMASK) // ((x*(ANGLE_45/45))>>ANGLETOFINESHIFT) & FINEMASK
 
-#if !(defined _NDS) || !(defined NONET)
+#if !(defined __NDS__) || !(defined NONET)
 // Effective size is 10240.
 extern fixed_t finesine[5*FINEANGLES/4];
 
@@ -114,7 +114,7 @@ void FM_Rotate(matrix_t *dest, angle_t angle, fixed_t x, fixed_t y, fixed_t z);
 // The table values in tables.c are calculated with this many fractional bits.
 #define FINE_FRACBITS 16
 
-#if (defined _NDS) && (defined NONET)
+#if (defined __NDS__) && (defined NONET)
 // Use the NDS's trig functions. This would break netplay, so we only do
 // it if NONET is defined.
 #define FINESINE(n) ((fixed_t)sinLerp((INT16)(((INT32)(n))<<(ANGLETOFINESHIFT-17))) << (FRACBITS - 12))

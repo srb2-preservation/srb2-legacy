@@ -508,7 +508,7 @@ extern const char *compdate, *comptime, *comprevision, *compbranch, *compnote;
 ///	Shuffle's incomplete OpenGL sorting code.
 #define SHUFFLE // This has nothing to do with sorting, why was it disabled?
 
-#if !(defined (__EMSCRIPTEN__) && (__SIZEOF_SIZE_T__ == 4)) && !defined (_NDS)
+#if !(defined (__EMSCRIPTEN__) && (__SIZEOF_SIZE_T__ == 4)) && !defined (__NDS__)
 ///	Allow the use of the SOC RESETINFO command.
 ///	\note	Builds that are tight on memory should disable this.
 ///	    	This stops the game from storing backups of the states, sprites, and mobjinfo tables.

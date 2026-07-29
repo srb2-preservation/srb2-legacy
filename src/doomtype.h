@@ -48,7 +48,7 @@
 
 /* Strings and some misc platform specific stuff */
 
-#if defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON) || defined (_NDS)
+#if defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON) || defined (__NDS__)
 	#undef stricmp
 	#define stricmp(x,y) strcasecmp(x,y)
 	#undef strnicmp
@@ -69,7 +69,7 @@
 #endif
 
 
-#if defined (_WIN32) || defined (__HAIKU__) || defined(__EMSCRIPTEN__) || defined (_NDS)
+#if defined (_WIN32) || defined (__HAIKU__) || defined(__EMSCRIPTEN__) || defined (__NDS__)
 #define HAVE_DOSSTR_FUNCS
 #endif
 

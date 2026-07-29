@@ -21,7 +21,7 @@
 #include <winsock.h>
 #endif
 #else
-#ifndef _NDS
+#ifndef __NDS__
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #endif

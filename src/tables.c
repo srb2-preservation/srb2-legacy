@@ -168,7 +168,7 @@ angle_t FixedAngle(fixed_t fa)
 }
 
 
-#if !(defined _NDS) || !(defined NONET)
+#if !(defined __NDS__) || !(defined NONET)
 #include "t_ftan.c"
 
 #include "t_fsin.c"

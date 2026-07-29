@@ -18,7 +18,7 @@
 
 #include <time.h>
 
-#if (defined (NOMD5) || defined (NOMSERV)) && !defined (NONET) && !defined (_NDS)
+#if (defined (NOMD5) || defined (NOMSERV)) && !defined (NONET) && !defined (__NDS__)
 #define NONET
 #endif
 

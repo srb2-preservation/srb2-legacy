@@ -983,7 +983,7 @@ static void IdentifyVersion(void)
 	const char *srb2waddir = NULL;
 	legacypk3_loaded = false;
 
-#if defined (__unix__) || defined (UNIXCOMMON) || defined (HAVE_SDL) || defined (_NDS)
+#if defined (__unix__) || defined (UNIXCOMMON) || defined (HAVE_SDL) || defined (__NDS__)
 	// change to the directory where 'srb2.srb' is found
 	srb2waddir = I_LocateWad();
 #endif
@@ -1656,7 +1656,7 @@ const char *D_Home(void)
 		userhome = I_SharedStorageLocation();
 	else
 #endif
-#ifdef _NDS
+#ifdef __NDS__
 		userhome = "nitro:/";
 #endif
 	{

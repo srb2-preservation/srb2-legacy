@@ -32,7 +32,7 @@
 
 // Size of statusbar.
 #define ST_HEIGHT 32
-#ifdef _NDS
+#ifdef __NDS__
 #define ST_WIDTH 256
 #else
 #define ST_WIDTH 320
@@ -43,7 +43,7 @@
 // we try to re-allocate a minimum of buffers for stability of the memory,
 // so all the small-enough tables based on screen size, are allocated once
 // and for all at the maximum size.
-#ifdef _NDS
+#ifdef __NDS__
 // needed for how little memory we have
 #define MAXVIDWIDTH 256
 #define MAXVIDHEIGHT 192
