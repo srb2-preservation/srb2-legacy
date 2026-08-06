@@ -42,6 +42,7 @@ static const char *whitelist[] = { // Allow scripters to write files of these ty
 	".png",
 	".sav2",
 	".txt",
+  ".gif",
 };
 
 
