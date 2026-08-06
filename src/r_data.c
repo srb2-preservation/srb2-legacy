@@ -1125,7 +1125,7 @@ extracolormap_t *R_CreateDefaultColormap(boolean lighttable)
 	exc->fadeend = 31;
 	exc->fog = 0;
 	exc->rgba = 0;
-	exc->fadergba = 0xFF000000;
+	exc->fadergba = 0x19000000;;
 	exc->colormap = lighttable ? R_CreateLightTable(exc) : NULL;
 #ifdef EXTRACOLORMAPLUMPS
 	exc->lump = LUMPERROR;
@@ -1240,7 +1240,7 @@ boolean R_CheckDefaultColormapByValues(boolean checkrgba, boolean checkfadergba,
 				&& !fog)
 			)
 		&& (!checkrgba ? true : rgba == 0)
-		&& (!checkfadergba ? true : (unsigned)fadergba == 0xFF000000)
+		&& (!checkfadergba ? true : fadergba == 0x19000000)
 #ifdef EXTRACOLORMAPLUMPS
 		&& lump == LUMPERROR
 		&& extra_colormap->lumpname[0] == 0
@@ -1341,7 +1341,7 @@ extracolormap_t *R_ColormapForName(char *name)
 	if (lump == LUMPERROR)
 		I_Error("R_ColormapForName: Cannot find colormap lump %.8s\n", name);
 
-	eexc = R_GetColormapFromListByValues(0, 0xFF000000, 0, 31, 0, lump);
+	exc = R_GetColormapFromListByValues(0, 0x19000000, 0, 31, 0, lump);
 	if (exc)
 		return exc;
 
@@ -1361,7 +1361,7 @@ extracolormap_t *R_ColormapForName(char *name)
 	exc->fadeend = 31;
 	exc->fog = 0;
 	exc->rgba = 0;
-	exc->fadergba = 0xFF000000;
+	exc->fadergba = 0x19000000;;
 
 	R_AddColormapToList(exc);
 
@@ -1419,7 +1419,7 @@ void R_GenerateLightTable(extracolormap_t *extra_colormap, boolean uselookup)
 	cmaskg = cg;
 	cmaskb = cb;
 
-	maskamt = (double)(ca/255.0l);
+	maskamt = (double)(ca/24.0l);
 	othermask = 1 - maskamt;
 	maskamt /= 0xff;
 
@@ -1435,7 +1435,7 @@ void R_GenerateLightTable(extracolormap_t *extra_colormap, boolean uselookup)
 	cdestb = cfb;
 
 	// fade alpha unused in software
-	// maskamt = (double)(cfa/255.0l);
+	// fmaskamt = (double)(cfa/24.0l);
 	// othermask = 1 - maskamt;
 	// maskamt /= 0xff;
 
@@ -1532,13 +1532,13 @@ extracolormap_t *R_CreateColormap(char *p1, char *p2, char *p3)
 	// Get base colormap value
 	// First alpha-only, then full value
 	if (p1[0] >= 'a' && p1[0] <= 'z' && !p1[1])
-		ca = ((p1[0] - 'a') * 102) / 10;
+		ca = ((p1[0] - 'a'));
 	else if (p1[0] == '#' && p1[1] >= 'a' && p1[1] <= 'z' && !p1[2])
-		ca = ((p1[1] - 'a') * 102) / 10;
+		ca = ((p1[1] - 'a'));
 	else if (p1[0] >= 'A' && p1[0] <= 'Z' && !p1[1])
-		ca = ((p1[0] - 'A') * 102) / 10;
+		ca = ((p1[0] - 'A'));
 	else if (p1[0] == '#' && p1[1] >= 'A' && p1[1] <= 'Z' && !p1[2])
-		ca = ((p1[1] - 'A') * 102) / 10;
+		ca = ((p1[1] - 'A'));
 	else if (p1[0] == '#')
 	{
 		// For each subsequent value, the value before it must exist
@@ -1554,20 +1554,20 @@ extracolormap_t *R_CreateColormap(char *p1, char *p2, char *p3)
 					cb = ((HEX2INT(p1[5]) * 16) + HEX2INT(p1[6]));
 
 					if (p1[7] >= 'a' && p1[7] <= 'z')
-						ca = ((p1[7] - 'a') * 102) / 10;
+						ca = ((p1[7] - 'a') );
 					else if (p1[7] >= 'A' && p1[7] <= 'Z')
-						ca = ((p1[7] - 'A') * 102) / 10;
+						ca = ((p1[7] - 'A') );
 					else
-						ca = 255;
+						ca = 25;
 				}
 				else
-					ca = 255;
+					ca = 25;
 			}
 			else
-				ca = 255;
+				ca = 25;
 		}
 		else
-			ca = 255;
+			ca = 25;
 	}
 
 #define NUMFROMCHAR(c) (c >= '0' && c <= '9' ? c - '0' : 0)
@@ -1597,13 +1597,13 @@ extracolormap_t *R_CreateColormap(char *p1, char *p2, char *p3)
 	// Get fade (dark) colormap value
 	// First alpha-only, then full value
 	if (p3[0] >= 'a' && p3[0] <= 'z' && !p3[1])
-		cfa = ((p3[0] - 'a') * 102) / 10;
+		cfa = ((p3[0] - 'a') ) ;
 	else if (p3[0] == '#' && p3[1] >= 'a' && p3[1] <= 'z' && !p3[2])
-		cfa = ((p3[1] - 'a') * 102) / 10;
+		cfa = ((p3[1] - 'a') ) ;
 	else if (p3[0] >= 'A' && p3[0] <= 'Z' && !p3[1])
-		cfa = ((p3[0] - 'A') * 102) / 10;
+		cfa = ((p3[0] - 'A') ) ;
 	else if (p3[0] == '#' && p3[1] >= 'A' && p3[1] <= 'Z' && !p3[2])
-		cfa = ((p3[1] - 'A') * 102) / 10;
+		cfa = ((p3[1] - 'A') ) ;
 	else if (p3[0] == '#')
 	{
 		// For each subsequent value, the value before it must exist
@@ -1619,20 +1619,20 @@ extracolormap_t *R_CreateColormap(char *p1, char *p2, char *p3)
 					cfb = ((HEX2INT(p3[5]) * 16) + HEX2INT(p3[6]));
 
 					if (p3[7] >= 'a' && p3[7] <= 'z')
-						cfa = ((p3[7] - 'a') * 102) / 10;
+						cfa = ((p3[7] - 'a')) ;
 					else if (p3[7] >= 'A' && p3[7] <= 'Z')
-						cfa = ((p3[7] - 'A') * 102) / 10;
+						cfa = ((p3[7] - 'A')) ;
 					else
-						cfa = 255;
+						cfa = 25;
 				}
 				else
-					cfa = 255;
+					cfa = 25;
 			}
 			else
-				cfa = 255;
+				cfa = 25;
 		}
 		else
-			cfa = 255;
+			cfa = 25;
 	}
 #undef ALPHA2INT
 #undef HEX2INT
