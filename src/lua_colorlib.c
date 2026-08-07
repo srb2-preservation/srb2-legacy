@@ -18,7 +18,7 @@
 #include "lua_script.h"
 #include "lua_libs.h"
 
-//#define COLORLIB_USE_LOOKUP
+#define COLORLIB_USE_LOOKUP
 
 #ifdef COLORLIB_USE_LOOKUP
 	static colorlookup_t colormix_lut;
@@ -192,7 +192,7 @@ static int lib_colorRgbToPalette(lua_State *L)
 	GetArgsRGBA(L, 1, &r, &g, &b, NULL);
 
 #ifdef COLORLIB_USE_LOOKUP
-	InitColorLUT(&colormix_lut, pMasterPalette, false);
+	InitColorLUT(&colormix_lut, pLocalPalette, false);
 #endif
 
 	lua_pushinteger(L, GetNearestColor(r, g, b));

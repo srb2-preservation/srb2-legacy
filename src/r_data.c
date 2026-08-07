@@ -1370,7 +1370,7 @@ extracolormap_t *R_ColormapForName(char *name)
 #endif
 
 //
-// R_CreateColormap
+// R_CreateColormapFromLinedef
 //
 // This is a more GL friendly way of doing colormaps: Specify colormap
 // data in a special linedef's texture areas and use that to generate
@@ -1379,9 +1379,16 @@ extracolormap_t *R_ColormapForName(char *name)
 //
 static double deltas[256][3], map[256][3];
 
+static colorlookup_t lighttable_lut;
+
 static UINT8 LightTableNearest(UINT8 r, UINT8 g, UINT8 b)
 {
 	return NearestColor(r, g, b);
+}
+
+static UINT8 LightTableNearest_LUT(UINT8 r, UINT8 g, UINT8 b)
+{
+	return GetColorLUT(&lighttable_lut, r, g, b);
 }
 
 lighttable_t *R_CreateLightTable(extracolormap_t *extra_colormap)
@@ -1393,8 +1400,6 @@ lighttable_t *R_CreateLightTable(extracolormap_t *extra_colormap)
 
 void R_GenerateLightTable(extracolormap_t *extra_colormap, boolean uselookup)
 {
-	(void)uselookup;
-
 	double cmaskr, cmaskg, cmaskb, cdestr, cdestg, cdestb;
 	double maskamt = 0, othermask = 0;
 
@@ -1449,6 +1454,14 @@ void R_GenerateLightTable(extracolormap_t *extra_colormap, boolean uselookup)
 		char *colormap_p;
 
 		UINT8 (*NearestColorFunc)(UINT8, UINT8, UINT8) = LightTableNearest;
+
+		if (uselookup)
+		{
+			InitColorLUT(&lighttable_lut, pLocalPalette, false);
+			NearestColorFunc = LightTableNearest_LUT;
+		}
+		else
+			NearestColorFunc = LightTableNearest;
 
 		// Initialise the map and delta arrays
 		// map[i] stores an RGB color (as double) for index i,
