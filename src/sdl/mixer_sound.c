@@ -1387,6 +1387,7 @@ void I_StopFadingSong(void)
 	// in var_cleanup()
 }
 
+#if 0
 boolean I_FadeSongFromVolume(UINT8 target_volume, UINT8 source_volume, UINT32 ms, void (*callback)(void))
 {
 	INT16 volume_delta;
@@ -1436,6 +1437,18 @@ boolean I_FadeSongFromVolume(UINT8 target_volume, UINT8 source_volume, UINT32 ms
 	}
 
 	return is_fading;
+}
+#endif
+
+boolean I_FadeSongFromVolume(UINT8 target_volume, UINT8 source_volume, UINT32 ms, void (*callback)(void))
+{
+	I_StopFadingSong();
+
+	I_SetInternalMusicVolume(target_volume);
+	if (callback)
+	  (*callback)();
+
+	return true;
 }
 
 boolean I_FadeSong(UINT8 target_volume, UINT32 ms, void (*callback)(void))
