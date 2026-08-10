@@ -6891,10 +6891,12 @@ struct {
 	{"UINT32_MAX",UINT32_MAX},
 
 	// fixed_t constants, from m_fixed.h
+	{"FU",FRACUNIT},
 	{"FRACUNIT",FRACUNIT},
 	{"FRACBITS",FRACBITS},
 
 	// doomdef.h constants
+	{"TR",TICRATE},
 	{"TICRATE",TICRATE},
 	{"MUSICRATE",MUSICRATE},
 	{"RING_DIST",RING_DIST},

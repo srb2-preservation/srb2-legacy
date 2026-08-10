@@ -52,6 +52,7 @@ static lua_CFunction liblist[] = {
 	LUA_PolyObjLib, // polyobj_t
 	LUA_BlockmapLib, // blockmap stuff
 	LUA_HudLib, // HUD stuff
+	LUA_ColorLib,
 	NULL
 };
 
@@ -416,7 +417,11 @@ void LUA_InvalidateLevel(void)
 	LUA_InvalidateMapthings();
 
 	for (i = 0; i < numsubsectors; i++)
+	{
 		LUA_InvalidateUserdata(&subsectors[i]);
+		if (sectors[i].extra_colormap)
+			LUA_InvalidateUserdata(sectors[i].extra_colormap);
+	}
 	for (i = 0; i < numsectors; i++)
 		LUA_InvalidateUserdata(&sectors[i]);
 	for (i = 0; i < numlines; i++)
