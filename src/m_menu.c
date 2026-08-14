@@ -151,6 +151,7 @@ static saveinfo_t savegameinfo[MAXSAVEGAMES]; // Extra info about the save games
 INT16 startmap; // Mario, NiGHTS, or just a plain old normal game?
 
 static INT16 itemOn = 1; // menu item skull is on, Hack by Tails 09-18-2002
+static boolean lastdirection = true; // toaster - Only You Can Prevent Hacks - true is for forward, false is for backwards
 static INT16 skullAnimCounter = 10; // skull animation counter
 
 static  boolean setupcontrols_secondaryplayer;
@@ -259,6 +260,7 @@ static void M_ModeAttackRetry(INT32 choice);
 static void M_ModeAttackEndGame(INT32 choice);
 static void M_SetGuestReplay(INT32 choice);
 static void M_ChoosePlayer(INT32 choice);
+static void M_ChooseMarathonPlayer(void);
 static void M_Marathon(INT32 choice);
 static void M_StartMarathon(INT32 choice);
 menu_t SP_LevelStatsDef;
@@ -879,7 +881,7 @@ enum
 // Marathon
 static menuitem_t SP_MarathonMenu[] =
 {
-	{IT_STRING|IT_CVAR,        NULL, "Player",    NULL,    &cv_chooseskin,             90},
+	{IT_STRING|IT_CVAR,        NULL, "Character",    NULL,    &cv_chooseskin,             90},
 	{IT_STRING|IT_CVAR,        NULL, "Category",  NULL, &cv_dummymarathon,            100},
 	{IT_STRING|IT_CVAR,        NULL, "Timer",     NULL, &cv_dummyloadless,            110},
 	{IT_STRING|IT_CVAR,        NULL, "Cutscenes", NULL, &cv_dummycutscenes,           120},
@@ -1407,7 +1409,7 @@ static menuitem_t OP_OpenGLOptionsMenu[] =
 	{IT_STRING|IT_CVAR,         NULL, "Shaders", NULL, 	     &cv_glshaders,        50},
 	{IT_STRING|IT_CVAR,         NULL, "Lack of Perspective", NULL,  &cv_glshearing,   60},
 	{IT_STRING|IT_CVAR,         NULL, "Palette Rendering", NULL,  &cv_glpaletterendering,   70},
-	{IT_STRING|IT_CVAR,         NULL, "Light Dithering", NULL,  &cv_glpaletterendering,   80},
+	{IT_STRING|IT_CVAR,         NULL, "Light Dithering", NULL,  &cv_gllightdither,   80},
 	{IT_STRING|IT_CVAR,         NULL, "Quality",     NULL,     &cv_scr_depth,        100},
 	{IT_STRING|IT_CVAR,         NULL, "Texture Filter", NULL,   &cv_glfiltermode,     110},
 	{IT_STRING|IT_CVAR,         NULL, "Anisotropic",  NULL,    &cv_glanisotropicmode,120},
@@ -1479,6 +1481,8 @@ static menuitem_t OP_ScreenshotOptionsMenu[] =
 	// Shows when GIF is selected
 	{IT_STRING|IT_CVAR, NULL, "Region Optimizing", NULL,  &cv_gif_optimize,              80},
 	{IT_STRING|IT_CVAR, NULL, "Downscaling", NULL,       &cv_gif_downscale,             85},
+	{IT_STRING|IT_CVAR, NULL, "Maximum Filesize", NULL,       &cv_gif_maxsize,             90},
+	{IT_STRING|IT_CVAR, NULL, "Rolling GIFs", NULL,       &cv_gif_rolling,             95},
 	// Shows when APNG is selected
 	{IT_STRING|IT_CVAR, NULL, "Memory Level", NULL,       &cv_zlib_memorya,              80},
 	{IT_STRING|IT_CVAR, NULL, "Compression Level", NULL,  &cv_zlib_levela,               85},
@@ -1492,9 +1496,9 @@ enum
 	op_movie_folder = 9,
 	op_screenshot_capture = 10,
 	op_screenshot_gif_start = 11,
-	op_screenshot_gif_end = 12,
-	op_screenshot_apng_start = 13,
-	op_screenshot_apng_end = 16,
+	op_screenshot_gif_end = 14,
+	op_screenshot_apng_start = 15,
+	op_screenshot_apng_end = 18,
 };
 
 static menuitem_t OP_EraseDataMenu[] =
@@ -1664,24 +1668,25 @@ static menuitem_t OP_LegacyOptionsMenu[] =
 
 static menuitem_t OP_LegacyCreditsMenu[] = // This barely fits on green resolution
 {
-	{IT_HEADER|IT_STRING, NULL, "Contributors:", NULL,  NULL, 7},
-	{IT_STRING, NULL, "PAS", NULL,  NULL, 22},
-	{IT_STRING, NULL, "chromaticpipe", NULL,  NULL, 32},
-	{IT_STRING, NULL, "Hanicef", NULL,  NULL, 42},
-	{IT_STRING, NULL, "Lugent",  NULL, NULL, 52},
-	{IT_STRING, NULL, "tempowad", NULL,  NULL, 62},
-	{IT_STRING, NULL, "tatokis", NULL,  NULL, 72},
-	{IT_STRING, NULL, "luigi budd", NULL,  NULL, 82}, // Enhanced server info screen
-	{IT_STRING, NULL, "Lamibe", NULL,  NULL, 92},
-	{IT_STRING, NULL, "UnitickDelta", NULL,  NULL, 102}, // Software sky barreling
-	{IT_STRING, NULL, "Bewer", NULL,  NULL, 112}, // SRB2Kart text colormaps
-	{IT_STRING, NULL, "alufolie91", NULL,  NULL, 122},
-	{IT_STRING, NULL, "xdf", NULL,  NULL, 132}, // Marathon mode
-	{IT_HEADER|IT_STRING, NULL, "Special Thanks:", NULL,  NULL, 142},
-	{IT_STRING, NULL, "Upstream SRB2 Contributors", NULL, NULL, 152},
-	{IT_STRING, NULL, "SRB2 Classic", NULL, NULL, 162},
-	{IT_STRING, NULL, "SRB2Kart-Saturn", NULL, NULL, 172},
-	{IT_STRING, NULL, "SRB2EventZ", NULL, NULL,  182}, // Netgame testing and feature ideas
+	{IT_HEADER|IT_STRING, NULL, "Contributors:", NULL,  NULL, 3},
+	{IT_STRING, NULL, "PAS", NULL,  NULL, 11}, 
+	{IT_STRING, NULL, "chromaticpipe", NULL,  NULL, 16},
+	{IT_STRING, NULL, "Hanicef", NULL,  NULL, 21},
+	{IT_STRING, NULL, "Lugent",  NULL, NULL, 26},
+	{IT_STRING, NULL, "tempowad", NULL,  NULL, 31},
+	{IT_STRING, NULL, "tatokis", NULL,  NULL, 36},
+	{IT_STRING, NULL, "luigi budd", NULL,  NULL, 41}, // Enhanced server info screen
+	{IT_STRING, NULL, "Lamibe", NULL,  NULL, 46},
+	{IT_STRING, NULL, "UnitickDelta", NULL,  NULL, 51}, // Software sky barreling
+	{IT_STRING, NULL, "Bewer", NULL,  NULL, 56}, // SRB2Kart text colormaps
+	{IT_STRING, NULL, "alufolie91", NULL,  NULL, 61},
+	{IT_STRING, NULL, "xdf", NULL,  NULL, 66}, // Marathon mode
+	{IT_STRING, NULL, "A-Star100", NULL,  NULL, 71}, // PR #183 on Github
+	{IT_HEADER|IT_STRING, NULL, "Special Thanks:", NULL,  NULL, 76},
+	{IT_STRING, NULL, "Upstream SRB2 Contributors", NULL, NULL, 81},
+	{IT_STRING, NULL, "SRB2 Classic", NULL, NULL, 86},
+	{IT_STRING, NULL, "SRB2Kart-Saturn", NULL, NULL, 91},
+	{IT_STRING, NULL, "SRB2EventZ", NULL, NULL,  96}, // Netgame testing and feature ideas
 };
 
 static void M_LegacyCreditsToolTips(void)
@@ -2068,10 +2073,10 @@ menu_t OP_JoystickSetDef =
 
 menu_t OP_CameraOptionsDef = DEFAULTMENUSTYLE(
 	/*MN_OP_MAIN + (MN_OP_P1CONTROLS << 6) + (MN_OP_P1CAMERA << 12),*/ // Menu SOC :money_mouth:
-	"M_CONTRO", OP_CameraOptionsMenu, &OP_P1ControlsDef, 35, 30);
+	"M_CONTRO", OP_CameraOptionsMenu, &OP_P1ControlsDef, 30, 30);
 menu_t OP_Camera2OptionsDef = DEFAULTMENUSTYLE(
 	/*MN_OP_MAIN + (MN_OP_P2CONTROLS << 6) + (MN_OP_P2CAMERA << 12),*/
-	"M_CONTRO", OP_Camera2OptionsMenu, &OP_P2ControlsDef, 35, 30);
+	"M_CONTRO", OP_Camera2OptionsMenu, &OP_P2ControlsDef, 30, 30);
 
 menu_t OP_VideoOptionsDef = DEFAULTSCROLLMENUSTYLE("M_VIDEO", OP_VideoOptionsMenu, &OP_MainDef, 30, 30);
 menu_t OP_VideoModeDef =
@@ -2150,7 +2155,7 @@ menu_t OP_ScreenshotOptionsDef = DEFAULTSCROLLMENUSTYLE("M_DATA", OP_ScreenshotO
 menu_t OP_AddonsOptionsDef = DEFAULTMENUSTYLE("M_ADDONS", OP_AddonsOptionsMenu, &OP_MainDef, 30, 30);
 menu_t OP_EraseDataDef = DEFAULTMENUSTYLE("M_DATA", OP_EraseDataMenu, &OP_DataOptionsDef, 60, 30);
 menu_t OP_LegacyOptionsDef = DEFAULTMENUSTYLE(NULL, OP_LegacyOptionsMenu, &OP_MainDef, 30, 30);
-menu_t OP_LegacyCreditsDef = DEFAULTMENUSTYLE(NULL, OP_LegacyCreditsMenu, &OP_LegacyOptionsDef, 30, 0);
+menu_t OP_LegacyCreditsDef = DEFAULTSCROLLMENUSTYLE(NULL, OP_LegacyCreditsMenu, &OP_LegacyOptionsDef, 30, 0);
 
 // ==========================================================================
 // CVAR ONCHANGE EVENTS GO HERE
@@ -2506,6 +2511,7 @@ static void M_ResetCvars(INT32 choice)
 static void M_NextOpt(void)
 {
 	INT16 oldItemOn = itemOn; // prevent infinite loop
+	lastdirection = true;
 
 	do
 	{
@@ -2520,6 +2526,7 @@ static void M_NextOpt(void)
 static void M_PrevOpt(void)
 {
 	INT16 oldItemOn = itemOn; // prevent infinite loop
+	lastdirection = false;
 
 	do
 	{
@@ -2837,12 +2844,22 @@ boolean M_Responder(event_t *ev)
 			M_NextOpt();
 			S_StartSound(NULL, sfx_menu1);
 			coolalphatimer = 9;
+			if (currentMenu == &SP_PlayerDef)
+			{
+				Z_Free(char_notes);
+				char_notes = NULL;
+			}
 			return true;
 
 		case KEY_UPARROW:
 			M_PrevOpt();
 			S_StartSound(NULL, sfx_menu1);
 			coolalphatimer = 9;
+			if (currentMenu == &SP_PlayerDef)
+			{
+				Z_Free(char_notes);
+				char_notes = NULL;
+			}
 			return true;
 
 		case KEY_LEFTARROW:
@@ -2988,28 +3005,15 @@ void M_Drawer(void)
 			}
 			else
 			{
-				char *menucompnote = Z_Malloc(19, PU_STATIC, NULL);
-				if (strlen(compnote) > 15) // Don't want it to potentially cross over into the menu, somewhat of a magic number but ehh it works on most resolutions
-				{
-					strncpy(menucompnote, compnote, 15);
-					menucompnote[15] = '\0';
-					strcat(menucompnote, "...");
-				}
-				else
-				{
-					strncpy(menucompnote, compnote, 18);
-					menucompnote[18] = '\0';
-				}
 #ifdef DEVELOP // Development -- show revision / branch info
 				V_DrawThinString(vid.dupx, vid.height - 17*vid.dupy, V_NOSCALESTART|V_TRANSLUCENT|V_ALLOWLOWERCASE, compbranch);
 				V_DrawThinString(vid.dupx, vid.height - 9*vid.dupy,  V_NOSCALESTART|V_TRANSLUCENT|V_ALLOWLOWERCASE, comprevision);
 #else // Regular build
 #ifdef BETAVERSION
-				V_DrawThinString(vid.dupx, vid.height - 20*vid.dupy, V_NOSCALESTART|V_TRANSLUCENT|V_ALLOWLOWERCASE, va("%s %s", comprevision, menucompnote));
+				V_DrawThinString(vid.dupx, vid.height - 20*vid.dupy, V_NOSCALESTART|V_TRANSLUCENT|V_ALLOWLOWERCASE, va("%s", compnote));
 #endif
 				V_DrawThinString(vid.dupx, vid.height - 9*vid.dupy, V_NOSCALESTART|V_TRANSLUCENT|V_ALLOWLOWERCASE, va("%s", VERSIONSTRING));
 #endif
-				Z_Free(menucompnote);
 			}
 		}
 	}
@@ -5421,10 +5425,7 @@ static void M_DrawAddons(void)
 		y = FRACUNIT;
 	else
 	{
-		x = FixedDiv(((ssize_t)(numwadfiles) - (ssize_t)(mainwads+1))<<FRACBITS, ((ssize_t)MAX_WADFILES - (ssize_t)(mainwads+1))<<FRACBITS);
-		y = FixedDiv((((ssize_t)packetsizetally-(ssize_t)mainwadstally)<<FRACBITS), ((((ssize_t)MAXFILENEEDED*sizeof(UINT8)-(ssize_t)mainwadstally)-(5+22))<<FRACBITS)); // 5+22 = (a.ext + checksum length) is minimum addition to packet size tally
-		if (x > y)
-			y = x;
+		y = FixedDiv(((ssize_t)(numwadfiles) - (ssize_t)(mainwads+1))<<FRACBITS, ((ssize_t)MAX_WADFILES - (ssize_t)(mainwads+1))<<FRACBITS);
 		if (y > FRACUNIT) // happens because of how we're shrinkin' it a little
 			y = FRACUNIT;
 	}
@@ -6715,7 +6716,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 {
 	const INT32 my = 24;
 	patch_t *patch;
-	INT32 i, o, j;
+	INT32 i, o, j, prev, next;
 	char *picname;
 
 	// Black BG
@@ -6725,79 +6726,126 @@ static void M_DrawSetupChoosePlayerMenu(void)
 	// Character select profile images!1
 	M_DrawTextBox(0, my, 16, 20);
 
-	if (abs(itemOn*128*FRACUNIT - char_scroll) > 256*FRACUNIT)
-		char_scroll = itemOn*128*FRACUNIT;
-	else if (itemOn*128*FRACUNIT - char_scroll > 128*FRACUNIT)
-		char_scroll += FixedMul(48*FRACUNIT, renderdeltatics);
-	else if (itemOn*128*FRACUNIT - char_scroll < -128*FRACUNIT)
-		char_scroll -= FixedMul(48*FRACUNIT, renderdeltatics);
-	else if (itemOn*128*FRACUNIT > char_scroll+FixedMul(16*FRACUNIT, renderdeltatics))
-		char_scroll += FixedMul(16*FRACUNIT, renderdeltatics);
-	else if (itemOn*128*FRACUNIT < char_scroll-FixedMul(16*FRACUNIT, renderdeltatics))
-		char_scroll -= FixedMul(16*FRACUNIT, renderdeltatics);
+	i = (itemOn*128 - char_scroll/FRACUNIT);
+
+	if (abs(i) > 128)
+	{
+		o = (lastdirection) ? -1 : 1;
+		char_scroll = (itemOn + o)*128*FRACUNIT;
+		i = -o*128;
+	}
+
+	if (abs(i) > 1)
+		char_scroll += FixedMul(i*FRACUNIT>>2, renderdeltatics);
 	else // close enough.
 		char_scroll = itemOn*128*FRACUNIT; // just be exact now.
-	i = (char_scroll+16*FRACUNIT)/(128*FRACUNIT);
-	o = ((char_scroll/FRACUNIT)+16)%128;
 
-	// prev character
-	if (i-1 >= 0 && PlayerMenu[i-1].status != IT_DISABLED
-	&& o < 32)
+	o = ((char_scroll / FRACUNIT) + 16);
+	if (lastdirection)
+		o += 128; // This one-directional hack is to prevent visual glitches when going from the (currentMenu->numitems)nd character to the 1st character.
+	i = (o / 128);
+	o = (o % 128);
+
+	// subtract 1 from i to counteract the +128 from the prior hack, if we made it happen
+	if (lastdirection)
 	{
-		picname = description[i-1].picname;
-		if (picname[0] == '\0')
+		j = i;
+		do
 		{
-			picname = strtok(Z_StrDup(description[i-1].skinname), "&");
-			for (j = 0; j < numskins; j++)
-				if (stricmp(skins[j].name, picname) == 0)
-				{
-					Z_Free(picname);
-					picname = skins[j].charsel;
-					break;
-				}
-			if (j == numskins) // AAAAAAAAAA
-				picname = skins[0].charsel;
-		}
-		patch = W_CachePatchName(picname, PU_PATCH);
-		if (SHORT(patch->width) >= 256)
-			V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT/2, 0, patch, 0, SHORT(patch->height) + 2*(o-32), SHORT(patch->width), 32 - o);
-		else
-			V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT, 0, patch, 0, SHORT(patch->height) + o - 32, SHORT(patch->width), 32 - o);
-		W_UnlockCachedPatch(patch);
+			i--;
+			if (i < 0)
+				i = (currentMenu->numitems - 1);
+		} while (i != j && PlayerMenu[i].status == IT_DISABLED); // Skip over all disabled characters.
 	}
 
-	// next character
-	if (i+1 < currentMenu->numitems && PlayerMenu[i+1].status != IT_DISABLED
-	&& o < 128)
+	// Get prev character...
+	prev = i;
+	do
 	{
-		picname = description[i+1].picname;
-		if (picname[0] == '\0')
+		prev--;
+		if (prev < 0)
+			prev = (currentMenu->numitems - 1);
+	} while (prev != i && PlayerMenu[prev].status == IT_DISABLED); // Skip over all disabled characters.
+
+	if (prev != i) // If there's more than one character available...
+	{
+		// Let's get the next character now.
+		next = i;
+		do
 		{
-			picname = strtok(Z_StrDup(description[i+1].skinname), "&");
-			for (j = 0; j < numskins; j++)
-				if (stricmp(skins[j].name, picname) == 0)
+			next++;
+			if (next >= currentMenu->numitems)
+				next = 0;
+		} while (next != i && PlayerMenu[next].status == IT_DISABLED); // Skip over all disabled characters.
+
+		// Draw prev character if it's visible and its number isn't greater than the current one
+		if ((o < 32) && !((prev == next) && prev > i)) // (prev != i) was previously a part of this, but we don't need to check again after above.
+		{
+			picname = description[prev].picname;
+			if (picname[0] == '\0')
+			{
+				picname = strtok(Z_StrDup(description[prev].skinname), "&");
+				for (j = 0; j < numskins; j++)
+					if (stricmp(skins[j].name, picname) == 0)
+					{
+						Z_Free(picname);
+						picname = skins[j].charsel;
+						break;
+					}
+				if (j == numskins) // AAAAAAAAAA
 				{
 					Z_Free(picname);
-					picname = skins[j].charsel;
-					break;
+					picname = skins[0].charsel;
 				}
-			if (j == numskins) // AAAAAAAAAA
-				picname = skins[0].charsel;
+				strncpy(description[prev].picname, picname, 8); // Only iterate once.
+			}
+			patch = W_CachePatchName(picname, PU_PATCH);
+			if (SHORT(patch->width) >= 256)
+				V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT/2, 0, patch, 0, SHORT(patch->height) + 2*(o-32), SHORT(patch->width), 64 - 2*o);
+			else
+				V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT, 0, patch, 0, SHORT(patch->height) + o - 32, SHORT(patch->width), 32 - o);
+			W_UnlockCachedPatch(patch);
 		}
-		patch = W_CachePatchName(picname, PU_PATCH);
-		if (SHORT(patch->width) >= 256)
-			V_DrawCroppedPatch(8<<FRACBITS, (my + 168 - o)<<FRACBITS, FRACUNIT/2, 0, patch, 0, 0, SHORT(patch->width)/2, o);
-		else
-			V_DrawCroppedPatch(8<<FRACBITS, (my + 168 - o)<<FRACBITS, FRACUNIT, 0, patch, 0, 0, SHORT(patch->width), o);
-		W_UnlockCachedPatch(patch);
+
+		// Draw next character if it's visible and its number isn't less than the current one
+		if ((o < 128) && !((prev == next) && next < i)) // (next != i) was previously a part of this, but it's implicitly true if (prev != i) is true.
+		{
+			picname = description[next].picname;
+			if (picname[0] == '\0')
+			{
+				picname = strtok(Z_StrDup(description[next].skinname), "&");
+				for (j = 0; j < numskins; j++)
+					if (stricmp(skins[j].name, picname) == 0)
+					{
+						Z_Free(picname);
+						picname = skins[j].charsel;
+						break;
+					}
+				if (j == numskins) // AAAAAAAAAA
+				{
+					Z_Free(picname);
+					picname = skins[0].charsel;
+				}
+				strncpy(description[next].picname, picname, 8); // Only iterate once.
+			}
+			patch = W_CachePatchName(picname, PU_PATCH);
+			if (SHORT(patch->width) >= 256)
+				V_DrawCroppedPatch(8<<FRACBITS, (my + 168 - o)<<FRACBITS, FRACUNIT/2, 0, patch, 0, 0, SHORT(patch->width), o*2);
+			else
+				V_DrawCroppedPatch(8<<FRACBITS, (my + 168 - o)<<FRACBITS, FRACUNIT, 0, patch, 0, 0, SHORT(patch->width), o);
+			W_UnlockCachedPatch(patch);
+		}
+
+		// current character
+		if (PlayerMenu[i].status == IT_DISABLED) // Prevent flickering.
+			i = (lastdirection) ? prev : next; // This actually causes duplication at slow scroll speeds (<16FU per tic), but thankfully we always go quickly.
 	}
 
-	// current character
-	if (i < currentMenu->numitems && PlayerMenu[i].status != IT_DISABLED)
+	if (PlayerMenu[i].status != IT_DISABLED)
 	{
 		picname = description[i].picname;
 		if (picname[0] == '\0')
-		{
+			{
 			picname = strtok(Z_StrDup(description[i].skinname), "&");
 			for (j = 0; j < numskins; j++)
 				if (stricmp(skins[j].name, picname) == 0)
@@ -6807,8 +6855,12 @@ static void M_DrawSetupChoosePlayerMenu(void)
 					break;
 				}
 			if (j == numskins) // AAAAAAAAAA
+			{
+				Z_Free(picname);
 				picname = skins[0].charsel;
-		}
+			}
+			strncpy(description[i].picname, picname, 8); // Only iterate once.
+			}
 		patch = W_CachePatchName(picname, PU_PATCH);
 		if (o >= 0 && o <= 32)
 		{
@@ -6885,6 +6937,20 @@ static void M_ChoosePlayer(INT32 choice)
 	if (levelselect.rows)
 		Z_Free(levelselect.rows);
 	levelselect.rows = NULL;
+}
+
+// M_ChoosePlayer but stripped down and fixed for Marathon run
+static void M_ChooseMarathonPlayer(void)
+{
+	boolean ultmode = (cv_dummymarathon.value == 1);
+
+	M_ClearMenus(true);
+
+	lastmapsaved = 0;
+	gamecomplete = false;
+
+	G_DeferedInitNew(ultmode, G_BuildMapName(startmap), (UINT8)cv_chooseskin.value-1, false, fromlevelselect);
+	COM_BufAddText("dummyconsvar 1\n"); // G_DeferedInitNew doesn't do this
 }
 
 // ===============
@@ -7225,7 +7291,7 @@ void M_DrawTimeAttackMenu(void)
 		y = 32+lsheadingheight;
 		V_DrawSmallScaledPatch(208, y, 0, PictureOfLevel);
 
-		if (itemOn == talevel)
+		if (itemOn == talevel && currentMenu == &SP_TimeAttackDef)
 		{
 			/* Draw arrows !! */
 			y = y + 25 - 4;
@@ -7234,7 +7300,6 @@ void M_DrawTimeAttackMenu(void)
 			V_DrawCharacter(208 + 80 + 2 + (skullAnimCounter/5), y,
 					'\x1D' | V_YELLOWMAP, false);
 		}
-
 
 		V_DrawString(104 - 72, 32+lsheadingheight/2, 0, "* LEVEL RECORDS *");
 		
@@ -7871,7 +7936,7 @@ static void M_StartMarathon(INT32 choice)
 		marathonmode |= MA_NOCUTSCENES;
 	if (cv_dummyloadless.value)
 		marathonmode |= MA_INGAME;
-	M_ChoosePlayer(cv_chooseskin.value-1);
+	M_ChooseMarathonPlayer();
 	M_ClearMenus(true);
 }
 
@@ -9314,10 +9379,10 @@ static void M_ScreenshotOptions(INT32 choice)
 static void M_LegacyReportIssue(INT32 choice)
 {
 	(void)choice;
-	int url = I_OpenURL("https://github.com/srb2-preservation/srb2-legacy/issues");
+	int url = I_OpenURL(ISSUES);
 
 	if (url == -1) // SDL_OpenURL unsupported or failed
-		M_StartMessage(M_GetText("Open the following in your web browser:\n\nhttps://github.com/srb2-preservation\n/srb2-legacy/issues\n\n(Press a key)\n"), NULL, MM_NOTHING);
+		M_StartMessage(M_GetText("Open the following in your web browser:\n\n" ISSUES" \n\n(Press a key)\n"), NULL, MM_NOTHING);
 }
 
 // =============
@@ -10425,7 +10490,10 @@ void M_QuitResponse(INT32 ch)
 			I_FinishUpdate(); // Update the screen with the image Tails 06-19-2001
 			I_Sleep(cv_sleep.value);
 			I_UpdateTime(cv_timescale.value);
-
+			if (moviemode)
+				M_SaveFrame();
+			if (takescreenshot)
+				M_DoScreenShot();
 		}
 	}
 	I_Quit();

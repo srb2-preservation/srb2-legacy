@@ -28,6 +28,8 @@
 #include "m_menu.h"
 #include "m_cheat.h"
 #include "p_setup.h" // NiGHTS grading
+#include "m_misc.h"
+#include "m_anigif.h"
 
 //random index
 #include "m_random.h"
@@ -783,10 +785,10 @@ static void ST_drawInput(void)
 
 	if(stplyr->pflags & PF_NIGHTSMODE)
 		y += 8;
-	else if (modeattacking || !LUA_HudEnabled(hud_lives))
+	else if ((modeattacking || !LUA_HudEnabled(hud_lives)) || !G_GametypeUsesLives())
 		y += 24;
-	else if (G_RingSlingerGametype() && LUA_HudEnabled(hud_powerstones))
-		y -= 5;
+	/*else if (G_RingSlingerGametype() && LUA_HudEnabled(hud_powerstones))
+		y -= 5;*/
 
 	// O backing
 	V_DrawFill(x, y-1, 16, 16, inputflags|20);
@@ -945,11 +947,11 @@ static void ST_drawInput(void)
 	x -= 2;
 	y -= 13;
 
-		if (stplyr->pflags & PF_ANALOGMODE)
-		{
-			V_DrawThinString(x, y, inputflags, "ANALOG");
-			y -= 8;
-		}
+	if (stplyr->pflags & PF_ANALOGMODE)
+	{
+		V_DrawThinString(x, y, inputflags, "ANALOG");
+		y -= 8;
+	}
 	if (!demosynced) // should always be last, so it doesn't push anything else around
 		V_DrawThinString(x, y, inputflags|((leveltime & 4) ? V_YELLOWMAP : V_REDMAP), "BAD DEMO!!");
 }
@@ -2153,4 +2155,46 @@ void ST_Drawer(void)
 			ST_overlayDrawer();
 		}
 	}
+}
+
+// draw movie frame amount and size
+void ST_MovieInfoDrawer(void)
+{
+	if (!moviemode)
+		return;
+
+	if (!cv_moviemodeinfo.value)
+		return;
+
+	INT32 gif_frames = M_RecordedFrames();
+
+	INT32 x = 3;
+	INT32 y = BASEVIDHEIGHT - 8;
+
+	float gif_size = M_SavedSize();
+
+	INT32 movietype_color = ((gif_frames / (TICRATE / 2)) % 2) ? V_REDMAP : 0;
+
+	const char *movietype = (moviemode == MM_APNG ? "APNG" : "GIF");
+
+	V_DrawThinString(x, y,
+		movietype_color|V_USERHUDTRANS|V_SNAPTOLEFT|V_SNAPTOBOTTOM,
+		movietype
+	);
+
+	INT32 capwarning = max(cv_gif_maxsize.value - 2, 0);
+	boolean withincap = (capwarning > 0 ? (gif_size >= capwarning) : false);
+
+	V_DrawThinString(strlen(movietype) * 6 + x, y,
+		V_ALLOWLOWERCASE|V_USERHUDTRANS|V_SNAPTOLEFT|V_SNAPTOBOTTOM,
+		va(
+			"%s%d.%02ds | %.2f mb\x86", // the main format
+
+			(withincap ? "\x82" : "\x86"), // color if near the limit
+			
+			G_TicsToSeconds(gif_frames), // seconds
+			G_TicsToCentiseconds(gif_frames), // centiseconds
+			gif_size // size in megabytes
+		)
+	);
 }

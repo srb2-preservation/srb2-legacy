@@ -53,7 +53,7 @@ jobs:
 
       - name: Build
         run: |
-          git clone https://git.do.srb2.org/STJr/srb2assets-public.git -b SRB2_2.1 assets/installer
+          git clone https://codeberg.org/srb2-preservation/assets.git -b legacy assets/installer
 
           mkdir build
           cd build

@@ -722,12 +722,12 @@ static void P_LoadRawSectors(UINT8 *data, size_t i)
 		ss->moved = true;
 
 		ss->extra_colormap = NULL;
+		ss->spawn_extra_colormap = NULL;
 
 		ss->floor_xoffs = ss->ceiling_xoffs = ss->floor_yoffs = ss->ceiling_yoffs = 0;
 		ss->spawn_flr_xoffs = ss->spawn_ceil_xoffs = ss->spawn_flr_yoffs = ss->spawn_ceil_yoffs = 0;
 		ss->floorpic_angle = ss->ceilingpic_angle = 0;
 		ss->spawn_flrpic_angle = ss->spawn_ceilpic_angle = 0;
-		ss->bottommap = ss->midmap = ss->topmap = -1;
 		ss->gravity = NULL;
 		ss->cullheight = NULL;
 		ss->verticalflip = false;
@@ -1380,7 +1380,6 @@ static inline void P_LoadSideDefs(lumpnum_t lumpnum)
 static void P_LoadRawSideDefs2(void *data)
 {
 	UINT16 i;
-	INT32 num;
 
 	for (i = 0; i < numsides; i++)
 	{
@@ -1402,93 +1401,23 @@ static void P_LoadRawSideDefs2(void *data)
 			sd->sector = sec = &sectors[sector_num];
 		}
 
-		// refined to allow colormaps to work as wall textures if invalid as colormaps
-		// but valid as textures.
-
 		sd->sector = sec = &sectors[SHORT(msd->sector)];
+
+		sd->colormap_data = NULL;
 
 		// Colormaps!
 		switch (sd->special)
 		{
 			case 63: // variable colormap via 242 linedef
 			case 606: //SoM: 4/4/2000: Just colormap transfer
+			case 455: // Fade colormaps! mazmazz 9/12/2018 (:flag_us:)
 				// SoM: R_CreateColormap will only create a colormap in software mode...
 				// Perhaps we should just call it instead of doing the calculations here.
-				{
-					if (msd->toptexture[0] == '#' || msd->bottomtexture[0] == '#')
-					{
-						sec->midmap = R_CreateColormap(msd->toptexture, msd->midtexture,
-							msd->bottomtexture);
-						sd->toptexture = sd->bottomtexture = 0;
-					}
-					else
-					{
-						if ((num = R_CheckTextureNumForName(msd->toptexture)) == -1)
-							sd->toptexture = 0;
-						else
-							sd->toptexture = num;
-						if ((num = R_CheckTextureNumForName(msd->midtexture)) == -1)
-							sd->midtexture = 0;
-						else
-							sd->midtexture = num;
-						if ((num = R_CheckTextureNumForName(msd->bottomtexture)) == -1)
-							sd->bottomtexture = 0;
-						else
-							sd->bottomtexture = num;
-					}
-					// for now, full support of toptexture only
-					if ((msd->toptexture[0] == '#' && msd->toptexture[1] && msd->toptexture[2] && msd->toptexture[3] && msd->toptexture[4] && msd->toptexture[5] && msd->toptexture[6])
-						|| (msd->bottomtexture[0] == '#' && msd->bottomtexture[1] && msd->bottomtexture[2] && msd->bottomtexture[3] && msd->bottomtexture[4] && msd->bottomtexture[5] && msd->bottomtexture[6]))
-					{
-						char *col;
-
-						sec->midmap = R_CreateColormap(msd->toptexture, msd->midtexture,
-							msd->bottomtexture);
-						sd->toptexture = sd->bottomtexture = 0;
-#define HEX2INT(x) (x >= '0' && x <= '9' ? x - '0' : x >= 'a' && x <= 'f' ? x - 'a' + 10 : x >= 'A' && x <= 'F' ? x - 'A' + 10 : 0)
-#define ALPHA2INT(x) (x >= 'a' && x <= 'z' ? x - 'a' : x >= 'A' && x <= 'Z' ? x - 'A' : x >= '0' && x <= '9' ? 25 : 0)
-						sec->extra_colormap = &extra_colormaps[sec->midmap];
-
-						if (msd->toptexture[0] == '#' && msd->toptexture[1] && msd->toptexture[2] && msd->toptexture[3] && msd->toptexture[4] && msd->toptexture[5] && msd->toptexture[6])
-						{
-							col = msd->toptexture;
-
-							sec->extra_colormap->rgba =
-								(HEX2INT(col[1]) << 4) + (HEX2INT(col[2]) << 0) +
-								(HEX2INT(col[3]) << 12) + (HEX2INT(col[4]) << 8) +
-								(HEX2INT(col[5]) << 20) + (HEX2INT(col[6]) << 16);
-
-							// alpha
-							if (msd->toptexture[7])
-								sec->extra_colormap->rgba += (ALPHA2INT(col[7]) << 24);
-							else
-								sec->extra_colormap->rgba += (25 << 24);
-						}
-						else
-							sec->extra_colormap->rgba = 0;
-
-						if (msd->bottomtexture[0] == '#' && msd->bottomtexture[1] && msd->bottomtexture[2] && msd->bottomtexture[3] && msd->bottomtexture[4] && msd->bottomtexture[5] && msd->bottomtexture[6])
-						{
-							col = msd->bottomtexture;
-
-							sec->extra_colormap->fadergba =
-								(HEX2INT(col[1]) << 4) + (HEX2INT(col[2]) << 0) +
-								(HEX2INT(col[3]) << 12) + (HEX2INT(col[4]) << 8) +
-								(HEX2INT(col[5]) << 20) + (HEX2INT(col[6]) << 16);
-
-							// alpha
-							if (msd->bottomtexture[7])
-								sec->extra_colormap->fadergba += (ALPHA2INT(col[7]) << 24);
-							else
-								sec->extra_colormap->fadergba += (25 << 24);
-						}
-						else
-							sec->extra_colormap->fadergba = 0x19000000; // default alpha, (25 << 24)
-#undef ALPHA2INT
-#undef HEX2INT
-					}
-					break;
-				}
+				sd->colormap_data = R_CreateColormap(msd->toptexture, msd->midtexture,
+					msd->bottomtexture);
+				sd->sector->extra_colormap = sd->sector->spawn_extra_colormap = sd->colormap_data;
+				sd->toptexture = sd->midtexture = sd->bottomtexture = 0;
+				break;
 
 			case 413: // Change music
 			{

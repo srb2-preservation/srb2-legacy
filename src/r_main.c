@@ -124,8 +124,7 @@ lighttable_t *zlight[LIGHTLEVELS][MAXLIGHTZ];
 
 
 // Hack to support extra boom colormaps.
-size_t num_extra_colormaps;
-extracolormap_t extra_colormaps[MAXCOLORMAPS];
+extracolormap_t *extra_colormaps = NULL;
 
 // Render stats
 precise_t ps_prevframetime = 0;
@@ -190,7 +189,6 @@ consvar_t cv_soniccd = CVAR_INIT ("soniccd", "Off", NULL, CV_NETVAR, CV_OnOff, N
 consvar_t cv_allowmlook = CVAR_INIT ("allowmlook", "Yes", NULL, CV_NETVAR, CV_YesNo, NULL);
 consvar_t cv_showhud = CVAR_INIT ("showhud", "Yes", "Whether or not to show the Heads-Up Display", CV_CALL,  CV_YesNo, R_SetViewSize);
 consvar_t cv_translucenthud = CVAR_INIT ("translucenthud", "10", "How opaque the HUD is, lower values make the HUD more transparent", CV_SAVE, translucenthud_cons_t, NULL);
-consvar_t cv_uncappedhud = CVAR_INIT ("uncappedhud", "Yes", NULL, CV_SAVE, CV_YesNo, NULL);
 consvar_t cv_modernpause = CVAR_INIT ("modernpause", "On", "Use a blue textbox or a graphic when the game is paused", CV_SAVE, CV_OnOff, NULL);
 
 #ifdef __NDS__
@@ -212,6 +210,8 @@ consvar_t cv_fovchange = CVAR_INIT ("fovchange", "Off", NULL, CV_SAVE, CV_OnOff,
 consvar_t cv_maxportals = CVAR_INIT ("maxportals", "2",  NULL, CV_SAVE, maxportals_cons_t, NULL);
 
 consvar_t cv_secbright = CVAR_INIT("r_secbright", "0", "Sets minimum sector brightness (0-255), useful for dark areas", CV_SAVE, secbright_cons_t, NULL);
+
+consvar_t cv_moviemodeinfo = CVAR_INIT ("moviemodeinfo", "Yes", "Show info about movie being recorded on the heads-up display", CV_SAVE, CV_YesNo, NULL);
 
 
 void SplitScreen_OnChange(void)
@@ -401,11 +401,6 @@ angle_t R_PointToAngleEx(INT32 x2, INT32 y2, INT32 x1, INT32 y1)
 		(x1 = -x1) > (y1 = -y1) ? ANGLE_180+tantoangle[SlopeDivEx(y1,x1)] :    // octant 4
 		ANGLE_270-tantoangle[SlopeDivEx(x1,y1)] :                              // octant 5
 		0;
-}
-
-INT32 R_GetHudUncap(boolean menu)
-{
-	return cv_uncappedhud.value ? ((menu) ? (rendertimefrac_unpaused & FRACMASK) : (rendertimefrac & FRACMASK) ) : 0; // Ternary operators are FUN -chromaticpipe
 }
 
 //
@@ -1874,8 +1869,8 @@ void R_RegisterEngineStuff(void)
 
 	CV_RegisterVar(&cv_showhud);
 	CV_RegisterVar(&cv_translucenthud);
-	CV_RegisterVar(&cv_uncappedhud);
 	CV_RegisterVar(&cv_modernpause);
+	CV_RegisterVar(&cv_moviemodeinfo);
 
 	CV_RegisterVar(&cv_maxportals);
 

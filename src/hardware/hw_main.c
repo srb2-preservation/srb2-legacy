@@ -1022,7 +1022,7 @@ static void HWR_SplitWall(sector_t *sector, FOutVector *wallVerts, INT32 texnum,
 			else
 			{
 				lightnum = *list[i].lightlevel;
-				colormap = list[i].extra_colormap;
+				colormap = *list[i].extra_colormap;
 				lightnum = colormap ? lightnum : HWR_CalcWallLight(lightnum, v1x, v1y, v2x, v2y);
 			}
 		}
@@ -3080,14 +3080,14 @@ static void HWR_AddPolyObjectPlanes(void)
 				memset(&Surf, 0x00, sizeof(Surf));
 				blendmode = HWR_TranstableToAlpha(po_ptrs[i]->translucency, &Surf);
 				HWR_AddTransparentPolyobjectFloor(levelflats[polyobjsector->floorpic].lumpnum, po_ptrs[i], false, polyobjsector->floorheight,
-												(light == -1 ? gl_frontsector->lightlevel : *gl_frontsector->lightlist[light].lightlevel), Surf.PolyColor.s.alpha, polyobjsector, blendmode, (light == -1 ? gl_frontsector->extra_colormap : gl_frontsector->lightlist[light].extra_colormap));
+												(light == -1 ? gl_frontsector->lightlevel : *gl_frontsector->lightlist[light].lightlevel), Surf.PolyColor.s.alpha, polyobjsector, blendmode, (light == -1 ? gl_frontsector->extra_colormap : *gl_frontsector->lightlist[light].extra_colormap));
 			}
 			else
 			{
 				HWR_GetFlat(levelflats[polyobjsector->floorpic].lumpnum);
 				HWR_RenderPolyObjectPlane(po_ptrs[i], false, polyobjsector->floorheight, PF_Occlude,
 											(light == -1 ? gl_frontsector->lightlevel : *gl_frontsector->lightlist[light].lightlevel), levelflats[polyobjsector->floorpic].lumpnum,
-											polyobjsector, 255, (light == -1 ? gl_frontsector->extra_colormap : gl_frontsector->lightlist[light].extra_colormap));
+											polyobjsector, 255, (light == -1 ? gl_frontsector->extra_colormap : *gl_frontsector->lightlist[light].extra_colormap));
 			}
 		}
 
@@ -3103,14 +3103,14 @@ static void HWR_AddPolyObjectPlanes(void)
 				memset(&Surf, 0x00, sizeof(Surf));
 				blendmode = HWR_TranstableToAlpha(po_ptrs[i]->translucency, &Surf);
 				HWR_AddTransparentPolyobjectFloor(levelflats[polyobjsector->ceilingpic].lumpnum, po_ptrs[i], true, polyobjsector->ceilingheight,
-												(light == -1 ? gl_frontsector->lightlevel : *gl_frontsector->lightlist[light].lightlevel), Surf.PolyColor.s.alpha, polyobjsector, blendmode, (light == -1 ? gl_frontsector->extra_colormap : gl_frontsector->lightlist[light].extra_colormap));
+												(light == -1 ? gl_frontsector->lightlevel : *gl_frontsector->lightlist[light].lightlevel), Surf.PolyColor.s.alpha, polyobjsector, blendmode, (light == -1 ? gl_frontsector->extra_colormap : *gl_frontsector->lightlist[light].extra_colormap));
 			}
 			else
 			{
 				HWR_GetFlat(levelflats[polyobjsector->ceilingpic].lumpnum);
 				HWR_RenderPolyObjectPlane(po_ptrs[i], true, polyobjsector->ceilingheight, PF_Occlude,
 										(light == -1 ? gl_frontsector->lightlevel : *gl_frontsector->lightlist[light].lightlevel), levelflats[polyobjsector->ceilingpic].lumpnum,
-										polyobjsector, 255, (light == -1 ? gl_frontsector->extra_colormap : gl_frontsector->lightlist[light].extra_colormap));
+										polyobjsector, 255, (light == -1 ? gl_frontsector->extra_colormap : *gl_frontsector->lightlist[light].extra_colormap));
 			}
 		}
 	}
@@ -3230,12 +3230,12 @@ static void HWR_Subsector(size_t num)
 		light = R_GetPlaneLight(gl_frontsector, locFloorHeight, false);
 		if (gl_frontsector->floorlightsec == -1)
 			floorlightlevel = *gl_frontsector->lightlist[light].lightlevel;
-		floorcolormap = gl_frontsector->lightlist[light].extra_colormap;
+		floorcolormap = *gl_frontsector->lightlist[light].extra_colormap;
 
 		light = R_GetPlaneLight(gl_frontsector, locCeilingHeight, false);
 		if (gl_frontsector->ceilinglightsec == -1)
 			ceilinglightlevel = *gl_frontsector->lightlist[light].lightlevel;
-		ceilingcolormap = gl_frontsector->lightlist[light].extra_colormap;
+		ceilingcolormap = *gl_frontsector->lightlist[light].extra_colormap;
 	}
 
 	sub->sector->extra_colormap = gl_frontsector->extra_colormap;
@@ -3331,7 +3331,7 @@ static void HWR_Subsector(size_t num)
 					                       *rover->bottomheight,
 					                       *gl_frontsector->lightlist[light].lightlevel,
 					                       rover->alpha-1 > 255 ? 255 : rover->alpha-1, rover->master->frontsector, (rover->flags & FF_RIPPLE ? PF_Ripple : 0)|PF_Translucent,
-					                       false, gl_frontsector->lightlist[light].extra_colormap);
+					                       false, *gl_frontsector->lightlist[light].extra_colormap);
 
 				}
 				else
@@ -3339,7 +3339,7 @@ static void HWR_Subsector(size_t num)
 					HWR_GetFlat(levelflats[*rover->bottompic].lumpnum);
 					light = R_GetPlaneLight(gl_frontsector, centerHeight, dup_viewz < cullHeight ? true : false);
 										HWR_RenderPlane(sub, &extrasubsectors[num], false, *rover->bottomheight, (rover->flags & FF_RIPPLE ? PF_Ripple : 0)|PF_Occlude, *gl_frontsector->lightlist[light].lightlevel, levelflats[*rover->bottompic].lumpnum,
-					                rover->master->frontsector, 255, false, gl_frontsector->lightlist[light].extra_colormap);
+					                rover->master->frontsector, 255, false, *gl_frontsector->lightlist[light].extra_colormap);
 
 				}
 			}
@@ -3385,7 +3385,7 @@ static void HWR_Subsector(size_t num)
 					                        *rover->topheight,
 					                        *gl_frontsector->lightlist[light].lightlevel,
 					                        rover->alpha-1 > 255 ? 255 : rover->alpha-1, rover->master->frontsector, (rover->flags & FF_RIPPLE ? PF_Ripple : 0)|PF_Translucent,
-					                        false, gl_frontsector->lightlist[light].extra_colormap);
+					                        false, *gl_frontsector->lightlist[light].extra_colormap);
 
 
 				}
@@ -3394,7 +3394,7 @@ static void HWR_Subsector(size_t num)
 					HWR_GetFlat(levelflats[*rover->toppic].lumpnum);
 					light = R_GetPlaneLight(gl_frontsector, centerHeight, dup_viewz < cullHeight ? true : false);
 					HWR_RenderPlane(sub, &extrasubsectors[num], true, *rover->topheight, (rover->flags & FF_RIPPLE ? PF_Ripple : 0)|PF_Occlude, *gl_frontsector->lightlist[light].lightlevel, levelflats[*rover->toppic].lumpnum,
-					                  rover->master->frontsector, 255, false, gl_frontsector->lightlist[light].extra_colormap);
+					                  rover->master->frontsector, 255, false, *gl_frontsector->lightlist[light].extra_colormap);
 				}
 			}
 		}
@@ -4092,7 +4092,7 @@ static void HWR_SplitSprite(gl_vissprite_t *spr)
 	alpha = Surf.PolyColor.s.alpha;
 	// Start with the lightlevel and colormap from the top of the sprite
 	lightlevel = *list[sector->numlights - 1].lightlevel;
-	colormap = list[sector->numlights - 1].extra_colormap;
+	colormap = *list[sector->numlights - 1].extra_colormap;
 	i = 0;
 	temp = FLOAT_TO_FIXED(realtop);
 
@@ -4108,7 +4108,7 @@ static void HWR_SplitSprite(gl_vissprite_t *spr)
 		{
 			if (!(spr->mobj->frame & FF_FULLBRIGHT))
 				lightlevel = max(min(255, *list[i-1].lightlevel), 0);
-			colormap = list[i-1].extra_colormap;
+			colormap = *list[i-1].extra_colormap;
 			break;
 		}
 	}
@@ -4124,7 +4124,7 @@ static void HWR_SplitSprite(gl_vissprite_t *spr)
 		{
 			if (!(spr->mobj->frame & FF_FULLBRIGHT))
 				lightlevel = max(min(255, *list[i].lightlevel), 0);
-			colormap = list[i].extra_colormap;
+			colormap = *list[i].extra_colormap;
 		}
 
 
@@ -4396,7 +4396,7 @@ static inline void HWR_DrawPrecipitationSprite(gl_vissprite_t *spr)
 	GLPatch_t *gpatch; // sprite patch converted to hardware
 	FSurfaceInfo Surf;
 
-	if (P_MobjWasRemoved(spr->mobj))
+	if (!spr->mobj)
 		return;
 
 	if (!spr->mobj->subsector)
@@ -4450,8 +4450,8 @@ static inline void HWR_DrawPrecipitationSprite(gl_vissprite_t *spr)
 			if (!(spr->mobj->frame & FF_FULLBRIGHT))
 				lightlevel = max(min(255, *sector->lightlist[light].lightlevel), 0);
 
-			if (sector->lightlist[light].extra_colormap)
-				colormap = sector->lightlist[light].extra_colormap;
+			if (*sector->lightlist[light].extra_colormap)
+				colormap = *sector->lightlist[light].extra_colormap;
 		}
 		else
 		{

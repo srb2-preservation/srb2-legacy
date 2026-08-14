@@ -977,7 +977,7 @@ static void R_SplitSprite(vissprite_t *sprite, mobj_t *thing)
 		newsprite->cut |= SC_TOP;
 		if (!(sector->lightlist[i].caster->flags & FF_NOSHADE))
 		{
-			lightnum = max((*sector->lightlist[i].lightlevel >> LIGHTSEGSHIFT), cv_secbright.value);
+			lightnum = max(*sector->lightlist[i].lightlevel , cv_secbright.value)  >> LIGHTSEGSHIFT;
 
 			if (lightnum < 0)
 				spritelights = scalelight[0];
@@ -986,7 +986,7 @@ static void R_SplitSprite(vissprite_t *sprite, mobj_t *thing)
 			else
 				spritelights = scalelight[lightnum];
 
-			newsprite->extra_colormap = sector->lightlist[i].extra_colormap;
+			newsprite->extra_colormap = *sector->lightlist[i].extra_colormap;
 
 /*
 			if (thing->frame & FF_TRANSMASK)
@@ -1384,7 +1384,7 @@ static void R_ProjectSprite(mobj_t *thing)
 				break;
 			}
 		}
-		lightnum = max((*thing->subsector->sector->lightlist[light].lightlevel >> LIGHTSEGSHIFT), cv_secbright.value);
+		lightnum = max(*thing->subsector->sector->lightlist[light].lightlevel , cv_secbright.value) >> LIGHTSEGSHIFT;
 
 		if (lightnum < 0)
 			spritelights = scalelight[0];
@@ -1442,7 +1442,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	vis->sz = (INT16)((centeryfrac - FixedMul(vis->gz - viewz, sortscale))>>FRACBITS);
 	vis->cut = SC_NONE;
 	if (thing->subsector->sector->numlights)
-		vis->extra_colormap = thing->subsector->sector->lightlist[light].extra_colormap;
+		vis->extra_colormap = *thing->subsector->sector->lightlist[light].extra_colormap;
 	else
 		vis->extra_colormap = thing->subsector->sector->extra_colormap;
 
@@ -1729,7 +1729,7 @@ void R_AddSprites(sector_t *sec, INT32 lightlevel)
 	{
 		if (sec->heightsec == -1) lightlevel = sec->lightlevel;
 
-		lightnum = max((lightlevel >> LIGHTSEGSHIFT), cv_secbright.value);
+		lightnum = max(lightlevel, cv_secbright.value) >> LIGHTSEGSHIFT;
 
 		if (lightnum < 0)
 			spritelights = scalelight[0];

@@ -349,6 +349,10 @@ static void I_ReportSignal(int num, int coredumped)
 	char sigttl[512] = "Process killed by signal: ";
 	const char *reportmsg = "\n\nIf this consistently happens, please report an issue so it can be fixed.\n\nSorry for the inconvenience!";
 
+	// stop the movie on crash
+	if (moviemode)
+		M_StopMovie();
+
 	switch (num)
 	{
 //	case SIGINT:
@@ -425,7 +429,7 @@ static void I_ReportSignal(int num, int coredumped)
 	SDL_ShowMessageBox(&messageboxdata, &buttonid);
 
 	if (buttonid == 1)
-		I_OpenURL("https://github.com/srb2-preservation/srb2-legacy/issues");
+		I_OpenURL(ISSUES);
 }
 
 #ifndef NEWSIGNALHANDLER
@@ -2520,6 +2524,8 @@ void I_Quit(void)
 		G_CheckDemoStatus();
 	if (metalrecording)
 		G_StopMetalRecording();
+	if (moviemode)
+		M_StopMovie();
 
 	D_QuitNetGame();
 	I_ShutdownMusic();
@@ -2641,6 +2647,8 @@ void I_Error(const char *error, ...)
 		G_CheckDemoStatus();
 	if (metalrecording)
 		G_StopMetalRecording();
+	if (moviemode)
+		M_StopMovie();
 
 	D_QuitNetGame();
 	I_ShutdownMusic();

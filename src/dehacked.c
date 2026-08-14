@@ -452,7 +452,7 @@ static void readPlayer(MYFILE *f, INT32 num)
 					You MAY disable previous entries if you so desire...
 					But try to enable something that's already enabled and you will be sent to a free slot.
 
-					Because of this, you are allowed to edit any previous entrys you like, but only if you
+					Because of this, you are allowed to edit any previous entries you like, but only if you
 					signal that you are purposely doing so by disabling and then reenabling the slot.
 
 					... Or use MENUPOSITION first, that works too. Hell, you could edit multiple character
@@ -6891,10 +6891,12 @@ struct {
 	{"UINT32_MAX",UINT32_MAX},
 
 	// fixed_t constants, from m_fixed.h
+	{"FU",FRACUNIT},
 	{"FRACUNIT",FRACUNIT},
 	{"FRACBITS",FRACBITS},
 
 	// doomdef.h constants
+	{"TR",TICRATE},
 	{"TICRATE",TICRATE},
 	{"MUSICRATE",MUSICRATE},
 	{"RING_DIST",RING_DIST},
