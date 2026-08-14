@@ -21,6 +21,13 @@
 
 #include "../i_sound.h"
 #include "../s_sound.h"
+
+UINT8 sound_started = 0;
+
+// uncomment this to enable music (beware that its very slow)
+//#define __MUSIC__
+
+#ifdef __MUSIC__
 #include "stb_vorbis.c"
 
 #include <maxmod9.h>
@@ -29,8 +36,6 @@ stb_vorbis *vorbis = NULL;
 stb_vorbis_info info;
 mm_stream stream;
 
-UINT8 sound_started = 0;
-
 static mm_word StreamCallback(mm_word length, mm_addr dest, mm_stream_formats format)
 {
     INT32 samples_per_channel = length * info.channels;
@@ -38,6 +43,7 @@ static mm_word StreamCallback(mm_word length, mm_addr dest, mm_stream_formats fo
 
     return length;
 }
+#endif
 
 void *I_GetSfx(sfxinfo_t *sfx)
 {
@@ -101,7 +107,9 @@ void I_SetSfxVolume(UINT8 volume)
 
 void I_InitMusic(void)
 {
+#ifdef __MUSIC__
     mmInitNoSoundbank();
+#endif
 }
 
 void I_ShutdownMusic(void){}
@@ -172,6 +180,7 @@ UINT32 I_GetSongPosition(void)
 
 boolean I_LoadSong(char *data, size_t len)
 {
+#ifdef __MUSIC__
 	if (!cv_gamedigimusic.value) { return true; }
 
     int error;
@@ -184,10 +193,14 @@ boolean I_LoadSong(char *data, size_t len)
     info = stb_vorbis_get_info(vorbis);
 
     return true;
+#else
+	return false;
+#endif
 }
 
 void I_UnloadSong(void)
 {
+#ifdef __MUSIC__
 	if (!cv_gamedigimusic.value) { return; }
 
     mmStreamClose();
@@ -197,10 +210,12 @@ void I_UnloadSong(void)
         stb_vorbis_close(vorbis);
         vorbis = NULL;
     }
+#endif
 }
 
 boolean I_PlaySong(boolean looping)
 {
+#ifdef __MUSIC__
 	(void)looping;
 	if (!cv_gamedigimusic.value) { return true; }
 
@@ -218,11 +233,16 @@ boolean I_PlaySong(boolean looping)
     mmStreamOpen(&stream);
 
     return true;
+#else
+	return false;
+#endif
 }
 
 void I_StopSong(void)
 {
+#ifdef __MUSIC__
     mmStreamClose();
+#endif
 }
 
 void I_PauseSong(void)

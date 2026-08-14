@@ -1294,7 +1294,11 @@ float M_SavedSize(void)
 	switch (moviemode)
 	{	
 		case MM_GIF:
+#if NUMSCREENS > 2
 			return GIF_GetSizeMB();
+#else
+			return 0;
+#endif
 		case MM_APNG:
 #ifdef USE_APNG
 		return ftell(apng_FILE);
