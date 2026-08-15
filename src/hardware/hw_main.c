@@ -3454,7 +3454,7 @@ static void HWR_Subsector(size_t num)
 
 		while (count--)
 		{
-				if (!line->polyseg) // ignore segs that belong to polyobjects
+				if (!line->polyseg && !line->glseg) // ignore segs that belong to polyobjects and minisegs
 				HWR_AddLine(line);
 				line++;
 		}
