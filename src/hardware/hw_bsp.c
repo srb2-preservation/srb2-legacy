@@ -444,10 +444,15 @@ static poly_t *CutOutSubsecPoly(seg_t *lseg, INT32 count, poly_t *poly)
 	for (; count--; lseg++)
 	{
 		//x,y,dx,dy (like a divline)
-		p1.x = FIXED_TO_FLOAT(lseg->v1->x);
-		p1.y = FIXED_TO_FLOAT(lseg->v1->y);
-		p2.x = FIXED_TO_FLOAT(lseg->v2->x);
-		p2.y = FIXED_TO_FLOAT(lseg->v2->y);
+		line_t *line = lseg->linedef;
+
+		if (lseg->glseg)
+			continue;
+
+		p1.x = FIXED_TO_FLOAT(lseg->side ? line->v2->x : line->v1->x);
+		p1.y = FIXED_TO_FLOAT(lseg->side ? line->v2->y : line->v1->y);
+		p2.x = FIXED_TO_FLOAT(lseg->side ? line->v1->x : line->v2->x);
+		p2.y = FIXED_TO_FLOAT(lseg->side ? line->v1->y : line->v2->y);
 
 		cutseg.x = p1.x;
 		cutseg.y = p1.y;
