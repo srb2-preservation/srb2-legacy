@@ -656,12 +656,16 @@ static void ST_drawInfo(void)
 	{
 		fixed_t distToSonic = P_AproxDistance(stplyr->mo->x - tails->mo->x, stplyr->mo->y - tails->mo->y);
 		angle_t angleTowardsSonic = R_PointToAngle2(tails->mo->x, tails->mo->y, stplyr->mo->x, stplyr->mo->y);
+		fixed_t angleToSonicDeg = AngleFixed(angleTowardsSonic);
+		fixed_t facingAngleDeg = AngleFixed(tails->mo->angle);
 		V_DrawDebugLine(va("Tails Z Pos: %5d  ", tails->mo->z>>FRACBITS));
 		V_DrawDebugLine(va("Tails Y Pos: %5d  ", tails->mo->y>>FRACBITS));
 		V_DrawDebugLine(va("Tails X Pos: %5d  ", tails->mo->x>>FRACBITS));
 		V_DrawDebugLine(va("Distance to Sonic: %5d  ", distToSonic>>FRACBITS));
-		V_DrawDebugLine(va("Angle towards Sonic: %5d  ", angleTowardsSonic>>FRACBITS));
-		V_DrawDebugLine(va("Facing Angle: %5d  ", tails->mo->angle>>FRACBITS));
+		V_DrawDebugLine(va("%3d.%04d  ", FixedInt(angleToSonicDeg), (FixedRem(angleToSonicDeg, FRACUNIT)*10000)>>FRACBITS));
+		V_DrawDebugLine(va("Angle towards Sonic: %08X  ", angleTowardsSonic));
+		V_DrawDebugLine(va("%3d.%04d  ", FixedInt(facingAngleDeg), (FixedRem(facingAngleDeg, FRACUNIT)*10000)>>FRACBITS));
+		V_DrawDebugLine(va("Facing Angle: %08X  ", tails->mo->angle));
 		V_DrawDebugLine(va("\n"));
 	}
 
@@ -670,8 +674,8 @@ static void ST_drawInfo(void)
 	{
 		const fixed_t angle = AngleFixed(stplyr->mo->angle);
 		V_DrawDebugLine(va("Speed: %5d  ", stplyr->speed>>FRACBITS));
-		V_DrawDebugLine(va("Angle: %5d  ", stplyr->mo->angle>>FRACBITS));
-		//V_DrawDebugLine(va("Angle: %5d  ", FixedInt(angle)));
+		V_DrawDebugLine(va("%3d.%04d  ", FixedInt(angle), (FixedRem(angle, FRACUNIT)*10000)>>FRACBITS));
+		V_DrawDebugLine(va("Angle: %08X  ", stplyr->mo->angle));
 		V_DrawDebugLine(va("Z Pos: %5d  ", stplyr->mo->z>>FRACBITS));
 #ifdef XYPOS
 		V_DrawDebugLine(va("Y Pos: %5d  ", stplyr->mo->y>>FRACBITS));
@@ -2374,7 +2378,7 @@ void ST_MovieInfoDrawer(void)
 			"%s%d.%02ds | %.2f mb\x86", // the main format
 
 			(withincap ? "\x82" : "\x86"), // color if near the limit
-			
+
 			G_TicsToSeconds(gif_frames), // seconds
 			G_TicsToCentiseconds(gif_frames), // centiseconds
 			gif_size // size in megabytes
