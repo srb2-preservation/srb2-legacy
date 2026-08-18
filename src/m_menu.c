@@ -1666,7 +1666,7 @@ static menuitem_t OP_LegacyOptionsMenu[] =
 	{IT_STRING|IT_CALL, NULL, "Report an Issue", "If you found a problem with SRB2 Legacy or have a suggestion, here is where to go.", M_LegacyReportIssue, 90},
 };
 
-static menuitem_t OP_LegacyCreditsMenu[] = // This barely fits on green resolution
+static menuitem_t OP_LegacyCreditsMenu[] = // This barely fits on green resolutions
 {
 	{IT_HEADER|IT_STRING, NULL, "Contributors:", NULL,  NULL, 3},
 	{IT_STRING, NULL, "PAS", NULL,  NULL, 11},  
