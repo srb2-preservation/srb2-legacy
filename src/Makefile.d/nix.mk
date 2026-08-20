@@ -20,7 +20,7 @@ endif
 
 SDL=1
 
-ifeq (${OPENGL},1)
+ifeq (${GLFW},1)
 EXENAME?=srb2glfw
 endif
 

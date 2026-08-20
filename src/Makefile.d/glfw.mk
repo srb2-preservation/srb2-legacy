@@ -1,8 +1,8 @@
-makedir:=$(makedir)/OpenGL
+makedir:=$(makedir)/glfw
 
-sources+=$(call List,opengl/Sourcefile)
+sources+=$(call List,glfw/Sourcefile)
 
-opts+=-DDIRECTFULLSCREEN -D__OPENGL__ -DHAVE_MIXER
+opts+=-DDIRECTFULLSCREEN -D__GLFW__ -DHAVE_MIXER
 libs+= -lGL -lGLU -lglfw -lSDL2 -lSDL2_mixer
 
 ifdef FREEBSD
