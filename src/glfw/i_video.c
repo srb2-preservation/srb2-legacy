@@ -192,7 +192,10 @@ const char *VID_GetModeName(INT32 modeNum)
 	return &vidModeName[modeNum][0];
 }
 
-UINT32 I_GetRefreshRate(void) { return 60; }
+UINT32 I_GetRefreshRate(void)
+{
+	return glfwGetVideoMode(glfwGetPrimaryMonitor())->refreshRate;
+}
 
 void I_UpdateNoBlit(void) {}
 
