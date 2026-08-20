@@ -2128,7 +2128,7 @@ void I_GetEvent(void)
 	ev.type = ev_mouse;
 	ev.data1 = 0;
 	ev.data2 = (INT32)(x - lastMouseX);
-	ev.data3 = (INT32)(y - lastMouseY);
+	ev.data3 = -(INT32)(y - lastMouseY);
 	//ev.repeated = false;
 
 	lastMouseX = x;
