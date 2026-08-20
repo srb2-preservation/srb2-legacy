@@ -61,11 +61,12 @@ void I_StartupGraphics(void)
 	memset(pal32, 0, sizeof(pal32));
 	CV_RegisterVar(&cv_vidwait);
 
-    if (!glfwInit())
-        I_Error("Failed to initialize GLFW");
+    	if (!glfwInit())
+		I_Error("Failed to initialize GLFW");
 
 	VID_SetMode(20);
-    graphics_started = true;
+	allow_fullscreen = true;
+	graphics_started = true;
 }
 
 void I_ShutdownGraphics(void)
@@ -128,6 +129,7 @@ INT32 VID_SetMode(INT32 modeNum)
 
 void VID_CheckRenderer(void)
 {
+	GLFWmonitor* primaryMonitor = glfwGetPrimaryMonitor();
     free(rgba);
     rgba = calloc(1, vid.width * vid.height * 4);
 
@@ -140,7 +142,7 @@ void VID_CheckRenderer(void)
 		window = NULL;
 	}
 
-    window = glfwCreateWindow(vid.width, vid.height, "SRB2 "VERSIONSTRING, cv_fullscreen.value ? glfwGetPrimaryMonitor() : NULL, NULL);
+    window = glfwCreateWindow(vid.width, vid.height, "SRB2 Legacy "VERSIONSTRING, cv_fullscreen.value ? primaryMonitor : NULL, NULL);
     if (!window)
 		I_Error("Failed to create window!\n");
 
@@ -157,6 +159,16 @@ void VID_CheckRenderer(void)
 
     glDisable(GL_DEPTH_TEST);
     glClearColor(0,0,0,1);
+
+	if (cv_fullscreen.value == 1)
+	{
+		glfwSetWindowMonitor(window, primaryMonitor, 0, 0, vid.width, vid.height, I_GetRefreshRate());
+	}
+	else
+	{
+		I_SetBorderlessWindow();
+		glfwSetWindowMonitor(window, NULL, 0, 0, vid.width, vid.height, 0);
+	}
 }
 
 void VID_CheckGLLoaded(rendermode_t oldrender)
@@ -247,3 +259,8 @@ void I_ReadScreen(UINT8 *scr)
 void I_BeginRead(void){}
 
 void I_EndRead(void){}
+
+void I_SetBorderlessWindow(void)
+{
+	glfwSetWindowAttrib(window, GLFW_DECORATED, (cv_fullscreen.value == 2 ? GLFW_FALSE : GLFW_TRUE));
+}
