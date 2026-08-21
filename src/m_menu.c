@@ -1666,7 +1666,7 @@ static menuitem_t OP_LegacyOptionsMenu[] =
 	{IT_STRING|IT_CALL, NULL, "Report an Issue", "If you found a problem with SRB2 Legacy or have a suggestion, here is where to go.", M_LegacyReportIssue, 90},
 };
 
-static menuitem_t OP_LegacyCreditsMenu[] = // This used to barely fit on green resolutions, but not anymore, this is because this menu is now a scrolling menu where space is not a problem
+static menuitem_t OP_LegacyCreditsMenu[] = 
 {
 	{IT_HEADER|IT_STRING, NULL, "Contributors:", NULL,  NULL, 3},
 	{IT_STRING, NULL, "PAS", NULL,  NULL, 11},  
@@ -1675,18 +1675,17 @@ static menuitem_t OP_LegacyCreditsMenu[] = // This used to barely fit on green r
 	{IT_STRING, NULL, "Lugent",  NULL, NULL, 26},
 	{IT_STRING, NULL, "tempowad", NULL,  NULL, 31},
 	{IT_STRING, NULL, "tatokis", NULL,  NULL, 36},
-	{IT_STRING, NULL, "luigi budd", NULL,  NULL, 41}, // Enhanced server info screen
-	{IT_STRING, NULL, "Lamibe", NULL,  NULL, 46},
-	{IT_STRING, NULL, "UnitickDelta", NULL,  NULL, 51}, // Software sky barreling
-	{IT_STRING, NULL, "Bewer", NULL,  NULL, 56}, // SRB2Kart text colormaps
-	{IT_STRING, NULL, "alufolie91", NULL,  NULL, 61},
-	{IT_STRING, NULL, "xdf", NULL,  NULL, 66}, // Marathon mode
-	{IT_STRING, NULL, "A-Star100", NULL,  NULL, 71}, // PR #183 on Github
-	{IT_HEADER|IT_STRING, NULL, "Special Thanks:", NULL,  NULL, 76},
-	{IT_STRING, NULL, "Upstream SRB2 Contributors", NULL, NULL, 81},
-	{IT_STRING, NULL, "SRB2 Classic", NULL, NULL, 86},
-	{IT_STRING, NULL, "SRB2Kart-Saturn", NULL, NULL, 91},
-	{IT_STRING, NULL, "SRB2EventZ", NULL, NULL,  96}, // Netgame testing and feature ideas
+	{IT_STRING, NULL, "Lamibe", NULL,  NULL, 41},
+	{IT_STRING, NULL, "UnitickDelta", NULL,  NULL, 46}, // Software sky barreling
+	{IT_STRING, NULL, "Bewer", NULL,  NULL, 51}, // SRB2Kart text colormaps
+	{IT_STRING, NULL, "alufolie91", NULL,  NULL, 56},
+	{IT_STRING, NULL, "xdf", NULL,  NULL, 61}, // Marathon mode
+	{IT_STRING, NULL, "A-Star100", NULL,  NULL, 66}, // PR #183 on Github
+	{IT_HEADER|IT_STRING, NULL, "Special Thanks:", NULL,  NULL, 71},
+	{IT_STRING, NULL, "Upstream SRB2 Contributors", NULL, NULL, 76},
+	{IT_STRING, NULL, "SRB2 Classic", NULL, NULL, 81},
+	{IT_STRING, NULL, "SRB2Kart-Saturn", NULL, NULL, 86},
+	{IT_STRING, NULL, "SRB2EventZ", NULL, NULL,  91}, // Netgame testing and feature ideas
 };
 
 static void M_LegacyCreditsToolTips(void)
