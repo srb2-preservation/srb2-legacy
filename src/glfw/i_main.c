@@ -52,7 +52,7 @@ typedef BOOL (WINAPI *p_IsDebuggerPresent)(VOID);
 static void InitLogging(void)
 {
 	const char *homedir = NULL;
-#ifdef NATIVEDIR
+#ifdef DEFAULTDIR
 	const char *logdir = NULL;
 #endif
 	time_t my_time;
@@ -98,7 +98,7 @@ static void InitLogging(void)
 					"%s"PATHSEP, reldir);
 		}
 		else
-#ifdef NATIVEDIR
+#ifdef DEFAULTDIR
 		if (homedir)
 		{
 			logdir = I_ConfigDir();
@@ -106,7 +106,7 @@ static void InitLogging(void)
 					"%s"PATHSEP"%s"PATHSEP, logdir, reldir);
 		}
 		else
-#endif/*NATIVEDIR*/
+#endif/*DEFAULTDIR*/
 		{
 			left = snprintf(logfilename, sizeof logfilename,
 					"."PATHSEP"%s"PATHSEP, reldir);
@@ -122,11 +122,11 @@ static void InitLogging(void)
 
 #if defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON)
 	logstream = fopen(logfilename, "w");
-#ifdef NATIVEDIR
+#ifdef DEFAULTDIR
 	if (logdir)
 		link = va("%s/latest-log.txt", logdir);
 	else
-#endif/*NATIVEDIR*/
+#endif/*DEFAULTDIR*/
 		link = "latest-log.txt";
 	unlink(link);
 	if (symlink(logfilename, link) == -1)
