@@ -21,9 +21,18 @@ endif()
 
 # DO NOT CHANGE THIS SRB2 STRING! Some variable names depend on this string.
 # Version change is fine.
+# CXX is enabled alongside C (previously C-only) because the iOS target links
+# the prebuilt libgme/libopenmpt static archives (both C++), which need the
+# C++ runtime wired into the link step; CMake only does that when CXX is
+# enabled. CMAKE_SYSTEM_NAME isn't populated until this first project()/
+# enable_language() call runs (that's what processes the toolchain file), so
+# this can't be conditioned on platform here — it's unconditional for all
+# platforms instead. Every toolchain this project already supports (MSVC,
+# Android NDK, Emscripten, and typical gcc/clang installs) ships a C++
+# compiler alongside its C one, so this shouldn't affect non-iOS builds.
 project(SRB2
 	VERSION ${SRB2_VERSION}
-	LANGUAGES C)
+	LANGUAGES C CXX)
 
 ##### PACKAGE CONFIGURATION #####
 
@@ -130,6 +139,10 @@ endif()
 
 if(${CMAKE_SYSTEM} MATCHES "Darwin")
 	add_definitions(-DMACOSX)
+endif()
+
+if(${CMAKE_SYSTEM} MATCHES "iOS")
+	add_definitions(-DIOS)
 endif()
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")

@@ -812,7 +812,17 @@ static void Impl_HandleJoystickAxisEvent(SDL_JoyAxisEvent evt)
 	{
 		evt.axis--;
 		event.data1 = evt.axis / 2;
+#if defined(__APPLE__)
+		// SDL's Apple joystick backends (both the macOS HID/GameController
+		// path and iOS's GCController-based one) report the vertical axis
+		// with the opposite sign from what this engine's default axis
+		// mapping expects -- affects menu navigation too, not just
+		// cv_moveaxis-driven gameplay movement, so it has to be corrected
+		// here at the raw event level rather than per-player-configurable.
+		event.data3 = -SDLJoyAxis(evt.value, event.type);
+#else
 		event.data3 = SDLJoyAxis(evt.value, event.type);
+#endif
 	}
 	D_PostEvent(&event);
 }

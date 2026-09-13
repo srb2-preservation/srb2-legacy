@@ -62,6 +62,25 @@ if(${CMAKE_SYSTEM} MATCHES "Android")
 	set(SRB2_CONFIG_NATIVESCREENRES ON)
 endif()
 
+if(${CMAKE_SYSTEM} MATCHES "iOS")
+	set(SRB2_CONFIG_USE_INTERNAL_LIBRARIES ON)
+	# No desktop GL on iOS (GLES/Metal only); same as Android for now.
+	set(SRB2_CONFIG_HWRENDER OFF)
+	# Keep LTO off for the initial bring-up; safe to revisit later.
+	set(SRB2_CONFIG_LTO ON)
+	# <execinfo.h>/backtrace() do not exist on iOS.
+	set(SRB2_CONFIG_EXECINFO OFF)
+	# src/apng.c's use of png_set_acTL/png_get_acTL is gated on
+	# PNG_WRITE_APNG_SUPPORTED (an APNG-patched-libpng-only feature macro),
+	# falling back to a no-op dummy when that's undefined -- confirmed
+	# building and working fine against the stock (unpatched) libpng
+	# vendored for iOS (thirdparty/libpng/iOS). APNG movie recording itself
+	# is presumably a silent no-op as a result (not yet specifically
+	# verified), but plain PNG screenshot saving and texture loading work.
+	set(SRB2_CONFIG_HAVE_PNG ON)
+	set(SRB2_CONFIG_NATIVESCREENRES ON)
+endif()
+
 add_subdirectory(blua)
 
 if(${SRB2_CONFIG_HAVE_GME})
@@ -77,6 +96,9 @@ if(${SRB2_CONFIG_HAVE_GME})
 		elseif(${CMAKE_SYSTEM} MATCHES "Android")
 			set(GME_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/thirdparty/libgme/include)
 			set(GME_LIBRARIES "${CMAKE_SOURCE_DIR}/thirdparty/libgme/libs/${CMAKE_ANDROID_ARCH_ABI}/libgme.so")
+		elseif(${CMAKE_SYSTEM} MATCHES "iOS")
+			set(GME_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/thirdparty/libgme/iOS/include)
+			set(GME_LIBRARIES "${CMAKE_SOURCE_DIR}/thirdparty/libgme/iOS/gme.xcframework")
 		endif()
 	elseif(${CMAKE_SYSTEM} MATCHES "Emscripten")
 		set(GME_FOUND ON)
@@ -106,6 +128,9 @@ if(${SRB2_CONFIG_HAVE_OPENMPT})
 		elseif(${CMAKE_SYSTEM} MATCHES "Android")
 			set(OPENMPT_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/thirdparty/libopenmpt/include)
 			set(OPENMPT_LIBRARIES "${CMAKE_SOURCE_DIR}/thirdparty/libopenmpt/libs/${CMAKE_ANDROID_ARCH_ABI}/libopenmpt.so")
+		elseif(${CMAKE_SYSTEM} MATCHES "iOS")
+			set(OPENMPT_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/thirdparty/libopenmpt/iOS/include)
+			set(OPENMPT_LIBRARIES "${CMAKE_SOURCE_DIR}/thirdparty/libopenmpt/iOS/libopenmpt.xcframework")
 		endif()
 	elseif(${CMAKE_SYSTEM} MATCHES "Emscripten")
 		set(OPENMPT_FOUND ON)
@@ -140,6 +165,9 @@ if(${SRB2_CONFIG_HAVE_ZLIB})
 			endif()
 		elseif(${CMAKE_SYSTEM} MATCHES "Android")
 			set(ZLIB_LIBRARIES "-lz")
+		elseif(${CMAKE_SYSTEM} MATCHES "iOS")
+			# Apple ships zlib as a system library on iOS; no custom build needed.
+			set(ZLIB_LIBRARIES "-lz")
 		endif()
 	elseif(${CMAKE_SYSTEM} MATCHES Emscripten)
 		set(ZLIB_FOUND ON)
@@ -167,6 +195,9 @@ if(${SRB2_CONFIG_HAVE_PNG} AND ${SRB2_CONFIG_HAVE_ZLIB})
 				endif()
 			elseif(${CMAKE_SYSTEM} MATCHES "Android")
 				set(PNG_LIBRARIES libpng::libpng)
+			elseif(${CMAKE_SYSTEM} MATCHES "iOS")
+				set(PNG_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/thirdparty/libpng/iOS/include)
+				set(PNG_LIBRARIES "${CMAKE_SOURCE_DIR}/thirdparty/libpng/iOS/libpng.xcframework")
 			endif()
 		elseif(${CMAKE_SYSTEM} MATCHES Emscripten)
 			set(PNG_FOUND ON)
@@ -235,6 +266,13 @@ if(${SRB2_CONFIG_NATIVESCREENRES})
 	target_compile_definitions(SRB2SDL2 PRIVATE -DNATIVESCREENRES)
 endif()
 
+if(${CMAKE_SYSTEM} MATCHES "iOS")
+	# SRB2SDL2 is otherwise a pure C target, but it links the static
+	# libgme/libopenmpt archives (both C++). Force the final link step to go
+	# through the C++ driver so the C++ runtime gets linked in too.
+	set_property(TARGET SRB2SDL2 PROPERTY LINKER_LANGUAGE CXX)
+endif()
+
 # Targets
 
 # Compatibility flag with later versions of GCC
@@ -285,7 +323,7 @@ if(${CMAKE_SYSTEM} MATCHES Emscripten)
 	add_subdirectory(web)
 endif()
 
-if(${CMAKE_SYSTEM} MATCHES "Windows") 
+if(${CMAKE_SYSTEM} MATCHES "Windows")
 	add_subdirectory(win32)
 endif()
 

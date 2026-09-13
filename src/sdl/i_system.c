@@ -94,7 +94,7 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #ifdef FREEBSD
 #include <kvm.h>
 #endif
-#ifndef EMSCRIPTEN
+#if !defined(EMSCRIPTEN) && !defined(IOS)
 #include <nlist.h>
 #include <sys/sysctl.h>
 #endif
@@ -146,7 +146,11 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #endif
 
 #ifdef __APPLE__
+#ifdef MACOSX
 #include "macosx/mac_resources.h"
+#elif IOS
+#include "ios/ios_resources.h"
+#endif
 #endif
 
 #ifndef errno
@@ -1043,6 +1047,68 @@ void I_JoyScale2(void)
 	JoyInfo2.scale = Joystick2.bGamepadStyle?1:cv_joyscale2.value;
 }
 
+#if defined(__ANDROID__) || defined(IOS)
+// SDL exposes the device's tilt sensor as a fake joystick named this way on
+// Android/iOS. It's used for tilt-as-joystick elsewhere (see
+// IsJoystickAccelerometer() in i_video.c), but it should never occupy a
+// "real" device slot in the joystick list/selection below -- otherwise it
+// can sit at a lower SDL index than an actual controller and silently steal
+// the default device slot from it.
+static boolean I_JoyNameIsAccelerometer(const char *name)
+{
+	return (name && (!strcmp(name, "Android Accelerometer") || !strcmp(name, "iOS Accelerometer")));
+}
+
+// Number of "real" (non-accelerometer) SDL joysticks.
+static INT32 I_JoyRawCount(void)
+{
+	INT32 raw, filtered = 0;
+	INT32 count = SDL_NumJoysticks();
+	for (raw = 0; raw < count; raw++)
+		if (!I_JoyNameIsAccelerometer(SDL_JoystickNameForIndex(raw)))
+			filtered++;
+	return filtered;
+}
+
+// Maps a 0-based filtered index (accelerometer excluded) to the raw SDL
+// joystick index it actually corresponds to. Returns -1 if out of range.
+static INT32 I_JoyRawIndex(INT32 filteredIndex)
+{
+	INT32 raw, seen = 0;
+	INT32 count = SDL_NumJoysticks();
+	if (filteredIndex < 0)
+		return -1;
+	for (raw = 0; raw < count; raw++)
+	{
+		if (I_JoyNameIsAccelerometer(SDL_JoystickNameForIndex(raw)))
+			continue;
+		if (seen == filteredIndex)
+			return raw;
+		seen++;
+	}
+	return -1;
+}
+
+// Inverse of I_JoyRawIndex: maps a raw SDL joystick index back to its
+// filtered index. Returns -1 if the raw index is itself an accelerometer
+// (shouldn't happen in practice -- accelerometers are never opened through
+// the filtered path -- but guards against surprises).
+static INT32 I_JoyFilteredIndex(INT32 rawIndex)
+{
+	INT32 raw, seen = 0;
+	if (I_JoyNameIsAccelerometer(SDL_JoystickNameForIndex(rawIndex)))
+		return -1;
+	for (raw = 0; raw < rawIndex; raw++)
+		if (!I_JoyNameIsAccelerometer(SDL_JoystickNameForIndex(raw)))
+			seen++;
+	return seen;
+}
+#else
+#define I_JoyRawCount() SDL_NumJoysticks()
+#define I_JoyRawIndex(filteredIndex) (filteredIndex)
+#define I_JoyFilteredIndex(rawIndex) (rawIndex)
+#endif
+
 // Cheat to get the device index for a joystick handle
 INT32 I_GetJoystickDeviceIndex(SDL_Joystick *dev)
 {
@@ -1052,7 +1118,7 @@ INT32 I_GetJoystickDeviceIndex(SDL_Joystick *dev)
 	{
 		SDL_Joystick *test = SDL_JoystickOpen(i);
 		if (test && test == dev)
-			return i;
+			return I_JoyFilteredIndex(i);
 		else if (JoyInfo.dev != test && JoyInfo2.dev != test)
 			SDL_JoystickClose(test);
 	}
@@ -1273,7 +1339,7 @@ static int joy_open(int joyindex)
 		return -1;
 	}
 
-	newdev = SDL_JoystickOpen(joyindex-1);
+	newdev = SDL_JoystickOpen(I_JoyRawIndex(joyindex-1));
 
 	// Handle the edge case where the device <-> joystick index assignment can change due to hotplugging
 	// This indexing is SDL's responsibility and there's not much we can do about it.
@@ -1545,7 +1611,7 @@ static int joy_open2(int joyindex)
 		return -1;
 	}
 
-	newdev = SDL_JoystickOpen(joyindex-1);
+	newdev = SDL_JoystickOpen(I_JoyRawIndex(joyindex-1));
 
 	// Handle the edge case where the device <-> joystick index assignment can change due to hotplugging
 	// This indexing is SDL's responsibility and there's not much we can do about it.
@@ -1637,7 +1703,7 @@ void I_InitJoystick(void)
 	}
 
 	if (cv_usejoystick.value)
-		newjoy = SDL_JoystickOpen(cv_usejoystick.value-1);
+		newjoy = SDL_JoystickOpen(I_JoyRawIndex(cv_usejoystick.value-1));
 
 	if (newjoy && JoyInfo2.dev == newjoy) // don't override an active device
 		cv_usejoystick.value = I_GetJoystickDeviceIndex(JoyInfo.dev) + 1;
@@ -1680,7 +1746,7 @@ void I_InitJoystick2(void)
 	}
 
 	if (cv_usejoystick2.value)
-		newjoy = SDL_JoystickOpen(cv_usejoystick2.value-1);
+		newjoy = SDL_JoystickOpen(I_JoyRawIndex(cv_usejoystick2.value-1));
 
 	if (newjoy && JoyInfo.dev == newjoy) // don't override an active device
 		cv_usejoystick2.value = I_GetJoystickDeviceIndex(JoyInfo2.dev) + 1;
@@ -1723,7 +1789,7 @@ INT32 I_NumJoys(void)
 {
 	INT32 numjoy = 0;
 	if (SDL_WasInit(SDL_INIT_JOYSTICK) == SDL_INIT_JOYSTICK)
-		numjoy = SDL_NumJoysticks();
+		numjoy = I_JoyRawCount();
 	return numjoy;
 }
 
@@ -1736,7 +1802,7 @@ const char *I_GetJoyName(INT32 joyindex)
 	joyindex--; //SDL's Joystick System starts at 0, not 1
 	if (SDL_WasInit(SDL_INIT_JOYSTICK) == SDL_INIT_JOYSTICK)
 	{
-		tempname = SDL_JoystickNameForIndex(joyindex);
+		tempname = SDL_JoystickNameForIndex(I_JoyRawIndex(joyindex));
 		if (tempname)
 			strncpy(joyname, tempname, 254);
 	}
@@ -3005,9 +3071,13 @@ const char *I_ConfigDir(void)
 			free(base);
 
 #ifdef __APPLE__
+#ifdef MACOSX
 			basesize = strlen(home) + strlen("/Library/Application Support/srb2-legacy") + 1;
 			base = malloc(basesize);
 			snprintf(base, basesize, "%s/Library/Application Support/srb2-legacy", home);
+#elif IOS
+			base = iOS_GetHomePath();
+#endif
 #else
 			const char *xdgdatahome = I_GetXDGDataHome(home);
 			basesize = strlen(xdgdatahome) + strlen("/srb2-legacy") + 1;
@@ -3141,8 +3211,17 @@ static const char *locateWad(void)
 #endif
 #endif
 
-#ifdef __APPLE__
+#ifdef MACOSX
 	OSX_GetResourcesPath(returnWadPath);
+	I_OutputMsg(",%s", returnWadPath);
+	if (isWadPathOk(returnWadPath))
+	{
+		return returnWadPath;
+	}
+#endif
+
+#ifdef IOS
+	iOS_GetResourcesPath(returnWadPath);
 	I_OutputMsg(",%s", returnWadPath);
 	if (isWadPathOk(returnWadPath))
 	{

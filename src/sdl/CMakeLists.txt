@@ -16,6 +16,23 @@ if(${SRB2_CONFIG_SDL2_USEMIXER})
 		elseif(${CMAKE_SYSTEM} MATCHES "Android")
 			set(SDL2_MIXER_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/thirdparty/SDL2_mixer/include/)
 			set(SDL2_MIXER_LIBRARIES "${CMAKE_SOURCE_DIR}/thirdparty/SDL2_mixer/libs/${CMAKE_ANDROID_ARCH_ABI}/libSDL2_mixer.so")
+		elseif(${CMAKE_SYSTEM} MATCHES "iOS")
+			set(SDL2_MIXER_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/thirdparty/SDL2_mixer/iOS/include)
+			# SDL2MIXER_VENDORED builds each codec as its own separate static
+			# library rather than baking them into libSDL2_mixer.a itself, so
+			# all of them need linking too (SRB2 never calls into these
+			# directly, only through SDL_mixer's own Mix_* API).
+			set(SDL2_MIXER_ROOT "${CMAKE_SOURCE_DIR}/thirdparty/SDL2_mixer/iOS")
+			set(SDL2_MIXER_LIBRARIES
+				"${SDL2_MIXER_ROOT}/SDL2_mixer.xcframework"
+				"${SDL2_MIXER_ROOT}/opusfile.xcframework"
+				"${SDL2_MIXER_ROOT}/opus.xcframework"
+				"${SDL2_MIXER_ROOT}/vorbisfile.xcframework"
+				"${SDL2_MIXER_ROOT}/vorbis.xcframework"
+				"${SDL2_MIXER_ROOT}/ogg.xcframework"
+				"${SDL2_MIXER_ROOT}/xmp.xcframework"
+				"${SDL2_MIXER_ROOT}/wavpack.xcframework"
+			)
 		endif()
 	elseif(${CMAKE_SYSTEM} MATCHES Emscripten)
 		set(SDL2_MIXER_FOUND  ON)
@@ -57,6 +74,15 @@ if(${SRB2_CONFIG_USE_INTERNAL_LIBRARIES})
 	elseif(${CMAKE_SYSTEM} MATCHES "Android")
 		set(SDL2_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/thirdparty/SDL2/include)
 		set(SDL2_LIBRARIES "${CMAKE_SOURCE_DIR}/thirdparty/SDL2/libs/${CMAKE_ANDROID_ARCH_ABI}/libSDL2.so")
+	elseif(${CMAKE_SYSTEM} MATCHES "iOS")
+		# Plain static SDL2, patched with a backported UIScene life cycle
+		# implementation (see srb2-legacy-ioslibs/build.sh and
+		# sources/SDL2-2.32.10/src/video/uikit/ for details/rationale).
+		set(SDL2_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/thirdparty/SDL2/iOS/include)
+		set(SDL2_LIBRARIES
+			"${CMAKE_SOURCE_DIR}/thirdparty/SDL2/iOS/SDL2.xcframework"
+			"${CMAKE_SOURCE_DIR}/thirdparty/SDL2/iOS/SDL2main.xcframework"
+		)
 	endif()
 elseif(${CMAKE_SYSTEM} MATCHES Emscripten)
 	set(SDL2_FOUND ON)
@@ -79,6 +105,13 @@ if(${SDL2_FOUND})
 			macosx/mac_resources.c
 			macosx/mac_resources.h
 			macosx/Srb2mac.icns
+		)
+	endif()
+
+	if(${CMAKE_SYSTEM} MATCHES "iOS")
+		target_sources(SRB2SDL2 PRIVATE
+			ios/ios_resources.c
+			ios/ios_resources.h
 		)
 	endif()
 
@@ -112,6 +145,52 @@ if(${SDL2_FOUND})
 
 			RESOURCE "${CMAKE_CURRENT_SOURCE_DIR}/macosx/Srb2mac.icns"
 		)
+	endif()
+
+	if(${CMAKE_SYSTEM} MATCHES "iOS")
+		# CMake's own default Info.plist.in template (the one used here
+		# otherwise) has no extension point for custom keys, so a local
+		# copy of it is used instead -- see ios/Info.plist.in for the
+		# UIFileSharingEnabled/LSSupportsOpeningDocumentsInPlace keys added
+		# on top of it (XCODE_ATTRIBUTE_INFOPLIST_KEY_* was tried first, but
+		# has no effect once MACOSX_BUNDLE_INFO_PLIST already points at a
+		# real plist file rather than using Xcode's newer plist-synthesis
+		# mode).
+		set_target_properties(SRB2SDL2 PROPERTIES
+			OUTPUT_NAME "${CPACK_PACKAGE_DESCRIPTION_SUMMARY}"
+			MACOSX_BUNDLE_BUNDLE_NAME "SRB2 Legacy"
+			MACOSX_BUNDLE_BUNDLE_VERSION ${SRB2_VERSION}
+			MACOSX_BUNDLE_GUI_IDENTIFIER "org.stjr.srb2legacy"
+			XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "org.stjr.srb2legacy"
+			MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/ios/Info.plist.in"
+		)
+
+		# i_main.c's SDLMAIN branch (#include "SDL_main.h") is what makes
+		# SDL2 rename our main() to SDL_main and provide the real C main()
+		# under the hood, which calls UIApplicationMain to properly bootstrap
+		# a UIKit app before running our code. Without this, main() would run
+		# outside of any UIApplication/run loop and SDL's video/event systems
+		# would not function.
+		target_compile_definitions(SRB2SDL2 PRIVATE -DSDLMAIN)
+
+		# Frameworks SDL2's UIKit backend (and libopenmpt/audio playback)
+		# need at link time.
+		set(SRB2_IOS_FRAMEWORKS
+			UIKit Foundation CoreFoundation CoreGraphics QuartzCore
+			CoreAudio AudioToolbox AVFoundation CoreMotion
+			GameController CoreHaptics CoreBluetooth Metal OpenGLES
+		)
+		foreach(fwname ${SRB2_IOS_FRAMEWORKS})
+			find_library(SRB2_IOS_FRAMEWORK_${fwname} ${fwname})
+			target_link_libraries(SRB2SDL2 PRIVATE ${SRB2_IOS_FRAMEWORK_${fwname}})
+		endforeach()
+
+		# Belt-and-suspenders alongside src/CMakeLists.txt's LINKER_LANGUAGE
+		# CXX: the Xcode generator doesn't reliably pick the C++ linker driver
+		# for a target with no .cpp sources of its own based on that property
+		# alone, so link libc++ explicitly too (needed for the static
+		# libgme/libopenmpt C++ archives).
+		target_link_libraries(SRB2SDL2 PRIVATE c++)
 	endif()
 
 	target_link_libraries(SRB2SDL2 PRIVATE
@@ -173,7 +252,7 @@ if(${SDL2_FOUND})
 	)
 
 	#### Installation ####
-	if(${CMAKE_SYSTEM} MATCHES Darwin)
+	if(${CMAKE_SYSTEM} MATCHES Darwin OR ${CMAKE_SYSTEM} MATCHES "iOS")
 		install(TARGETS SRB2SDL2
 			BUNDLE DESTINATION .
 		)
