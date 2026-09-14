@@ -99,12 +99,9 @@ if(${SDL2_FOUND})
 	endif()
 
 	if(${CMAKE_SYSTEM} MATCHES Darwin)
-		set(MACOSX_BUNDLE_ICON_FILE Srb2mac.icns)
-		set_source_files_properties(macosx/Srb2mac.icns PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
 		target_sources(SRB2SDL2 PRIVATE
 			macosx/mac_resources.c
 			macosx/mac_resources.h
-			macosx/Srb2mac.icns
 		)
 	endif()
 
@@ -136,15 +133,22 @@ if(${SDL2_FOUND})
 		)
 		set_target_properties(SRB2SDL2 PROPERTIES OUTPUT_NAME "${CPACK_PACKAGE_DESCRIPTION_SUMMARY}")
 
-		# Configure the app bundle icon and plist properties
-		target_sources(SRB2SDL2 PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/macosx/Srb2mac.icns")
+		# Configure the app bundle icon and plist properties. This target has
+		# no native Xcode Resources build phase (same situation as the iOS
+		# target -- see build.sh/test-sim.sh there for the same issue), so
+		# srb2.icon (an Icon Composer bundle -- supports light/dark/tinted/
+		# clear appearances) never gets picked up by actool automatically.
+		# It's compiled via an explicit post-build actool invocation below
+		# instead of MACOSX_PACKAGE_LOCATION + target_sources.
 		set_target_properties(SRB2SDL2 PROPERTIES
-			MACOSX_BUNDLE_ICON_FILE "Srb2mac"
 			MACOSX_BUNDLE_BUNDLE_NAME "SRB2 Legacy"
 			MACOSX_BUNDLE_BUNDLE_VERSION ${SRB2_VERSION}
-
-			RESOURCE "${CMAKE_CURRENT_SOURCE_DIR}/macosx/Srb2mac.icns"
+			MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/macosx/Info.plist.in"
 		)
+		# The actual icon-compiling add_custom_command(TARGET SRB2SDL2 ...)
+		# has to live in src/CMakeLists.txt, the directory that actually
+		# creates the SRB2SDL2 target (add_custom_command(TARGET) requires
+		# that exact scope) -- see the Darwin block there.
 	endif()
 
 	if(${CMAKE_SYSTEM} MATCHES "iOS")

@@ -56,6 +56,33 @@ else
 	# bundle in place rather than producing a separate copy elsewhere.
 	echo "==> installing assets into bundle"
 	cmake --install "$BUILD_DIR" --config Release --prefix "$BUILD_DIR/bin/Release"
+
+	# This target has no native Xcode Resources build phase (everything
+	# else in the bundle is copied in by our own cmake --install step
+	# above, not Xcode's build system), so src/sdl/srb2.icon (an Icon
+	# Composer bundle -- supports light/dark/tinted/clear appearances)
+	# never gets picked up by actool automatically the way it would in a
+	# normal Xcode project. Compile it ourselves and drop Assets.car
+	# straight into the (flat, iOS-style) bundle root.
+	echo "==> compiling app icon"
+	APP_PATH_FOR_ICON="$(find "$BUILD_DIR/bin/Release" -maxdepth 1 -iname "*.app" | head -1)"
+	PARTIAL_PLIST="$(mktemp)"
+	xcrun actool --compile "$APP_PATH_FOR_ICON" \
+		--platform iphonesimulator \
+		--minimum-deployment-target "$DEPLOYMENT_TARGET" \
+		--app-icon srb2 \
+		--output-partial-info-plist "$PARTIAL_PLIST" \
+		"$HERE/src/sdl/srb2.icon" \
+		> /dev/null
+	# actool's own compile step, run inside a real Xcode project, would
+	# have Xcode merge this partial plist into Info.plist automatically.
+	# CFBundleIconName alone (already in Info.plist.in) isn't enough --
+	# SpringBoard's actual icon lookup here needs the CFBundleIcons/
+	# CFBundleIcons~ipad dictionaries this generates too (which point at
+	# the legacy loose "AppIcon60x60"-style files actool also drops
+	# alongside Assets.car), so merge it in ourselves.
+	/usr/libexec/PlistBuddy -c "Merge $PARTIAL_PLIST :" "$APP_PATH_FOR_ICON/Info.plist"
+	rm -f "$PARTIAL_PLIST"
 fi
 
 APP_PATH="$(find "$BUILD_DIR/bin/Release" -maxdepth 1 -iname "*.app" 2>/dev/null | head -1)"

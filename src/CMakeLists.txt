@@ -319,6 +319,32 @@ else()
 	add_subdirectory(sdl)
 endif()
 
+if(${CMAKE_SYSTEM} MATCHES Darwin AND NOT ${SRB2_CONFIG_DEDICATED})
+	# This target has no native Xcode Resources build phase, so
+	# sdl/srb2.icon (an Icon Composer bundle -- supports light/dark/tinted/
+	# clear appearances) never gets picked up by actool automatically the
+	# way it would in a normal Xcode project. Compile it ourselves.
+	# add_custom_command(TARGET SRB2SDL2 ...) has to happen in this
+	# directory, the one that actually created the SRB2SDL2 target above
+	# (add_custom_command(TARGET) requires that exact scope), not in
+	# src/sdl/CMakeLists.txt where the rest of the icon config lives.
+	if(NOT CMAKE_OSX_DEPLOYMENT_TARGET)
+		set(SRB2_MACOS_ICON_DEPLOYMENT_TARGET "11.0")
+	else()
+		set(SRB2_MACOS_ICON_DEPLOYMENT_TARGET "${CMAKE_OSX_DEPLOYMENT_TARGET}")
+	endif()
+	add_custom_command(TARGET SRB2SDL2 POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_BUNDLE_CONTENT_DIR:SRB2SDL2>/Resources"
+		COMMAND xcrun actool --compile "$<TARGET_BUNDLE_CONTENT_DIR:SRB2SDL2>/Resources"
+			--platform macosx
+			--minimum-deployment-target "${SRB2_MACOS_ICON_DEPLOYMENT_TARGET}"
+			--app-icon srb2
+			--output-partial-info-plist /dev/null
+			"${CMAKE_CURRENT_SOURCE_DIR}/sdl/srb2.icon"
+		VERBATIM
+	)
+endif()
+
 if(${CMAKE_SYSTEM} MATCHES Emscripten)
 	add_subdirectory(web)
 endif()
