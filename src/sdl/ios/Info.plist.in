@@ -43,6 +43,26 @@
 	     real trackpad/mouse paired to a device). -->
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>UIDeviceFamily</key>
+	<array>
+		<integer>1</integer>  <!-- iPhone -->
+		<integer>2</integer>  <!-- iPad -->
+	</array>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>UIStatusBarHidden</key>
+	<true/>
+	<key>UILaunchStoryboardName</key>
+	<string>LaunchScreen</string>
 	<!-- Names the Icon Composer bundle src/sdl/srb2.icon (compiled into
 	     Assets.car by the actool invocation in build.sh/test-sim.sh, since
 	     this target has no native Xcode Resources build phase for actool
