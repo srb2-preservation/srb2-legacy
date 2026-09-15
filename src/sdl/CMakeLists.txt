@@ -167,6 +167,8 @@ if(${SDL2_FOUND})
 			MACOSX_BUNDLE_GUI_IDENTIFIER "org.stjr.srb2legacy"
 			XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "org.stjr.srb2legacy"
 			MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/ios/Info.plist.in"
+			# must be set here since Xcode overwrites the setting in Info.plist.in
+			XCODE_ATTRIBUTE_TARGETED_DEVICE_FAMILY "1,2"
 		)
 
 		# i_main.c's SDLMAIN branch (#include "SDL_main.h") is what makes
