@@ -1683,6 +1683,17 @@ INT32 VID_SetMode(INT32 modeNum)
 				vid.width = (INT32)(resolution.w) / (cv_nativeresdiv.value);
 				vid.height = (INT32)(resolution.h) / (cv_nativeresdiv.value);
 
+#if defined(IOS)
+				// hack to fix NATIVESCREENRES on iOS
+				// SDL2 won't report anything other than a portrait resolution
+				if (vid.width < vid.height)
+				{
+					INT32 temp = vid.width;
+					vid.width = vid.height;
+					vid.height = temp;
+				}
+#endif
+
 				if (vid.width > MAXVIDWIDTH)
 					vid.width = MAXVIDWIDTH;
 				else if (vid.width < BASEVIDWIDTH)
@@ -1754,6 +1765,10 @@ static SDL_bool Impl_CreateWindow(SDL_bool fullscreen)
 #ifdef IOS
 	// iOS requires apps to size their content based on screen coordinates rather than content size.
 	flags |= SDL_WINDOW_ALLOW_HIGHDPI;
+#endif
+
+#if defined(__ANDROID__) || defined(IOS)
+	SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight");
 #endif
 
 	// Create a window
