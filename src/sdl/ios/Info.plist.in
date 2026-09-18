@@ -43,11 +43,8 @@
 	     real trackpad/mouse paired to a device). -->
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
-	<key>UIDeviceFamily</key>
-	<array>
-		<integer>1</integer>  <!-- iPhone -->
-		<integer>2</integer>  <!-- iPad -->
-	</array>
+	<key>UIRequiresFullScreen</key>
+	<true/>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationLandscapeLeft</string>
@@ -62,6 +59,8 @@
 	<true/>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.action-games</string>
 	<!-- Names the Icon Composer bundle src/sdl/srb2.icon (compiled into
 	     Assets.car by the actool invocation in build.sh/test-sim.sh, since
 	     this target has no native Xcode Resources build phase for actool
