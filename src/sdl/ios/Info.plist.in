@@ -57,6 +57,8 @@
 	</array>
 	<key>UIStatusBarHidden</key>
 	<true/>
+	<key>CADisableMinimumFrameDurationOnPhone</key>
+	<true/>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>LSApplicationCategoryType</key>
