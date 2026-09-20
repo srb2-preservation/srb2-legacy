@@ -790,7 +790,7 @@ static void Impl_HandleJoystickAxisEvent(SDL_JoyAxisEvent evt)
 	{
 		evt.axis--;
 		event.data1 = evt.axis / 2;
-#if defined(IOS)
+#if TARGET_OS_IPHONE
 		event.data3 = -SDLJoyAxis(evt.value, event.type);
 #else
 		event.data3 = SDLJoyAxis(evt.value, event.type);
@@ -1655,7 +1655,7 @@ INT32 VID_SetMode(INT32 modeNum)
 				vid.width = (INT32)(resolution.w) / (cv_nativeresdiv.value);
 				vid.height = (INT32)(resolution.h) / (cv_nativeresdiv.value);
 
-#if defined(IOS)
+#if TARGET_OS_IPHONE
 				// hack to fix NATIVESCREENRES on iOS
 				// SDL2 won't report anything other than a portrait resolution
 				if (vid.width < vid.height)
@@ -1734,12 +1734,12 @@ static SDL_bool Impl_CreateWindow(SDL_bool fullscreen)
 	}
 #endif
 
-#ifdef IOS
+#if TARGET_OS_IPHONE
 	// iOS requires apps to size their content based on screen coordinates rather than content size.
 	flags |= SDL_WINDOW_ALLOW_HIGHDPI;
 #endif
 
-#if defined(__ANDROID__) || defined(IOS)
+#ifdef MOBILE_PLATFORM
 	SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight");
 #endif
 

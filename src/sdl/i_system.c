@@ -94,7 +94,7 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #ifdef FREEBSD
 #include <kvm.h>
 #endif
-#if !defined(EMSCRIPTEN) && !defined(IOS)
+#if !defined(EMSCRIPTEN) && !TARGET_OS_IPHONE
 #include <nlist.h>
 #include <sys/sysctl.h>
 #endif
@@ -146,9 +146,9 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #endif
 
 #ifdef __APPLE__
-#ifdef MACOSX
+#if TARGET_OS_OSX
 #include "macosx/mac_resources.h"
-#elif IOS
+#elif TARGET_OS_IPHONE
 #include "ios/ios_resources.h"
 #endif
 #endif
@@ -157,7 +157,7 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #include <errno.h>
 #endif
 
-#if (defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON)) && (!defined(__ANDROID__) && !defined(IOS))
+#if (defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON)) && !defined(MOBILE_PLATFORM)
 #ifndef NOEXECINFO
 #include <execinfo.h>
 #endif
@@ -1047,7 +1047,7 @@ void I_JoyScale2(void)
 	JoyInfo2.scale = Joystick2.bGamepadStyle?1:cv_joyscale2.value;
 }
 
-#if defined(__ANDROID__) || defined(IOS)
+#ifdef MOBILE_PLATFORM
 // used to filter accelerometers from the index of joysticks
 static boolean I_IsJoystickAccelerometer(const char *name)
 {
@@ -1058,7 +1058,7 @@ static boolean I_IsJoystickAccelerometer(const char *name)
 // "real joystick" means anything that is an actual gamepad and not an accelerometer
 static INT32 I_NumRealJoys(void)
 {
-#if defined(__ANDROID__) || defined(IOS)
+#ifdef MOBILE_PLATFORM
 	INT32 raw, filtered = 0;
 	INT32 count = SDL_NumJoysticks();
 	for (raw = 0; raw < count; raw++)
@@ -1072,7 +1072,7 @@ static INT32 I_NumRealJoys(void)
 
 static INT32 I_RawJoyIndex(INT32 filteredIndex)
 {
-#if defined(__ANDROID__) || defined(IOS)
+#ifdef MOBILE_PLATFORM
 	INT32 raw, seen = 0;
 	INT32 count = SDL_NumJoysticks();
 	if (filteredIndex < 0)
@@ -1093,7 +1093,7 @@ static INT32 I_RawJoyIndex(INT32 filteredIndex)
 
 static INT32 I_FilteredJoyIndex(INT32 rawIndex)
 {
-#if defined(__ANDROID__) || defined(IOS)
+#ifdef MOBILE_PLATFORM
 	INT32 raw, seen = 0;
 	if (I_IsJoystickAccelerometer(SDL_JoystickNameForIndex(rawIndex)))
 		return -1;
@@ -3068,11 +3068,11 @@ const char *I_ConfigDir(void)
 			free(base);
 
 #ifdef __APPLE__
-#ifdef MACOSX
+#if TARGET_OS_OSX
 			basesize = strlen(home) + strlen("/Library/Application Support/srb2-legacy") + 1;
 			base = malloc(basesize);
 			snprintf(base, basesize, "%s/Library/Application Support/srb2-legacy", home);
-#elif IOS
+#elif TARGET_OS_IPHONE
 			base = iOS_GetHomePath();
 #endif
 #else
@@ -3208,7 +3208,7 @@ static const char *locateWad(void)
 #endif
 #endif
 
-#ifdef MACOSX
+#if TARGET_OS_OSX
 	OSX_GetResourcesPath(returnWadPath);
 	I_OutputMsg(",%s", returnWadPath);
 	if (isWadPathOk(returnWadPath))
@@ -3217,7 +3217,7 @@ static const char *locateWad(void)
 	}
 #endif
 
-#ifdef IOS
+#if TARGET_OS_IPHONE
 	iOS_GetResourcesPath(returnWadPath);
 	I_OutputMsg(",%s", returnWadPath);
 	if (isWadPathOk(returnWadPath))
