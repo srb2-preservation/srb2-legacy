@@ -28,13 +28,6 @@
 	<true/>
 	<key>NSHumanReadableCopyright</key>
 	<string>${MACOSX_BUNDLE_COPYRIGHT}</string>
-	<!-- Names the Icon Composer bundle src/sdl/srb2.icon (supports
-	     light/dark/tinted/clear appearances), replacing the old
-	     CFBundleIconFile/.icns pairing. Unlike the iOS target, this one
-	     builds through a normal, unhacked Xcode Resources build phase, so
-	     .icon just needs to be a bundled resource (see
-	     set_source_files_properties in CMakeLists.txt) -- no manual actool
-	     invocation needed here. -->
 	<key>CFBundleIconName</key>
 	<string>srb2</string>
 </dict>

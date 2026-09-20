@@ -65,11 +65,6 @@ elseif(${CMAKE_SYSTEM} MATCHES "iOS")
 			DESTINATION "${outname}.app/"
 		)
 	endif()
-
-	install(FILES ${SRB2_ASSET_DOCS}
-		DESTINATION .
-		OPTIONAL
-	)
 else()
 	if (${SRB2_CONFIG_EXTERNAL_ASSETS})
 		install(DIRECTORY "${SRB2_ASSET_DIRECTORY}/"

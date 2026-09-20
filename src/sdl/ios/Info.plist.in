@@ -30,17 +30,10 @@
 	<true/>
 	<key>NSHumanReadableCopyright</key>
 	<string>${MACOSX_BUNDLE_COPYRIGHT}</string>
-	<!-- Exposes the app's Documents folder (see iOS_GetHomePath() in
-	     ios/ios_resources.c) under On My iPhone/iPad in the Files app,
-	     and over iTunes/Finder file sharing. -->
 	<key>UIFileSharingEnabled</key>
 	<true/>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
 	<true/>
-	<!-- Silences "You need UIApplicationSupportsIndirectInputEvents in
-	     your Info.plist for mouse support" and lets SDL2's UIKit backend
-	     receive trackpad/mouse pointer events in the Simulator (and from a
-	     real trackpad/mouse paired to a device). -->
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UIRequiresFullScreen</key>
@@ -63,10 +56,6 @@
 	<string>LaunchScreen</string>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.action-games</string>
-	<!-- Names the Icon Composer bundle src/sdl/srb2.icon (compiled into
-	     Assets.car by the actool invocation in build.sh/test-sim.sh, since
-	     this target has no native Xcode Resources build phase for actool
-	     to hook into automatically -- see those scripts for why). -->
 	<key>CFBundleIconName</key>
 	<string>srb2</string>
 </dict>

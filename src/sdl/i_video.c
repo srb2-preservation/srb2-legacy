@@ -754,20 +754,6 @@ static void Impl_HandleMouseWheelEvent(SDL_MouseWheelEvent evt)
 	}
 }
 
-#if defined(__ANDROID__)
-static boolean IsJoystickAccelerometer(SDL_Joystick *joy)
-{
-	return (!strcmp(SDL_JoystickName(joy), "Android Accelerometer"));
-}
-
-static boolean CanUseAccelerometer(SDL_Joystick *joy)
-{
-	if (IsJoystickAccelerometer(joy))
-		return (!(menuactive || paused || con_destlines || chat_on || gamestate != GS_LEVEL));
-	return true;
-}
-#endif
-
 static void Impl_HandleJoystickAxisEvent(SDL_JoyAxisEvent evt)
 {
 	event_t event;
@@ -783,18 +769,10 @@ static void Impl_HandleJoystickAxisEvent(SDL_JoyAxisEvent evt)
 	if (evt.which == joyid[0])
 	{
 		event.type = ev_joystick;
-#if defined(__ANDROID__)
-		if (!CanUseAccelerometer(JoyInfo.dev))
-			return;
-#endif
 	}
 	else if (evt.which == joyid[1])
 	{
 		event.type = ev_joystick2;
-#if defined(__ANDROID__)
-		if (!CanUseAccelerometer(JoyInfo2.dev))
-			return;
-#endif
 	}
 	else
 		return;
@@ -812,13 +790,7 @@ static void Impl_HandleJoystickAxisEvent(SDL_JoyAxisEvent evt)
 	{
 		evt.axis--;
 		event.data1 = evt.axis / 2;
-#if defined(__APPLE__)
-		// SDL's Apple joystick backends (both the macOS HID/GameController
-		// path and iOS's GCController-based one) report the vertical axis
-		// with the opposite sign from what this engine's default axis
-		// mapping expects -- affects menu navigation too, not just
-		// cv_moveaxis-driven gameplay movement, so it has to be corrected
-		// here at the raw event level rather than per-player-configurable.
+#if defined(IOS)
 		event.data3 = -SDLJoyAxis(evt.value, event.type);
 #else
 		event.data3 = SDLJoyAxis(evt.value, event.type);

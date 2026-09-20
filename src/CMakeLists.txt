@@ -64,20 +64,7 @@ endif()
 
 if(${CMAKE_SYSTEM} MATCHES "iOS")
 	set(SRB2_CONFIG_USE_INTERNAL_LIBRARIES ON)
-	# No desktop GL on iOS (GLES/Metal only); same as Android for now.
 	set(SRB2_CONFIG_HWRENDER OFF)
-	# Keep LTO off for the initial bring-up; safe to revisit later.
-	set(SRB2_CONFIG_LTO ON)
-	# <execinfo.h>/backtrace() do not exist on iOS.
-	set(SRB2_CONFIG_EXECINFO OFF)
-	# src/apng.c's use of png_set_acTL/png_get_acTL is gated on
-	# PNG_WRITE_APNG_SUPPORTED (an APNG-patched-libpng-only feature macro),
-	# falling back to a no-op dummy when that's undefined -- confirmed
-	# building and working fine against the stock (unpatched) libpng
-	# vendored for iOS (thirdparty/libpng/iOS). APNG movie recording itself
-	# is presumably a silent no-op as a result (not yet specifically
-	# verified), but plain PNG screenshot saving and texture loading work.
-	set(SRB2_CONFIG_HAVE_PNG ON)
 	set(SRB2_CONFIG_NATIVESCREENRES ON)
 endif()
 
@@ -267,9 +254,7 @@ if(${SRB2_CONFIG_NATIVESCREENRES})
 endif()
 
 if(${CMAKE_SYSTEM} MATCHES "iOS")
-	# SRB2SDL2 is otherwise a pure C target, but it links the static
-	# libgme/libopenmpt archives (both C++). Force the final link step to go
-	# through the C++ driver so the C++ runtime gets linked in too.
+	# since C++ libraries are statically linked
 	set_property(TARGET SRB2SDL2 PROPERTY LINKER_LANGUAGE CXX)
 endif()
 
@@ -278,11 +263,11 @@ endif()
 # Compatibility flag with later versions of GCC
 # We should really fix our code to not need this
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-	set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} -mno-ms-bitfields)
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mno-ms-bitfields")
 endif()
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND NOT ${CMAKE_SYSTEM} MATCHES "Emscripten")
-	set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} -Wno-absolute-value)
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-absolute-value")
 endif()
 
 target_compile_definitions(SRB2SDL2 PRIVATE -DCMAKECONFIG)
@@ -320,14 +305,6 @@ else()
 endif()
 
 if(${CMAKE_SYSTEM} MATCHES Darwin AND NOT ${SRB2_CONFIG_DEDICATED})
-	# This target has no native Xcode Resources build phase, so
-	# sdl/srb2.icon (an Icon Composer bundle -- supports light/dark/tinted/
-	# clear appearances) never gets picked up by actool automatically the
-	# way it would in a normal Xcode project. Compile it ourselves.
-	# add_custom_command(TARGET SRB2SDL2 ...) has to happen in this
-	# directory, the one that actually created the SRB2SDL2 target above
-	# (add_custom_command(TARGET) requires that exact scope), not in
-	# src/sdl/CMakeLists.txt where the rest of the icon config lives.
 	if(NOT CMAKE_OSX_DEPLOYMENT_TARGET)
 		set(SRB2_MACOS_ICON_DEPLOYMENT_TARGET "11.0")
 	else()

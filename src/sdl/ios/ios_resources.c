@@ -9,8 +9,6 @@ char *iOS_GetHomePath(void)
 	CFURLRef homeURL = CFCopyHomeDirectoryURL();
 	if (homeURL != NULL)
 	{
-		// The container root (homeURL) isn't visible in the Files app.
-		// Only the Documents subfolder shows up under On My iPhone/iPad.
 		CFURLRef docsURL = CFURLCreateCopyAppendingPathComponent(NULL, homeURL, CFSTR("Documents"), true);
 		if (docsURL != NULL)
 		{
