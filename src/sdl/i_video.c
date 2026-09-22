@@ -790,7 +790,7 @@ static void Impl_HandleJoystickAxisEvent(SDL_JoyAxisEvent evt)
 	{
 		evt.axis--;
 		event.data1 = evt.axis / 2;
-#if TARGET_OS_IPHONE
+#ifdef __APPLE__
 		event.data3 = -SDLJoyAxis(evt.value, event.type);
 #else
 		event.data3 = SDLJoyAxis(evt.value, event.type);

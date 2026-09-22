@@ -317,6 +317,7 @@ if(${CMAKE_SYSTEM} MATCHES Darwin AND NOT ${SRB2_CONFIG_DEDICATED})
 			--minimum-deployment-target "${SRB2_MACOS_ICON_DEPLOYMENT_TARGET}"
 			--app-icon srb2
 			--output-partial-info-plist /dev/null
+			> /dev/null
 			"${CMAKE_CURRENT_SOURCE_DIR}/sdl/srb2.icon"
 		VERBATIM
 	)
