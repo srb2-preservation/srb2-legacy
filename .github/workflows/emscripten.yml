@@ -4,7 +4,7 @@ name: Emscripten
 on:
   # Runs on pushes targeting the default branch
   push:
-    branches: [ "next", "master", "ci" ]
+    branches: [ "next", "master", "ci", "ios-slopported" ]
   pull_request:
     branches: [ "next", "master" ]
 
