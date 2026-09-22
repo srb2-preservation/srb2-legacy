@@ -26,7 +26,6 @@ if(${SRB2_CONFIG_SDL2_USEMIXER})
 				"${SDL2_MIXER_ROOT}/vorbisfile.xcframework"
 				"${SDL2_MIXER_ROOT}/vorbis.xcframework"
 				"${SDL2_MIXER_ROOT}/ogg.xcframework"
-				"${SDL2_MIXER_ROOT}/xmp.xcframework"
 				"${SDL2_MIXER_ROOT}/wavpack.xcframework"
 			)
 		endif()
