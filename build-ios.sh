@@ -2,6 +2,7 @@
 # Build and Package SRB2 Legacy for iOS
 set -euo pipefail
 
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 useassets=true
 simulator=false
 skipbuild=false
@@ -74,15 +75,15 @@ fi
 
 # Insert app icon
 PARTIAL_PLIST="$(mktemp)"
-xcrun actool --compile "$BUILD_DIR/bin/Release/$BUNDLE_NAME.app" \
+xcrun actool --compile "$REPO/$BUILD_DIR/bin/Release/$BUNDLE_NAME.app" \
 	--platform iphoneos \
 	--minimum-deployment-target "$DEPLOYMENT_TARGET" \
 	--app-icon srb2 \
 	--output-partial-info-plist "$PARTIAL_PLIST" \
-	"src/sdl/srb2.icon" \
+	"$REPO/src/sdl/srb2.icon" \
 	> /dev/null
 
-/usr/libexec/PlistBuddy -c "Merge $PARTIAL_PLIST :" "$BUILD_DIR/bin/Release/$BUNDLE_NAME.app/Info.plist"
+/usr/libexec/PlistBuddy -c "Merge $PARTIAL_PLIST :" "$REPO/$BUILD_DIR/bin/Release/$BUNDLE_NAME.app/Info.plist"
 rm -f "$PARTIAL_PLIST"
 
 if [ "$simulator" == false ]; then

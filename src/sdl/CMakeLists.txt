@@ -17,7 +17,7 @@ if(${SRB2_CONFIG_SDL2_USEMIXER})
 			set(SDL2_MIXER_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/thirdparty/SDL2_mixer/include/)
 			set(SDL2_MIXER_LIBRARIES "${CMAKE_SOURCE_DIR}/thirdparty/SDL2_mixer/libs/${CMAKE_ANDROID_ARCH_ABI}/libSDL2_mixer.so")
 		elseif(${CMAKE_SYSTEM} MATCHES "iOS")
-			set(SDL2_MIXER_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/thirdparty/SDL2_mixer/iOS/include)
+			set(SDL2_MIXER_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/thirdparty/SDL2_mixer/include)
 			set(SDL2_MIXER_ROOT "${CMAKE_SOURCE_DIR}/thirdparty/SDL2_mixer/iOS")
 			set(SDL2_MIXER_LIBRARIES
 				"${SDL2_MIXER_ROOT}/SDL2_mixer.xcframework"
@@ -67,10 +67,16 @@ if(${SRB2_CONFIG_USE_INTERNAL_LIBRARIES})
 			set(SDL2_LIBRARIES "-L${CMAKE_SOURCE_DIR}/libs/SDL2/i686-w64-mingw32/lib -lSDL2")
 		endif()
 	elseif(${CMAKE_SYSTEM} MATCHES "Android")
-		set(SDL2_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/thirdparty/SDL2/include)
+		set(SDL2_INCLUDE_DIRS
+			${CMAKE_SOURCE_DIR}/thirdparty/SDL2/android/config
+			${CMAKE_SOURCE_DIR}/thirdparty/SDL2/include
+		)
 		set(SDL2_LIBRARIES "${CMAKE_SOURCE_DIR}/thirdparty/SDL2/libs/${CMAKE_ANDROID_ARCH_ABI}/libSDL2.so")
 	elseif(${CMAKE_SYSTEM} MATCHES "iOS")
-		set(SDL2_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/thirdparty/SDL2/iOS/include)
+		set(SDL2_INCLUDE_DIRS
+			${CMAKE_SOURCE_DIR}/thirdparty/SDL2/iOS/config
+			${CMAKE_SOURCE_DIR}/thirdparty/SDL2/include
+		)
 		set(SDL2_LIBRARIES
 			"${CMAKE_SOURCE_DIR}/thirdparty/SDL2/iOS/SDL2.xcframework"
 			"${CMAKE_SOURCE_DIR}/thirdparty/SDL2/iOS/SDL2main.xcframework"
