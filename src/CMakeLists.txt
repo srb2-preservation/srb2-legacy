@@ -50,7 +50,7 @@ if(${CMAKE_SYSTEM} MATCHES Emscripten)
 endif()
 
 ### use internal libraries?
-if(${CMAKE_SYSTEM} MATCHES "Windows" OR "Android") ### set on Windows and Android only
+if(${CMAKE_SYSTEM} MATCHES "Windows" OR ${CMAKE_SYSTEM} MATCHES "Android") ### set on Windows and Android only
 	set(SRB2_CONFIG_USE_INTERNAL_LIBRARIES OFF CACHE BOOL
 		"Use SRB2's internal copies of required dependencies (SDL2, PNG, zlib, GME, OpenMPT).")
 endif()
