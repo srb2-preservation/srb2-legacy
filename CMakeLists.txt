@@ -23,7 +23,7 @@ endif()
 # Version change is fine.
 project(SRB2
 	VERSION ${SRB2_VERSION}
-	LANGUAGES C CXX)
+	LANGUAGES C)
 
 ##### PACKAGE CONFIGURATION #####
 
