@@ -16,6 +16,18 @@ if(${SRB2_CONFIG_SDL2_USEMIXER})
 		elseif(${CMAKE_SYSTEM} MATCHES "Android")
 			set(SDL2_MIXER_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/thirdparty/SDL2_mixer/include/)
 			set(SDL2_MIXER_LIBRARIES "${CMAKE_SOURCE_DIR}/thirdparty/SDL2_mixer/libs/${CMAKE_ANDROID_ARCH_ABI}/libSDL2_mixer.so")
+		elseif(${CMAKE_SYSTEM} MATCHES "iOS")
+			set(SDL2_MIXER_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/thirdparty/SDL2_mixer/include)
+			set(SDL2_MIXER_ROOT "${CMAKE_SOURCE_DIR}/thirdparty/SDL2_mixer/iOS")
+			set(SDL2_MIXER_LIBRARIES
+				"${SDL2_MIXER_ROOT}/SDL2_mixer.xcframework"
+				"${SDL2_MIXER_ROOT}/opusfile.xcframework"
+				"${SDL2_MIXER_ROOT}/opus.xcframework"
+				"${SDL2_MIXER_ROOT}/vorbisfile.xcframework"
+				"${SDL2_MIXER_ROOT}/vorbis.xcframework"
+				"${SDL2_MIXER_ROOT}/ogg.xcframework"
+				"${SDL2_MIXER_ROOT}/wavpack.xcframework"
+			)
 		endif()
 	elseif(${CMAKE_SYSTEM} MATCHES Emscripten)
 		set(SDL2_MIXER_FOUND  ON)
@@ -55,8 +67,20 @@ if(${SRB2_CONFIG_USE_INTERNAL_LIBRARIES})
 			set(SDL2_LIBRARIES "-L${CMAKE_SOURCE_DIR}/libs/SDL2/i686-w64-mingw32/lib -lSDL2")
 		endif()
 	elseif(${CMAKE_SYSTEM} MATCHES "Android")
-		set(SDL2_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/thirdparty/SDL2/include)
+		set(SDL2_INCLUDE_DIRS
+			${CMAKE_SOURCE_DIR}/thirdparty/SDL2/android/config
+			${CMAKE_SOURCE_DIR}/thirdparty/SDL2/include
+		)
 		set(SDL2_LIBRARIES "${CMAKE_SOURCE_DIR}/thirdparty/SDL2/libs/${CMAKE_ANDROID_ARCH_ABI}/libSDL2.so")
+	elseif(${CMAKE_SYSTEM} MATCHES "iOS")
+		set(SDL2_INCLUDE_DIRS
+			${CMAKE_SOURCE_DIR}/thirdparty/SDL2/iOS/config
+			${CMAKE_SOURCE_DIR}/thirdparty/SDL2/include
+		)
+		set(SDL2_LIBRARIES
+			"${CMAKE_SOURCE_DIR}/thirdparty/SDL2/iOS/SDL2.xcframework"
+			"${CMAKE_SOURCE_DIR}/thirdparty/SDL2/iOS/SDL2main.xcframework"
+		)
 	endif()
 elseif(${CMAKE_SYSTEM} MATCHES Emscripten)
 	set(SDL2_FOUND ON)
@@ -73,12 +97,16 @@ if(${SDL2_FOUND})
 	endif()
 
 	if(${CMAKE_SYSTEM} MATCHES Darwin)
-		set(MACOSX_BUNDLE_ICON_FILE Srb2mac.icns)
-		set_source_files_properties(macosx/Srb2mac.icns PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
 		target_sources(SRB2SDL2 PRIVATE
 			macosx/mac_resources.c
 			macosx/mac_resources.h
-			macosx/Srb2mac.icns
+		)
+	endif()
+
+	if(${CMAKE_SYSTEM} MATCHES "iOS")
+		target_sources(SRB2SDL2 PRIVATE
+			ios/ios_resources.c
+			ios/ios_resources.h
 		)
 	endif()
 
@@ -102,16 +130,35 @@ if(${SDL2_FOUND})
 			${CORE_FOUNDATION_LIBRARY}
 		)
 		set_target_properties(SRB2SDL2 PROPERTIES OUTPUT_NAME "${CPACK_PACKAGE_DESCRIPTION_SUMMARY}")
-
-		# Configure the app bundle icon and plist properties
-		target_sources(SRB2SDL2 PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/macosx/Srb2mac.icns")
 		set_target_properties(SRB2SDL2 PROPERTIES
-			MACOSX_BUNDLE_ICON_FILE "Srb2mac"
 			MACOSX_BUNDLE_BUNDLE_NAME "SRB2 Legacy"
 			MACOSX_BUNDLE_BUNDLE_VERSION ${SRB2_VERSION}
-
-			RESOURCE "${CMAKE_CURRENT_SOURCE_DIR}/macosx/Srb2mac.icns"
+			MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/macosx/Info.plist.in"
 		)
+	endif()
+
+	if(${CMAKE_SYSTEM} MATCHES "iOS")
+		set_target_properties(SRB2SDL2 PROPERTIES
+			OUTPUT_NAME "${CPACK_PACKAGE_DESCRIPTION_SUMMARY}"
+			MACOSX_BUNDLE_BUNDLE_NAME "SRB2 Legacy"
+			MACOSX_BUNDLE_BUNDLE_VERSION ${SRB2_VERSION}
+			MACOSX_BUNDLE_GUI_IDENTIFIER "org.stjr.srb2legacy"
+			XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "org.stjr.srb2legacy"
+			MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/ios/Info.plist.in"
+			# must be set here since Xcode overwrites the setting in Info.plist.in
+			XCODE_ATTRIBUTE_TARGETED_DEVICE_FAMILY "1,2"
+		)
+		target_compile_definitions(SRB2SDL2 PRIVATE -DSDLMAIN)
+		set(SRB2_IOS_FRAMEWORKS
+			UIKit Foundation CoreFoundation CoreGraphics QuartzCore
+			CoreAudio AudioToolbox AVFoundation CoreMotion
+			GameController CoreHaptics CoreBluetooth Metal OpenGLES
+		)
+		foreach(fwname ${SRB2_IOS_FRAMEWORKS})
+			find_library(SRB2_IOS_FRAMEWORK_${fwname} ${fwname})
+			target_link_libraries(SRB2SDL2 PRIVATE ${SRB2_IOS_FRAMEWORK_${fwname}})
+		endforeach()
+		target_link_libraries(SRB2SDL2 PRIVATE c++)
 	endif()
 
 	target_link_libraries(SRB2SDL2 PRIVATE
@@ -173,7 +220,7 @@ if(${SDL2_FOUND})
 	)
 
 	#### Installation ####
-	if(${CMAKE_SYSTEM} MATCHES Darwin)
+	if(${CMAKE_SYSTEM} MATCHES Darwin OR ${CMAKE_SYSTEM} MATCHES "iOS")
 		install(TARGETS SRB2SDL2
 			BUNDLE DESTINATION .
 		)

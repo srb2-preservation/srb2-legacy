@@ -112,6 +112,15 @@ extern FILE *logstream;
 extern char logfilename[1024];
 #endif
 
+#ifdef __APPLE__
+#include <TargetConditionals.h>
+#endif
+
+// Defines that the game is being compiled for a mobile OS
+#if defined(__ANDROID__) || TARGET_OS_IPHONE
+#define MOBILE_PLATFORM
+#endif
+
 //#define DEVELOP // Disable this for release builds to remove excessive cheat commands and enable MD5 checking and stuff, all in one go. :3
 #ifdef DEVELOP
 #define VERSIONSTRING "Development EXE"

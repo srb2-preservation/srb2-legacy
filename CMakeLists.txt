@@ -23,7 +23,7 @@ endif()
 # Version change is fine.
 project(SRB2
 	VERSION ${SRB2_VERSION}
-	LANGUAGES C)
+	LANGUAGES C CXX)
 
 ##### PACKAGE CONFIGURATION #####
 
@@ -126,10 +126,6 @@ if(${CMAKE_SYSTEM} MATCHES "Linux")
 	if(${SRB2_SYSTEM_BITS} EQUAL 64)
 		add_definitions(-DLINUX64)
 	endif()
-endif()
-
-if(${CMAKE_SYSTEM} MATCHES "Darwin")
-	add_definitions(-DMACOSX)
 endif()
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")

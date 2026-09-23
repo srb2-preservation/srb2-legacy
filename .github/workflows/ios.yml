@@ -1,0 +1,29 @@
+name: iOS
+
+on:
+  push:
+    branches: [ "next", "master", "ci", "ios-slopported" ]
+  pull_request:
+    branches: [ "next", "master" ]
+
+jobs:
+  build:
+    continue-on-error: true
+    runs-on: macos-latest
+
+    steps:
+    - uses: actions/checkout@v7.0.1
+
+    - name: Build SRB2 Legacy
+      run: |
+        if [[ "${{ github.ref == 'refs/heads/master' }}" == "true" ]]; then
+          ./build-ios.sh
+        else
+          ./build-ios.sh --noassets
+        fi
+
+    - name: Upload build artifact
+      uses: actions/upload-artifact@v7.0.1
+      with:
+        name: srb2legacy-iOS-${{ github.sha }}
+        path: "build-ios/device/bin/Release/SRB2 Legacy.ipa"
