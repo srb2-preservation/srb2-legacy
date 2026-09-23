@@ -25,7 +25,7 @@ project(SRB2
 	VERSION ${SRB2_VERSION}
 	LANGUAGES C)
 
-if({CMAKE_SYSTEM} MATCHES "iOS")
+if(${CMAKE_SYSTEM} MATCHES "iOS")
 	enable_language(CXX)
 endif()
 
