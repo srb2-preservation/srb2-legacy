@@ -23,7 +23,11 @@ endif()
 # Version change is fine.
 project(SRB2
 	VERSION ${SRB2_VERSION}
-	LANGUAGES C CXX)
+	LANGUAGES C)
+
+if(${CMAKE_SYSTEM} MATCHES "iOS")
+	enable_language(CXX)
+endif()
 
 ##### PACKAGE CONFIGURATION #####
 

@@ -44,13 +44,13 @@ if(${SRB2_CONFIG_DEDICATED})
 	set(SRB2_CONFIG_HWRENDER NO)
 endif()
 
-if(${CMAKE_SYSTEM} MATCHES Emscripten)
+if(${CMAKE_SYSTEM} MATCHES "Emscripten")
 	set(SRB2_CONFIG_HWRENDER OFF)
 	set(SRB2_CONFIG_EXECINFO OFF)
 endif()
 
 ### use internal libraries?
-if(${CMAKE_SYSTEM} MATCHES "Windows" OR "Android") ### set on Windows and Android only
+if(${CMAKE_SYSTEM} MATCHES "Windows" OR ${CMAKE_SYSTEM} MATCHES "Android" OR ${CMAKE_SYSTEM} MATCHES "iOS") ### set on Windows, Android, and iOS only
 	set(SRB2_CONFIG_USE_INTERNAL_LIBRARIES OFF CACHE BOOL
 		"Use SRB2's internal copies of required dependencies (SDL2, PNG, zlib, GME, OpenMPT).")
 endif()
@@ -323,7 +323,7 @@ if(${CMAKE_SYSTEM} MATCHES Darwin AND NOT ${SRB2_CONFIG_DEDICATED})
 	)
 endif()
 
-if(${CMAKE_SYSTEM} MATCHES Emscripten)
+if(${CMAKE_SYSTEM} MATCHES "Emscripten")
 	add_subdirectory(web)
 endif()
 
