@@ -143,6 +143,6 @@ nds_create_rom(SRB2DSI
     NAME "SRB2 Legacy"
     SUBTITLE "placeholder"
     AUTHOR "Sonic Team Jr."
-    ICON "icon.gif"
+    ICON "icon.png"
     NITROFS "${PROJECT_SOURCE_DIR}/assets/installer/"
 )
