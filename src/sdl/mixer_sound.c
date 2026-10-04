@@ -19,6 +19,7 @@
 #include "../w_wad.h"
 #include "../z_zone.h"
 #include "../byteptr.h"
+#include "../m_argv.h"
 
 #include "SDL.h"
 #include "SDL_mixer.h"
@@ -186,7 +187,7 @@ void I_StartupSound(void)
 	Mix_Init(MIX_INIT_FLAC|MIX_INIT_MP3|MIX_INIT_OGG|MIX_INIT_MOD);
 #endif
 
-	if (Mix_OpenAudio(SAMPLERATE, AUDIO_S16SYS, 2, BUFFERSIZE) < 0)
+	if (Mix_OpenAudioDevice(SAMPLERATE, AUDIO_S16SYS, 2, BUFFERSIZE, NULL, 0) < 0)
 	{
 		CONS_Alert(CONS_ERROR, "Error starting SDL_Mixer: %s\n", Mix_GetError());
 		// call to start audio failed -- we do not have it
@@ -1396,13 +1397,12 @@ boolean I_FadeSongFromVolume(UINT8 target_volume, UINT8 source_volume, UINT32 ms
 
 	I_StopFadingSong();
 
-	if (!ms && volume_delta)
+	if ((!ms && volume_delta) || M_CheckParm("-nomusicfades"))
 	{
 		I_SetInternalMusicVolume(target_volume);
 		if (callback)
 			(*callback)();
 		return true;
-
 	}
 	else if (!volume_delta)
 	{

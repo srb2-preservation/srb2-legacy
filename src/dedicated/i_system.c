@@ -736,7 +736,7 @@ const char *I_GetPlatform(void)
 	return "Windows";
 #elif defined(__linux__)
 	return "Linux";
-#elif defined(MACOSX)
+#elif TARGET_OS_OSX
 	return "macOS";
 #elif defined(__FreeBSD__)
 	return "FreeBSD";

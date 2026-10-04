@@ -754,20 +754,6 @@ static void Impl_HandleMouseWheelEvent(SDL_MouseWheelEvent evt)
 	}
 }
 
-#if defined(__ANDROID__)
-static boolean IsJoystickAccelerometer(SDL_Joystick *joy)
-{
-	return (!strcmp(SDL_JoystickName(joy), "Android Accelerometer"));
-}
-
-static boolean CanUseAccelerometer(SDL_Joystick *joy)
-{
-	if (IsJoystickAccelerometer(joy))
-		return (!(menuactive || paused || con_destlines || chat_on || gamestate != GS_LEVEL));
-	return true;
-}
-#endif
-
 static void Impl_HandleJoystickAxisEvent(SDL_JoyAxisEvent evt)
 {
 	event_t event;
@@ -783,18 +769,10 @@ static void Impl_HandleJoystickAxisEvent(SDL_JoyAxisEvent evt)
 	if (evt.which == joyid[0])
 	{
 		event.type = ev_joystick;
-#if defined(__ANDROID__)
-		if (!CanUseAccelerometer(JoyInfo.dev))
-			return;
-#endif
 	}
 	else if (evt.which == joyid[1])
 	{
 		event.type = ev_joystick2;
-#if defined(__ANDROID__)
-		if (!CanUseAccelerometer(JoyInfo2.dev))
-			return;
-#endif
 	}
 	else
 		return;
@@ -812,7 +790,11 @@ static void Impl_HandleJoystickAxisEvent(SDL_JoyAxisEvent evt)
 	{
 		evt.axis--;
 		event.data1 = evt.axis / 2;
+#ifdef __APPLE__
+		event.data3 = -SDLJoyAxis(evt.value, event.type);
+#else
 		event.data3 = SDLJoyAxis(evt.value, event.type);
+#endif
 	}
 	D_PostEvent(&event);
 }
@@ -961,7 +943,7 @@ void I_GetEvent(void)
 					if (newjoy && (!JoyInfo.dev || !SDL_JoystickGetAttached(JoyInfo.dev))
 						&& JoyInfo2.dev != newjoy) // don't override a currently active device
 					{
-						cv_usejoystick.value = evt.jdevice.which + 1;
+						cv_usejoystick.value = I_GetJoystickDeviceIndex(newjoy) + 1; // raw index would miscount filtered-out devices (e.g. iOS Accelerometer)
 
 						if (JoyInfo2.dev)
 							cv_usejoystick2.value = I_GetJoystickDeviceIndex(JoyInfo2.dev) + 1;
@@ -977,7 +959,7 @@ void I_GetEvent(void)
 					else if (newjoy && (!JoyInfo2.dev || !SDL_JoystickGetAttached(JoyInfo2.dev))
 						&& JoyInfo.dev != newjoy) // don't override a currently active device
 					{
-						cv_usejoystick2.value = evt.jdevice.which + 1;
+						cv_usejoystick2.value = I_GetJoystickDeviceIndex(newjoy) + 1; // see cv_usejoystick assignment above
 
 						if (JoyInfo.dev)
 							cv_usejoystick.value = I_GetJoystickDeviceIndex(JoyInfo.dev) + 1;
@@ -1673,6 +1655,17 @@ INT32 VID_SetMode(INT32 modeNum)
 				vid.width = (INT32)(resolution.w) / (cv_nativeresdiv.value);
 				vid.height = (INT32)(resolution.h) / (cv_nativeresdiv.value);
 
+#if TARGET_OS_IPHONE
+				// hack to fix NATIVESCREENRES on iOS
+				// SDL2 won't report anything other than a portrait resolution
+				if (vid.width < vid.height)
+				{
+					INT32 temp = vid.width;
+					vid.width = vid.height;
+					vid.height = temp;
+				}
+#endif
+
 				if (vid.width > MAXVIDWIDTH)
 					vid.width = MAXVIDWIDTH;
 				else if (vid.width < BASEVIDWIDTH)
@@ -1739,6 +1732,15 @@ static SDL_bool Impl_CreateWindow(SDL_bool fullscreen)
 		// default value for SDL_GL_DEPTH_SIZE is 16.
 		SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 	}
+#endif
+
+#if TARGET_OS_IPHONE
+	// iOS requires apps to size their content based on screen coordinates rather than content size.
+	flags |= SDL_WINDOW_ALLOW_HIGHDPI;
+#endif
+
+#ifdef MOBILE_PLATFORM
+	SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight");
 #endif
 
 	// Create a window
@@ -1950,6 +1952,7 @@ void VID_StartupOpenGL(void)
 		HWD.pfnSetShaderInfo    = hwSym("SetShaderInfo",NULL);
 		HWD.pfnSetPaletteLookup = hwSym("SetPaletteLookup",NULL);
 		HWD.pfnCreateLightTable = hwSym("CreateLightTable",NULL);
+		HWD.pfnUpdateLightTable = hwSym("UpdateLightTable",NULL);
 		HWD.pfnClearLightTables = hwSym("ClearLightTables",NULL);
 		HWD.pfnSetScreenPalette = hwSym("SetScreenPalette",NULL);
 

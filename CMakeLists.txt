@@ -25,6 +25,10 @@ project(SRB2
 	VERSION ${SRB2_VERSION}
 	LANGUAGES C)
 
+if(${CMAKE_SYSTEM} MATCHES "iOS")
+	enable_language(CXX)
+endif()
+
 ##### PACKAGE CONFIGURATION #####
 
 set(SRB2_CPACK_GENERATOR "" CACHE STRING "Generator to use for making a package. E.g., ZIP, TGZ, DragNDrop (OSX only). Leave blank for default generator.")
@@ -49,7 +53,7 @@ set(CPACK_PACKAGE_VERSION_MINOR ${SRB2_VERSION_MINOR})
 set(CPACK_PACKAGE_VERSION_PATCH ${SRB2_VERSION_PATCH})
 set(CPACK_PACKAGE_INSTALL_DIRECTORY "CMake ${CMAKE_VERSION_MAJOR}.${CMAKE_VERSION_MINOR}")
 set(CPACK_DMG_BACKGROUND_IMAGE "${CMAKE_CURRENT_SOURCE_DIR}/assets/DMGbackground.png")
-set(CPACK_DMG_DS_STORE_SETUP_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/scripts/CMakeDMGSetup.scpt")
+set(CPACK_DMG_DS_STORE_SETUP_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/assets/CMakeDMGSetup.scpt")
 include(CPack)
 
 # Set up CMAKE path
@@ -126,10 +130,6 @@ if(${CMAKE_SYSTEM} MATCHES "Linux")
 	if(${SRB2_SYSTEM_BITS} EQUAL 64)
 		add_definitions(-DLINUX64)
 	endif()
-endif()
-
-if(${CMAKE_SYSTEM} MATCHES "Darwin")
-	add_definitions(-DMACOSX)
 endif()
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")

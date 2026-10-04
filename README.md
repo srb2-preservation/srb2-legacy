@@ -13,7 +13,6 @@ The goal of SRB2 Legacy is to include essential fixes and QOL improvements seen 
 ## Compiling
 
 See [SRB2 Wiki/Source code compiling](http://wiki.srb2.org/wiki/Source_code_compiling)  
-Alternatively, you can also use [srb2bld](https://mb.srb2.org/addons/srb2bld-srb2-build-package-manager-cli.3727/)
 
 ## Nightlies
 
@@ -23,6 +22,7 @@ Nightly builds can be obtained below
 - [Linux](https://nightly.link/srb2-preservation/srb2-legacy/workflows/ubuntu/next)
 - [macOS](https://nightly.link/srb2-preservation/srb2-legacy/workflows/macos/next)
 - [Android](https://nightly.link/srb2-preservation/srb2-legacy/workflows/android/next)
+- [iOS](https://nightly.link/srb2-preservation/srb2-legacy/workflows/ios/next)
 
 ## Interact
 - Join the [srb2-preservation Matrix space](https://matrix.to/#/#srb2-preservation:merrycorps.xyz)
