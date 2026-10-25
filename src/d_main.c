@@ -1180,11 +1180,9 @@ void D_SRB2Main(void)
 
 	{
 		const char *userhome = D_Home(); //Alam: path to home
-#if defined(__ANDROID__)
-		strlcpy(srb2path, I_SharedStorageLocation(), sizeof(srb2path));
-#endif
+		const char *configdir = I_ConfigDir();
 
-		if (!userhome)
+		if (!userhome && !configdir)
 		{
 #if (defined (__unix__) || defined (__APPLE__) || defined (UNIXCOMMON)) && !defined (__CYGWIN__)
 			I_Error("Please set $HOME to your home directory\n");
@@ -1200,12 +1198,10 @@ void D_SRB2Main(void)
 			// use user specific config file
 			if (M_CheckParm("-workdir") && M_IsNextParm())
 				snprintf(srb2home, sizeof srb2home, "%s", M_GetNextParm());
+			else if (configdir)
+				snprintf(srb2home, sizeof srb2home, "%s", configdir);
 			else
-#ifdef DEFAULTDIR
-				snprintf(srb2home, sizeof srb2home, "%s", I_ConfigDir());
-#else
 				snprintf(srb2home, sizeof srb2home, "%s", userhome);
-#endif
 			snprintf(downloaddir, sizeof downloaddir, "%s" PATHSEP "DOWNLOAD", srb2home);
 			if (dedicated)
 				snprintf(configfile, sizeof configfile, "%s" PATHSEP "d"CONFIGFILENAME, srb2home);
@@ -1650,11 +1646,6 @@ const char *D_Home(void)
 	if (M_CheckParm("-home") && M_IsNextParm())
 		userhome = M_GetNextParm();
 	else
-#ifdef ANDROID
-	if (I_SharedStorageLocation())
-		userhome = I_SharedStorageLocation();
-	else
-#endif
 	{
 #if !(defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON))
 		if (FIL_FileOK(CONFIGFILENAME))

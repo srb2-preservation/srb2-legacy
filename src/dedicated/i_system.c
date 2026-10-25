@@ -1692,6 +1692,9 @@ const char *I_ConfigDir(void)
 	{
 		const char *home = D_Home();
 
+		if (!home)
+			return NULL;
+
 		// First, try legacy directory.
 		size_t basesize = strlen(home) + 1 + strlen(DEFAULTDIR) + 1;
 		base = malloc(basesize);

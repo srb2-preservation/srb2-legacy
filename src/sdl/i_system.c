@@ -3056,6 +3056,9 @@ const char *I_ConfigDir(void)
 	{
 		const char *home = D_Home();
 
+		if (!home)
+			return NULL;
+
 		// First, try legacy directory.
 		size_t basesize = strlen(home) + 1 + strlen(DEFAULTDIR) + 1;
 		base = malloc(basesize);
@@ -3086,6 +3089,8 @@ const char *I_ConfigDir(void)
 	}
 
 	return base;
+#elif defined(__ANDROID__)
+	return I_SharedStorageLocation();
 #else
 	return NULL;
 #endif

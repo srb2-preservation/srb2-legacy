@@ -116,7 +116,7 @@ void I_InitLogging(void)
 	const char *link;
 #endif
 
-	logdir = D_Home();
+	logdir = I_ConfigDir();
 
 	my_time = time(NULL);
 	timeinfo = localtime(&my_time);
