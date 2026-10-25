@@ -19,6 +19,7 @@ extern "C" {
 #endif
 
 char *Android_strchr(const char *str, int character);
+char *Android_strtok(char *str, const char *delimiters);
 
 int Android_sprintf(char *str, const char *format, ...);
 int Android_snprintf(char *str, size_t size, const char *format, ...);

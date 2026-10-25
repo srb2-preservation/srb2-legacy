@@ -398,6 +398,7 @@ char *sizeu5(size_t num);
 #define M_sprintf Android_sprintf
 #define M_snprintf Android_snprintf
 #define M_vsnprintf Android_vsnprintf
+#define strtok Android_strtok
 #else
 #define M_sprintf sprintf
 #define M_snprintf snprintf

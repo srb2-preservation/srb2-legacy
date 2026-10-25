@@ -29,6 +29,13 @@ char *Android_strchr(const char *str, int character)
 	return NULL;
 }
 
+// NDK 30+ marks strtok() as deprecated
+char *Android_strtok(char *str, const char *delimiters)
+{
+	static char *saveptr = NULL;
+	return strtok_r(str, delimiters, &saveptr);
+}
+
 static unsigned char extsyms[8192];
 static size_t numsyms;
 static size_t appliedsyms;
