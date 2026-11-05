@@ -310,16 +310,19 @@ if(${CMAKE_SYSTEM} MATCHES Darwin AND NOT ${SRB2_CONFIG_DEDICATED})
 	else()
 		set(SRB2_MACOS_ICON_DEPLOYMENT_TARGET "${CMAKE_OSX_DEPLOYMENT_TARGET}")
 	endif()
-	# Assets.car needs actool from Xcode 26+; older versions skip srb2.icon without failing,
-	# so always bundle Srb2mac.icns for macOS to fall back on
+	# srb2.icon needs actool from Xcode 26+, older versions skip it without failing;
+	# otherwise, bundle the classic Srb2mac.icns instead
 	set_target_properties(SRB2SDL2 PROPERTIES MACOSX_BUNDLE_ICON_FILE Srb2mac.icns)
-	set_source_files_properties(sdl/macosx/Srb2mac.icns PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
-	target_sources(SRB2SDL2 PRIVATE sdl/macosx/Srb2mac.icns)
 	execute_process(COMMAND xcrun --find actool
 		RESULT_VARIABLE SRB2_ACTOOL_RESULT
 		OUTPUT_QUIET ERROR_QUIET
 	)
-	if(SRB2_ACTOOL_RESULT EQUAL 0)
+	execute_process(COMMAND xcodebuild -version
+		OUTPUT_VARIABLE SRB2_XCODE_VERSION
+		ERROR_QUIET
+	)
+	string(REGEX REPLACE "^Xcode ([0-9.]+).*" "\\1" SRB2_XCODE_VERSION "${SRB2_XCODE_VERSION}")
+	if(SRB2_ACTOOL_RESULT EQUAL 0 AND SRB2_XCODE_VERSION VERSION_GREATER_EQUAL 26)
 		add_custom_command(TARGET SRB2SDL2 POST_BUILD
 			COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_BUNDLE_CONTENT_DIR:SRB2SDL2>/Resources"
 			COMMAND xcrun actool --compile "$<TARGET_BUNDLE_CONTENT_DIR:SRB2SDL2>/Resources"
@@ -332,7 +335,9 @@ if(${CMAKE_SYSTEM} MATCHES Darwin AND NOT ${SRB2_CONFIG_DEDICATED})
 			VERBATIM
 		)
 	else()
-		message(STATUS "actool not found, using sdl/macosx/Srb2mac.icns")
+		message(STATUS "actool from Xcode 26+ not found, using sdl/macosx/Srb2mac.icns")
+		set_source_files_properties(sdl/macosx/Srb2mac.icns PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
+		target_sources(SRB2SDL2 PRIVATE sdl/macosx/Srb2mac.icns)
 	endif()
 endif()
 

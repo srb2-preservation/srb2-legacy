@@ -14,7 +14,7 @@ jobs:
         arch:
           - runner: macos-latest
             name: aarch64
-          - runner: macos-15-intel
+          - runner: macos-26-intel
             name: x86_64
 
     name: ${{ matrix.arch.name }}
