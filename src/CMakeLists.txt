@@ -310,8 +310,11 @@ if(${CMAKE_SYSTEM} MATCHES Darwin AND NOT ${SRB2_CONFIG_DEDICATED})
 	else()
 		set(SRB2_MACOS_ICON_DEPLOYMENT_TARGET "${CMAKE_OSX_DEPLOYMENT_TARGET}")
 	endif()
-	# actool only ships with Xcode; without it, bundle the classic Srb2mac.icns instead
+	# Assets.car needs actool from Xcode 26+; older versions skip srb2.icon without failing,
+	# so always bundle Srb2mac.icns for macOS to fall back on
 	set_target_properties(SRB2SDL2 PROPERTIES MACOSX_BUNDLE_ICON_FILE Srb2mac.icns)
+	set_source_files_properties(sdl/macosx/Srb2mac.icns PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
+	target_sources(SRB2SDL2 PRIVATE sdl/macosx/Srb2mac.icns)
 	execute_process(COMMAND xcrun --find actool
 		RESULT_VARIABLE SRB2_ACTOOL_RESULT
 		OUTPUT_QUIET ERROR_QUIET
@@ -330,8 +333,6 @@ if(${CMAKE_SYSTEM} MATCHES Darwin AND NOT ${SRB2_CONFIG_DEDICATED})
 		)
 	else()
 		message(STATUS "actool not found, using sdl/macosx/Srb2mac.icns")
-		set_source_files_properties(sdl/macosx/Srb2mac.icns PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
-		target_sources(SRB2SDL2 PRIVATE sdl/macosx/Srb2mac.icns)
 	endif()
 endif()
 
