@@ -1563,6 +1563,7 @@ static menuitem_t OP_ChatOptionsMenu[] =
 	{IT_STRING | IT_CVAR, NULL, "Chat Notifications",     NULL,       	 &cv_chatnotifications,  60},
 	{IT_STRING | IT_CVAR, NULL, "Spam Protection",        NULL,    		 &cv_chatspamprotection,  70},
 	{IT_STRING | IT_CVAR, NULL, "Chat background tint",   NULL,         	 &cv_chatbacktint,  80},
+	{IT_STRING | IT_CVAR, NULL, "Keyboard Chat at Top",   NULL,         	 &cv_chatontop,  90},
 };
 
 static menuitem_t OP_ServerOptionsMenu[] =

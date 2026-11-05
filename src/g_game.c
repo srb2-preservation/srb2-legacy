@@ -343,6 +343,15 @@ consvar_t cv_chatspamprotection= CVAR_INIT ("chatspamprotection", "On", "Filter 
 // minichat text background
 consvar_t cv_chatbacktint = CVAR_INIT ("chatbacktint", "On", "Have a tinted background on chat messages", CV_SAVE, CV_OnOff, NULL);
 
+// move the chat to the top of the screen while the keyboard is up, so on-screen keyboards don't cover it
+consvar_t cv_chatontop = CVAR_INIT ("chatontop",
+#ifdef MOBILE_PLATFORM
+	"On",
+#else
+	"Off",
+#endif
+	"Move the chat box to the top of the screen while the keyboard is open", CV_SAVE, CV_OnOff, NULL);
+
 // old shit console chat. (mostly exists for stuff like terminal, not because I cared if anyone liked the old chat.)
 static CV_PossibleValue_t consolechat_cons_t[] = {{0, "Window"}, {1, "Console"}, {2, "Window (Hidden)"}, {0, NULL}};
 consvar_t cv_consolechat = CVAR_INIT ("chatmode", "Window", "How chat looks", CV_SAVE, consolechat_cons_t, NULL);
