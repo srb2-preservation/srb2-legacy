@@ -25,59 +25,12 @@
 #include "m_cond.h" // unlockables, emblems, etc
 #include "m_cheat.h" // objectplace
 #include "m_misc.h"
+#include "p_haptic.h"
 #include "v_video.h" // video flags for CEchos
 
 // CTF player names
 #define CTFTEAMCODE(pl) pl->ctfteam ? (pl->ctfteam == 1 ? "\x85" : "\x84") : ""
 #define CTFTEAMENDCODE(pl) pl->ctfteam ? "\x80" : ""
-
-void P_ForceFeed(const player_t *player, INT32 attack, INT32 fade, tic_t duration, INT32 period)
-{
-	BasicFF_t Basicfeed;
-	if (!player)
-		return;
-	Basicfeed.Duration = (UINT32)(duration * (100L/TICRATE));
-	Basicfeed.ForceX = Basicfeed.ForceY = 1;
-	Basicfeed.Gain = 25000;
-	Basicfeed.Magnitude = period*10;
-	Basicfeed.player = player;
-	/// \todo test FFB
-	P_RampConstant(&Basicfeed, attack, fade);
-}
-
-void P_ForceConstant(const BasicFF_t *FFInfo)
-{
-	JoyFF_t ConstantQuake;
-	if (!FFInfo || !FFInfo->player)
-		return;
-	ConstantQuake.ForceX    = FFInfo->ForceX;
-	ConstantQuake.ForceY    = FFInfo->ForceY;
-	ConstantQuake.Duration  = FFInfo->Duration;
-	ConstantQuake.Gain      = FFInfo->Gain;
-	ConstantQuake.Magnitude = FFInfo->Magnitude;
-	if (FFInfo->player == &players[consoleplayer])
-		I_Tactile(ConstantForce, &ConstantQuake);
-	else if (splitscreen && FFInfo->player == &players[secondarydisplayplayer])
-		I_Tactile2(ConstantForce, &ConstantQuake);
-}
-void P_RampConstant(const BasicFF_t *FFInfo, INT32 Start, INT32 End)
-{
-	JoyFF_t RampQuake;
-	if (!FFInfo || !FFInfo->player)
-		return;
-	RampQuake.ForceX    = FFInfo->ForceX;
-	RampQuake.ForceY    = FFInfo->ForceY;
-	RampQuake.Duration  = FFInfo->Duration;
-	RampQuake.Gain      = FFInfo->Gain;
-	RampQuake.Magnitude = FFInfo->Magnitude;
-	RampQuake.Start     = Start;
-	RampQuake.End       = End;
-	if (FFInfo->player == &players[consoleplayer])
-		I_Tactile(ConstantForce, &RampQuake);
-	else if (splitscreen && FFInfo->player == &players[secondarydisplayplayer])
-		I_Tactile2(ConstantForce, &RampQuake);
-}
-
 
 //
 // GET STUFF
@@ -2605,7 +2558,7 @@ static void P_KillPlayer(player_t *player, mobj_t *source, INT32 damage)
 	// Get rid of emeralds
 	player->powers[pw_emeralds] = 0;
 
-	P_ForceFeed(player, 40, 10, TICRATE, 40 + min(damage, 100)*2);
+	P_DoRumbleCombined(player, FRACUNIT, TICRATE / 3);
 
 	P_ResetPlayer(player);
 
@@ -2642,7 +2595,7 @@ static void P_SuperDamage(player_t *player, mobj_t *inflictor, mobj_t *source, I
 	fixed_t fallbackspeed;
 	angle_t ang;
 
-	P_ForceFeed(player, 40, 10, TICRATE, 40 + min(damage, 100)*2);
+	P_DoRumbleCombined(player, FRACUNIT, TICRATE / 6);
 
 	if (player->mo->eflags & MFE_VERTICALFLIP)
 		player->mo->z--;
@@ -2729,7 +2682,7 @@ static void P_ShieldDamage(player_t *player, mobj_t *inflictor, mobj_t *source, 
 
 	P_RemoveShield(player);
 
-	P_ForceFeed(player, 40, 10, TICRATE, 40 + min(damage, 100)*2);
+	P_DoRumbleCombined(player, FRACUNIT, TICRATE / 6);
 
 	if (source && (source->type == MT_SPIKE || (source->type == MT_NULL && source->threshold == 43))) // spikes
 		S_StartSound(player->mo, sfx_spkdth);
@@ -2760,7 +2713,7 @@ static void P_RingDamage(player_t *player, mobj_t *inflictor, mobj_t *source, IN
 	{
 		P_DoPlayerPain(player, source, inflictor);
 
-		P_ForceFeed(player, 40, 10, TICRATE, 40 + min(damage, 100)*2);
+		P_DoRumbleCombined(player, FRACUNIT, TICRATE / 6);
 
 		if (source && (source->type == MT_SPIKE || (source->type == MT_NULL && source->threshold == 43))) // spikes
 			S_StartSound(player->mo, sfx_spkdth);
@@ -3063,8 +3016,6 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 			player->health = 0;
 
 		P_HitDeathMessages(player, inflictor, source);
-
-		P_ForceFeed(player, 40, 10, TICRATE, 40 + min(damage, 100)*2);
 	}
 
 	// Killing dead. Just for kicks.

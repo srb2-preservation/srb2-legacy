@@ -26,7 +26,7 @@
 #include "g_game.h"
 #include "hu_stuff.h"
 #include "keys.h"
-#include "g_input.h" // JOY1
+#include "g_input.h" // GAMEPAD_KEY
 #include "m_menu.h"
 #include "console.h"
 #include "d_netfil.h"
@@ -1691,12 +1691,12 @@ static boolean CL_ServerConnectionTicker(const char *tmpsave, tic_t *oldtic, tic
 
 		if (cl_mode == CL_VIEWSERVER)
 		{
-			if (key == KEY_ENTER || key == KEY_JOY1)
+			if (key == KEY_ENTER || key == GAMEPAD_KEY(A))
 				cl_mode = CL_CHECKFILES;
-			else if (key == KEY_ESCAPE || key == KEY_JOY1+1)
+			else if (key == KEY_ESCAPE || key == GAMEPAD_KEY(B))
 				cl_mode = CL_ABORTED;
 
-			if ((key == KEY_SPACE || key == KEY_JOY1+2) && fileneedednum)
+			if ((key == KEY_SPACE || key == GAMEPAD_KEY(X)) && fileneedednum)
 			{
 				if (!addonlist_toggle_tapped)
 				{
@@ -1710,7 +1710,7 @@ static boolean CL_ServerConnectionTicker(const char *tmpsave, tic_t *oldtic, tic
 
 			if (addonlist_show && fileneedednum > 11)
 			{
-				if ((key == KEY_DOWNARROW || key == KEY_HAT1+1))
+				if ((key == KEY_DOWNARROW || key == GAMEPAD_KEY(DPAD_DOWN)))
 				{
 					if (!addonlist_toggle_tapped || addonlist_scroll_time >= TICRATE>>1)
 					{
@@ -1727,7 +1727,7 @@ static boolean CL_ServerConnectionTicker(const char *tmpsave, tic_t *oldtic, tic
 					addonlist_toggle_tapped = true;
 					addonlist_scroll_time++;
 				}
-				else if ((key == KEY_UPARROW || key == KEY_HAT1))
+				else if ((key == KEY_UPARROW || key == GAMEPAD_KEY(DPAD_UP)))
 				{
 					if (!addonlist_toggle_tapped || addonlist_scroll_time >= TICRATE>>1)
 					{
@@ -1744,7 +1744,7 @@ static boolean CL_ServerConnectionTicker(const char *tmpsave, tic_t *oldtic, tic
 					addonlist_toggle_tapped = true;
 					addonlist_scroll_time++;
 				}
-				else if (!(key == KEY_SPACE || key == KEY_JOY1+6))
+				else if (!(key == KEY_SPACE || key == GAMEPAD_KEY(X)))
 				{
 					addonlist_toggle_tapped = false;
 					addonlist_scroll_time = 0;
@@ -1766,7 +1766,7 @@ static boolean CL_ServerConnectionTicker(const char *tmpsave, tic_t *oldtic, tic
 
 
 
-		if (key == KEY_ESCAPE || key == KEY_JOY1+1)
+		if (key == KEY_ESCAPE || key == GAMEPAD_KEY(B))
 		{
 			CONS_Printf(M_GetText("Network game synchronization aborted.\n"));
 //				M_StartMessage(M_GetText("Network game synchronization aborted.\n\nPress ESC\n"), NULL, MM_NOTHING);

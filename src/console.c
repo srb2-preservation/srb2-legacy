@@ -763,21 +763,22 @@ boolean CON_Responder(event_t *ev)
 	static INT32 comskips, varskips;
 
 	const char *cmd = "";
+	INT32 evtype = ev->type;
 	INT32 key;
 
 	if (chat_on)
 		return false;
 
 	// let go keyup events, don't eat them
-	if (ev->type != ev_keydown && ev->type != ev_text && ev->type != ev_console)
+	key = G_RemapGamepadEvent(ev, &evtype);
+
+	if (evtype != ev_keydown && evtype != ev_text && evtype != ev_console)
 	{
 		return false;
 	}
 
-	key = ev->data1;
-
 	// check for console toggle key
-	if (ev->type == ev_keydown)
+	if (evtype == ev_keydown)
 	{
 		if (modeattacking || metalrecording || marathonmode)
 			return false;

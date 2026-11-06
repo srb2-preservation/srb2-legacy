@@ -974,9 +974,10 @@ void F_IntroTicker(void)
 //
 boolean F_IntroResponder(event_t *event)
 {
-	INT32 key = event->data1;
+	INT32 type = event->type;
+	INT32 key = G_RemapGamepadEvent(event, &type);
 
-	// remap virtual keys (mouse & joystick buttons)
+	// remap virtual keys (mouse & gamepad buttons)
 	switch (key)
 	{
 		case KEY_MOUSE1:
@@ -985,31 +986,31 @@ boolean F_IntroResponder(event_t *event)
 		case KEY_MOUSE1 + 1:
 			key = KEY_BACKSPACE;
 			break;
-		case KEY_JOY1:
-		case KEY_JOY1 + 2:
+		case GAMEPAD_KEY(A):
+		case GAMEPAD_KEY(X):
 			key = KEY_ENTER;
 			break;
-		case KEY_JOY1 + 3:
+		case GAMEPAD_KEY(Y):
 			key = 'n';
 			break;
-		case KEY_JOY1 + 1:
+		case GAMEPAD_KEY(B):
 			key = KEY_BACKSPACE;
 			break;
-		case KEY_HAT1:
+		case GAMEPAD_KEY(DPAD_UP):
 			key = KEY_UPARROW;
 			break;
-		case KEY_HAT1 + 1:
+		case GAMEPAD_KEY(DPAD_DOWN):
 			key = KEY_DOWNARROW;
 			break;
-		case KEY_HAT1 + 2:
+		case GAMEPAD_KEY(DPAD_LEFT):
 			key = KEY_LEFTARROW;
 			break;
-		case KEY_HAT1 + 3:
+		case GAMEPAD_KEY(DPAD_RIGHT):
 			key = KEY_RIGHTARROW;
 			break;
 	}
 
-	if (event->type != ev_keydown && key != 301)
+	if (type != ev_keydown && key != 301)
 		return false;
 
 	if (key != 27 && key != KEY_ENTER && key != KEY_SPACE && key != KEY_BACKSPACE)
@@ -1291,9 +1292,10 @@ void F_CreditTicker(void)
 
 boolean F_CreditResponder(event_t *event)
 {
-	INT32 key = event->data1;
+	INT32 type = event->type;
+	INT32 key = G_RemapGamepadEvent(event, &type);
 
-	// remap virtual keys (mouse & joystick buttons)
+	// remap virtual keys (mouse & gamepad buttons)
 	switch (key)
 	{
 		case KEY_MOUSE1:
@@ -1302,26 +1304,26 @@ boolean F_CreditResponder(event_t *event)
 		case KEY_MOUSE1 + 1:
 			key = KEY_BACKSPACE;
 			break;
-		case KEY_JOY1:
-		case KEY_JOY1 + 2:
+		case GAMEPAD_KEY(A):
+		case GAMEPAD_KEY(X):
 			key = KEY_ENTER;
 			break;
-		case KEY_JOY1 + 3:
+		case GAMEPAD_KEY(Y):
 			key = 'n';
 			break;
-		case KEY_JOY1 + 1:
+		case GAMEPAD_KEY(B):
 			key = KEY_BACKSPACE;
 			break;
-		case KEY_HAT1:
+		case GAMEPAD_KEY(DPAD_UP):
 			key = KEY_UPARROW;
 			break;
-		case KEY_HAT1 + 1:
+		case GAMEPAD_KEY(DPAD_DOWN):
 			key = KEY_DOWNARROW;
 			break;
-		case KEY_HAT1 + 2:
+		case GAMEPAD_KEY(DPAD_LEFT):
 			key = KEY_LEFTARROW;
 			break;
-		case KEY_HAT1 + 3:
+		case GAMEPAD_KEY(DPAD_RIGHT):
 			key = KEY_RIGHTARROW;
 			break;
 	}
@@ -1329,7 +1331,7 @@ boolean F_CreditResponder(event_t *event)
 	if (!(timesBeaten) && !(netgame || multiplayer))
 		return false;
 
-	if (event->type != ev_keydown)
+	if (type != ev_keydown)
 		return false;
 
 	if (key != KEY_ESCAPE && key != KEY_ENTER && key != KEY_SPACE && key != KEY_BACKSPACE)
@@ -1761,24 +1763,25 @@ void F_ContinueTicker(void)
 
 boolean F_ContinueResponder(event_t *event)
 {
-	INT32 key = event->data1;
+	INT32 type = event->type;
+	INT32 key = G_RemapGamepadEvent(event, &type);
 
 	if (keypressed)
 		return true;
 
 	if (timetonext >= 21*TICRATE/2)
 		return false;
-	if (event->type != ev_keydown)
+	if (type != ev_keydown)
 		return false;
 
-	// remap virtual keys (mouse & joystick buttons)
+	// remap virtual keys (mouse & gamepad buttons)
 	switch (key)
 	{
 		case KEY_ENTER:
 		case KEY_SPACE:
 		case KEY_MOUSE1:
-		case KEY_JOY1:
-		case KEY_JOY1 + 2:
+		case GAMEPAD_KEY(A):
+		case GAMEPAD_KEY(X):
 			break;
 		default:
 			return false;

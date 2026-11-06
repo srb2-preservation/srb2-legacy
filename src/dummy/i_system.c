@@ -44,46 +44,79 @@ void I_Error(const char *error, ...)
 	exit(-1);
 }
 
-void I_Tactile(FFType Type, const JoyFF_t *Effect)
-{
-	(void)Type;
-	(void)Effect;
-}
+void I_InitGamepads(void){}
 
-void I_Tactile2(FFType Type, const JoyFF_t *Effect)
-{
-	(void)Type;
-	(void)Effect;
-}
-
-void I_CursedWindowMovement (int xd, int yd)
-{
-	(void)xd;
-	(void)yd;
-}
-
-const char *I_GetPlatform(void)
-{
-	return "Other OS";
-}
-
-void I_JoyScale(void){}
-
-void I_JoyScale2(void){}
-
-void I_InitJoystick(void){}
-
-void I_InitJoystick2(void){}
-
-INT32 I_NumJoys(void)
+INT32 I_NumGamepads(void)
 {
 	return 0;
 }
 
-const char *I_GetJoyName(INT32 joyindex)
+void I_ChangeGamepad(UINT8 which)
+{
+	(void)which;
+}
+
+void I_SetGamepadDigital(UINT8 which, boolean enable)
+{
+	(void)which;
+	(void)enable;
+}
+
+void I_ShutdownGamepads(void){}
+
+const char *I_GetGamepadName(INT32 joyindex)
 {
 	(void)joyindex;
 	return NULL;
+}
+
+boolean I_RumbleSupported(void)
+{
+	return false;
+}
+
+boolean I_RumbleGamepad(UINT8 which, const haptic_t *effect)
+{
+	(void)which;
+	(void)effect;
+	return false;
+}
+
+boolean I_GetGamepadRumblePaused(UINT8 which)
+{
+	(void)which;
+	return false;
+}
+
+boolean I_SetGamepadLargeMotorFreq(UINT8 which, fixed_t freq)
+{
+	(void)which;
+	(void)freq;
+	return false;
+}
+
+boolean I_SetGamepadSmallMotorFreq(UINT8 which, fixed_t freq)
+{
+	(void)which;
+	(void)freq;
+	return false;
+}
+
+void I_SetGamepadRumblePaused(UINT8 which, boolean pause)
+{
+	(void)which;
+	(void)pause;
+}
+
+boolean I_GetGamepadRumbleSupported(UINT8 which)
+{
+	(void)which;
+	return false;
+}
+
+void I_StopGamepadRumble(UINT8 which)
+{
+	(void)which;
 }
 
 #ifndef NOMUMBLE
@@ -152,10 +185,6 @@ const char *I_LocateWad(void)
 {
 	return NULL;
 }
-
-void I_GetJoystickEvents(void){}
-
-void I_GetJoystick2Events(void){}
 
 void I_GetMouseEvents(void){}
 

@@ -24,6 +24,7 @@
 #include "am_map.h"
 #include "m_random.h"
 #include "p_local.h"
+#include "p_haptic.h"
 #include "r_draw.h"
 #include "r_main.h"
 #include "s_sound.h"
@@ -37,7 +38,7 @@
 #include "z_zone.h"
 #include "i_video.h"
 #include "byteptr.h"
-#include "i_joy.h"
+#include "i_gamepad.h"
 #include "r_local.h"
 #include "r_things.h"
 #include "y_inter.h"
@@ -58,9 +59,6 @@ UINT8 ultimatemode = false;
 boolean botingame;
 UINT8 botskin;
 UINT16 botcolor;
-
-JoyType_t Joystick;
-JoyType_t Joystick2;
 
 // 1024 bytes is plenty for a savegame
 #define SAVEGAMESIZE (1024)
@@ -301,21 +299,14 @@ void SendWeaponPref(void);
 void SendWeaponPref2(void);
 
 static CV_PossibleValue_t crosshair_cons_t[] = {{0, "Off"}, {1, "Cross"}, {2, "Angle"}, {3, "Point"}, {0, NULL}};
-static CV_PossibleValue_t joyaxis_cons_t[] = {{0, "None"},
-{1, "X-Axis"}, {2, "Y-Axis"}, {-1, "X-Axis-"}, {-2, "Y-Axis-"},
-#if JOYAXISSET > 1
-{3, "Z-Axis"}, {4, "X-Rudder"}, {-3, "Z-Axis-"}, {-4, "X-Rudder-"},
-#endif
-#if JOYAXISSET > 2
-{5, "Y-Rudder"}, {6, "Z-Rudder"}, {-5, "Y-Rudder-"}, {-6, "Z-Rudder-"},
-#endif
-#if JOYAXISSET > 3
-{7, "U-Axis"}, {8, "V-Axis"}, {-7, "U-Axis-"}, {-8, "V-Axis-"},
-#endif
- {0, NULL}};
-#if JOYAXISSET > 4
-"More Axis Sets"
-#endif
+CV_PossibleValue_t joyaxis_cons_t[] = {{0, "None"},
+	{1, "Left Stick X"}, {2, "Left Stick Y"},
+	{3, "Right Stick X"}, {4, "Right Stick Y"},
+	{-1, "Left Stick X-"}, {-2, "Left Stick Y-"},
+	{-3, "Right Stick X-"}, {-4, "Right Stick Y-"},
+	{5, "Left Trigger"}, {6, "Right Trigger"},
+	{0, NULL}
+};
 
 // don't mind me putting these here, I was lazy to figure out where else I could put those without blowing up the compiler.
 
@@ -388,27 +379,46 @@ typedef enum
 	AXISFIRENORMAL,
 } axis_input_e;
 
-consvar_t cv_moveaxis = CVAR_INIT ("joyaxis_move", "Y-Axis", "Axis for moving forwards and backwards", CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_sideaxis = CVAR_INIT ("joyaxis_side", "X-Axis", "Axis for strafing left and right", CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_lookaxis = CVAR_INIT ("joyaxis_look", "X-Rudder-", "Axis for vertical camera movement", CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_turnaxis = CVAR_INIT ("joyaxis_turn", "Z-Axis", "Axis for horizontal camera movement", CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_jumpaxis = CVAR_INIT ("joyaxis_jump", "None", NULL, CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_spinaxis = CVAR_INIT ("joyaxis_spin", "None", NULL, CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_fireaxis = CVAR_INIT ("joyaxis_fire", "Z-Rudder", NULL, CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_firenaxis = CVAR_INIT ("joyaxis_firenormal", "Z-Axis", NULL, CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_deadzone = CVAR_INIT ("joy_deadzone", "0.125", NULL, CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL);
-consvar_t cv_digitaldeadzone = CVAR_INIT ("joy_digdeadzone", "0.25", NULL, CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL);
-
-consvar_t cv_moveaxis2 = CVAR_INIT ("joyaxis2_move", "Y-Axis", "Axis for moving forwards and backwards", CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_sideaxis2 = CVAR_INIT ("joyaxis2_side", "X-Axis", "Axis for strafing left and right", CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_lookaxis2 = CVAR_INIT ("joyaxis2_look", "X-Rudder-", "Axis for vertical camera movement", CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_turnaxis2 = CVAR_INIT ("joyaxis2_turn", "Z-Axis", "Axis for horizontal camera movement", CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_jumpaxis2 = CVAR_INIT ("joyaxis2_jump", "None", NULL, CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_spinaxis2 = CVAR_INIT ("joyaxis2_spin", "None", NULL, CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_fireaxis2 = CVAR_INIT ("joyaxis2_fire", "Z-Rudder", NULL, CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_firenaxis2 = CVAR_INIT ("joyaxis2_firenormal", "Z-Axis", NULL, CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_deadzone2 = CVAR_INIT ("joy_deadzone2", "0.125", NULL, CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL);
-consvar_t cv_digitaldeadzone2 = CVAR_INIT ("joy_digdeadzone2", "0.25", NULL, CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL);
+consvar_t cv_moveaxis[2] = {
+	CVAR_INIT ("joyaxis_move", "Left Stick Y", "Axis for moving forwards and backwards", CV_SAVE, joyaxis_cons_t, NULL),
+	CVAR_INIT ("joyaxis2_move", "Left Stick Y", "Axis for moving forwards and backwards", CV_SAVE, joyaxis_cons_t, NULL)
+};
+consvar_t cv_sideaxis[2] = {
+	CVAR_INIT ("joyaxis_side", "Left Stick X", "Axis for strafing left and right", CV_SAVE, joyaxis_cons_t, NULL),
+	CVAR_INIT ("joyaxis2_side", "Left Stick X", "Axis for strafing left and right", CV_SAVE, joyaxis_cons_t, NULL)
+};
+consvar_t cv_lookaxis[2] = {
+	CVAR_INIT ("joyaxis_look", "Right Stick Y-", "Axis for vertical camera movement", CV_SAVE, joyaxis_cons_t, NULL),
+	CVAR_INIT ("joyaxis2_look", "Right Stick Y-", "Axis for vertical camera movement", CV_SAVE, joyaxis_cons_t, NULL)
+};
+consvar_t cv_turnaxis[2] = {
+	CVAR_INIT ("joyaxis_turn", "Right Stick X", "Axis for horizontal camera movement", CV_SAVE, joyaxis_cons_t, NULL),
+	CVAR_INIT ("joyaxis2_turn", "Right Stick X", "Axis for horizontal camera movement", CV_SAVE, joyaxis_cons_t, NULL)
+};
+consvar_t cv_jumpaxis[2] = {
+	CVAR_INIT ("joyaxis_jump", "None", NULL, CV_SAVE, joyaxis_cons_t, NULL),
+	CVAR_INIT ("joyaxis2_jump", "None", NULL, CV_SAVE, joyaxis_cons_t, NULL)
+};
+consvar_t cv_spinaxis[2] = {
+	CVAR_INIT ("joyaxis_spin", "None", NULL, CV_SAVE, joyaxis_cons_t, NULL),
+	CVAR_INIT ("joyaxis2_spin", "None", NULL, CV_SAVE, joyaxis_cons_t, NULL)
+};
+consvar_t cv_fireaxis[2] = {
+	CVAR_INIT ("joyaxis_fire", "Right Trigger", NULL, CV_SAVE, joyaxis_cons_t, NULL),
+	CVAR_INIT ("joyaxis2_fire", "Right Trigger", NULL, CV_SAVE, joyaxis_cons_t, NULL)
+};
+consvar_t cv_firenaxis[2] = {
+	CVAR_INIT ("joyaxis_firenormal", "Left Trigger", NULL, CV_SAVE, joyaxis_cons_t, NULL),
+	CVAR_INIT ("joyaxis2_firenormal", "Left Trigger", NULL, CV_SAVE, joyaxis_cons_t, NULL)
+};
+consvar_t cv_deadzone[2] = {
+	CVAR_INIT ("joy_deadzone", "0.125", NULL, CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL),
+	CVAR_INIT ("joy_deadzone2", "0.125", NULL, CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL)
+};
+consvar_t cv_digitaldeadzone[2] = {
+	CVAR_INIT ("joy_digdeadzone", "0.25", NULL, CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL),
+	CVAR_INIT ("joy_digdeadzone2", "0.25", NULL, CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL)
+};
 
 #if MAXPLAYERS > 32
 #error "please update player_name table using the new value for MAXPLAYERS"
@@ -752,149 +762,118 @@ INT16 G_SoftwareClipAimingPitch(INT32 *aiming)
 	return (INT16)((*aiming)>>16);
 }
 
-static INT32 JoyAxis(axis_input_e axissel)
+// Reads the value of a gamepad axis setting, as seen by a player
+static INT16 GetJoystickAxisValue(UINT8 which, axis_input_e axissel, INT32 axisval)
 {
-	INT32 retaxis;
-	INT32 axisval;
 	boolean flp = false;
+	INT16 retaxis;
 
-	//find what axis to get
+	// Axes don't drive the game while the menu, console or chat has the focus
+	if (menuactive || CON_Ready() || chat_on)
+		return 0;
+
+	if (axisval < 0) // odd -axes
+	{
+		axisval = -axisval;
+		flp = true;
+	}
+
+	if (axisval == 0 || axisval > NUM_GAMEPAD_AXES) // not there in array or None
+		return 0;
+
+	retaxis = G_GetGamepadAxisValue(which, axisval - 1);
+
+	if (!gamepads[which].digital)
+	{
+		const INT32 jdeadzone = (axissel < AXISDEAD) ? G_GetGamepadDeadZone(which) : G_GetGamepadDigitalDeadZone(which);
+		if (-jdeadzone < retaxis && retaxis < jdeadzone)
+			return 0;
+	}
+
+	if (flp) // flip it around
+		retaxis = (retaxis == INT16_MIN) ? INT16_MAX : -retaxis;
+
+	return retaxis;
+}
+
+static INT16 JoyAxis(UINT8 which, axis_input_e axissel)
+{
+	INT32 axisval;
+
+	// find what axis to get
 	switch (axissel)
 	{
 		case AXISTURN:
-			axisval = cv_turnaxis.value;
+			axisval = cv_turnaxis[which].value;
 			break;
 		case AXISMOVE:
-			axisval = cv_moveaxis.value;
+			axisval = cv_moveaxis[which].value;
 			break;
 		case AXISLOOK:
-			axisval = cv_lookaxis.value;
+			axisval = cv_lookaxis[which].value;
 			break;
 		case AXISSTRAFE:
-			axisval = cv_sideaxis.value;
+			axisval = cv_sideaxis[which].value;
 			break;
 		case AXISJUMP:
-			axisval = cv_jumpaxis.value;
+			axisval = cv_jumpaxis[which].value;
 			break;
 		case AXISSPIN:
-			axisval = cv_spinaxis.value;
+			axisval = cv_spinaxis[which].value;
 			break;
 		case AXISFIRE:
-			axisval = cv_fireaxis.value;
+			axisval = cv_fireaxis[which].value;
 			break;
 		case AXISFIRENORMAL:
-			axisval = cv_firenaxis.value;
+			axisval = cv_firenaxis[which].value;
 			break;
 		default:
 			return 0;
 	}
 
-	if (axisval < 0) //odd -axises
-	{
-		axisval = -axisval;
-		flp = true;
-	}
-	if (axisval > JOYAXISSET*2 || axisval == 0) //not there in array or None
-		return 0;
-
-	if (axisval%2)
-	{
-		axisval /= 2;
-		retaxis = joyxmove[axisval];
-	}
-	else
-	{
-		axisval--;
-		axisval /= 2;
-		retaxis = joyymove[axisval];
-	}
-
-	if (retaxis < (-JOYAXISRANGE))
-		retaxis = -JOYAXISRANGE;
-	if (retaxis > (+JOYAXISRANGE))
-		retaxis = +JOYAXISRANGE;
-	if (!Joystick.bGamepadStyle)
-	{
-		const INT32 jdeadzone = ((JOYAXISRANGE-1) * ((axissel < AXISDEAD) ? cv_deadzone.value : cv_digitaldeadzone.value)) >> FRACBITS;
-		if (-jdeadzone < retaxis && retaxis < jdeadzone)
-			return 0;
-	}
-	if (flp) retaxis = -retaxis; //flip it around
-	return retaxis;
+	return GetJoystickAxisValue(which, axissel, axisval);
 }
 
-static INT32 Joy2Axis(axis_input_e axissel)
+// Reads the value of a game control that is bound to an axis
+static INT16 GetAnalogInput(UINT8 which, gamecontrols_e gc)
 {
-	INT32 retaxis;
-	INT32 axisval;
-	boolean flp = false;
+	UINT8 i;
 
-	//find what axis to get
-	switch (axissel)
+	for (i = 0; i < 2; i++)
 	{
-		case AXISTURN:
-			axisval = cv_turnaxis2.value;
-			break;
-		case AXISMOVE:
-			axisval = cv_moveaxis2.value;
-			break;
-		case AXISLOOK:
-			axisval = cv_lookaxis2.value;
-			break;
-		case AXISSTRAFE:
-			axisval = cv_sideaxis2.value;
-			break;
-		case AXISJUMP:
-			axisval = cv_jumpaxis2.value;
-			break;
-		case AXISSPIN:
-			axisval = cv_spinaxis2.value;
-			break;
-		case AXISFIRE:
-			axisval = cv_fireaxis2.value;
-			break;
-		case AXISFIRENORMAL:
-			axisval = cv_firenaxis2.value;
-			break;
-		default:
-			return 0;
+		SINT8 isAnalog = G_PlayerInputIsAnalog(which, gc, i);
+		INT16 value;
+
+		if (!isAnalog)
+			continue;
+
+		value = G_GetAnalogPlayerInput(which, gc, i);
+		if (value > 0 && isAnalog == 1)
+			return value;
+		else if (value < 0 && isAnalog == -1)
+			return (value == INT16_MIN) ? INT16_MAX : -value;
 	}
 
-
-	if (axisval < 0) //odd -axises
-	{
-		axisval = -axisval;
-		flp = true;
-	}
-	if (axisval > JOYAXISSET*2 || axisval == 0) //not there in array or None
-		return 0;
-
-	if (axisval%2)
-	{
-		axisval /= 2;
-		retaxis = joy2xmove[axisval];
-	}
-	else
-	{
-		axisval--;
-		axisval /= 2;
-		retaxis = joy2ymove[axisval];
-	}
-
-	if (retaxis < (-JOYAXISRANGE))
-		retaxis = -JOYAXISRANGE;
-	if (retaxis > (+JOYAXISRANGE))
-		retaxis = +JOYAXISRANGE;
-	if (!Joystick2.bGamepadStyle)
-	{
-		const INT32 jdeadzone = ((JOYAXISRANGE-1) * ((axissel < AXISDEAD) ? cv_deadzone2.value : cv_digitaldeadzone2.value)) >> FRACBITS;
-		if (-jdeadzone < retaxis && retaxis < jdeadzone)
-			return 0;
-	}
-	if (flp) retaxis = -retaxis; //flip it around
-	return retaxis;
+	return 0;
 }
 
+static boolean CheckAxesUsable(UINT8 which, gamecontrols_e gc1, gamecontrols_e gc2)
+{
+	INT32 (*controls)[2] = which == 0 ? gamecontrol : gamecontrolbis;
+
+#define CHECK_RANGE(x, y, z) \
+	(controls[x][y] >= KEY_AXES && controls[x][y] < KEY_AXES + NUM_GAMEPAD_AXES \
+	&& controls[x][z] >= KEY_INV_AXES && controls[x][z] < KEY_INV_AXES + NUM_GAMEPAD_AXES)
+
+	if (CHECK_RANGE(gc1, 0, 1) || CHECK_RANGE(gc2, 0, 1))
+		return false;
+	if (CHECK_RANGE(gc1, 1, 0) || CHECK_RANGE(gc2, 1, 0))
+		return false;
+
+#undef CHECK_RANGE
+
+	return true;
+}
 
 //
 // G_BuildTiccmd
@@ -916,6 +895,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 	boolean forcestrafe = false;
 	INT32 tspeed, forward, side, axis, altaxis, i;
 	const INT32 speed = 1;
+	INT32 usegamepad;
 	// these ones used for multiple conditions
 	boolean turnleft, turnright, mouseaiming, analogjoystickmove, gamepadjoystickmove, thisjoyaiming;
 	player_t *player = &players[consoleplayer];
@@ -928,6 +908,8 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 
 	G_CopyTiccmd(cmd, I_BaseTiccmd(), 1); // empty, or external driver
 
+	usegamepad = cv_usegamepad[0].value;
+
 	// why build a ticcmd if we're paused?
 	// Or, for that matter, if we're being reborn.
 	if (paused || P_AutoPause() || (gamestate == GS_LEVEL && player->playerstate == PST_REBORN))
@@ -937,12 +919,13 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 		return;
 	}
 
-	turnright = PLAYER1INPUTDOWN(gc_turnright);
-	turnleft = PLAYER1INPUTDOWN(gc_turnleft);
-	mouseaiming = (PLAYER1INPUTDOWN(gc_mouseaiming)) ^
+	// Axes for turning are ignored here
+	turnright = G_CheckDigitalPlayerInput(0, gc_turnright);
+	turnleft = G_CheckDigitalPlayerInput(0, gc_turnleft);
+	mouseaiming = (G_PlayerInputDown(0, gc_mouseaiming)) ^
 		(cv_chasecam.value ? cv_chasefreelook.value : cv_alwaysfreelook.value);
-	analogjoystickmove = cv_usejoystick.value && !Joystick.bGamepadStyle;
-	gamepadjoystickmove = cv_usejoystick.value && Joystick.bGamepadStyle;
+	analogjoystickmove = usegamepad && !gamepads[0].digital;
+	gamepadjoystickmove = usegamepad && gamepads[0].digital;
 
 	thisjoyaiming = (cv_chasecam.value) ? cv_chasefreelook.value : cv_alwaysfreelook.value;
 
@@ -951,7 +934,13 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 		localaiming = 0;
 	joyaiming = thisjoyaiming;
 
-	axis = JoyAxis(AXISTURN);
+	axis = JoyAxis(0, AXISTURN);
+	if (usegamepad)
+	{
+		axis -= GetAnalogInput(0, gc_turnleft);
+		axis += GetAnalogInput(0, gc_turnright);
+	}
+
 	if (gamepadjoystickmove && axis != 0)
 	{
 		turnright = turnright || (axis > 0);
@@ -995,8 +984,8 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 
 		if (analogjoystickmove && axis != 0)
 		{
-			// JOYAXISRANGE is supposed to be 1023 (divide by 1024)
-			side += ((axis * sidemove[1]) >> 10);
+			// JOYAXISRANGE is supposed to be 32767 (divide by 32768)
+			side += ((axis * sidemove[1]) >> 15);
 		}
 	}
 	else
@@ -1008,50 +997,68 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 
 		if (analogjoystickmove && axis != 0)
 		{
-			// JOYAXISRANGE should be 1023 (divide by 1024)
-			cmd->angleturn = (INT16)(cmd->angleturn - (FixedMul(((axis * angleturn[1]) >> 10)<<FRACBITS, cv_cam_turnmultiplier.value)>>FRACBITS)); // ANALOG!
+			// JOYAXISRANGE should be 32767 (divide by 32768)
+			cmd->angleturn = (INT16)(cmd->angleturn - (FixedMul(((axis * angleturn[1]) >> 15)<<FRACBITS, cv_cam_turnmultiplier.value)>>FRACBITS)); // ANALOG!
 		}
 	}
 
-	axis = JoyAxis(AXISSTRAFE);
+	axis = JoyAxis(0, AXISSTRAFE);
+	if (usegamepad && CheckAxesUsable(0, gc_strafeleft, gc_straferight))
+	{
+		axis -= GetAnalogInput(0, gc_strafeleft);
+		axis += GetAnalogInput(0, gc_straferight);
+	}
+
 	if (gamepadjoystickmove && axis != 0)
 	{
-		if (axis < 0)
+		if (axis > 0)
 			side += sidemove[speed];
-		else if (axis > 0)
+		else if (axis < 0)
 			side -= sidemove[speed];
 	}
 	else if (analogjoystickmove && axis != 0)
 	{
-		// JOYAXISRANGE is supposed to be 1023 (divide by 1024)
-		side += ((axis * sidemove[1]) >> 10);
+		// JOYAXISRANGE is supposed to be 32767 (divide by 32768)
+		side += ((axis * sidemove[1]) >> 15);
 	}
 
 	// forward with key or button
-	axis = JoyAxis(AXISMOVE);
-	altaxis = JoyAxis(AXISLOOK);
-	if (PLAYER1INPUTDOWN(gc_forward) || (gamepadjoystickmove && axis < 0)
+	axis = JoyAxis(0, AXISMOVE);
+	if (usegamepad && CheckAxesUsable(0, gc_forward, gc_backward))
+	{
+		axis -= GetAnalogInput(0, gc_forward);
+		axis += GetAnalogInput(0, gc_backward);
+	}
+
+	altaxis = JoyAxis(0, AXISLOOK);
+	if (usegamepad)
+	{
+		altaxis += GetAnalogInput(0, gc_lookup);
+		altaxis -= GetAnalogInput(0, gc_lookdown);
+	}
+
+	if (G_CheckDigitalPlayerInput(0, gc_forward) || (gamepadjoystickmove && axis < 0)
 		|| ((player->pflags & PF_NIGHTSMODE)
-			&& (PLAYER1INPUTDOWN(gc_lookup) || (gamepadjoystickmove && altaxis < 0))))
+			&& (G_CheckDigitalPlayerInput(0, gc_lookup) || (gamepadjoystickmove && altaxis < 0))))
 		forward = forwardmove[speed];
-	if (PLAYER1INPUTDOWN(gc_backward) || (gamepadjoystickmove && axis > 0)
+	if (G_CheckDigitalPlayerInput(0, gc_backward) || (gamepadjoystickmove && axis > 0)
 		|| ((player->pflags & PF_NIGHTSMODE)
-			&& (PLAYER1INPUTDOWN(gc_lookdown) || (gamepadjoystickmove && altaxis > 0))))
+			&& (G_CheckDigitalPlayerInput(0, gc_lookdown) || (gamepadjoystickmove && altaxis > 0))))
 		forward -= forwardmove[speed];
 
 	if (analogjoystickmove && axis != 0)
-		forward -= ((axis * forwardmove[1]) >> 10); // ANALOG!
+		forward -= ((axis * forwardmove[1]) >> 15); // ANALOG!
 
 	// some people strafe left & right with mouse buttons
 	// those people are weird
-	if (PLAYER1INPUTDOWN(gc_straferight))
+	if (G_CheckDigitalPlayerInput(0, gc_straferight))
 		side += sidemove[speed];
-	if (PLAYER1INPUTDOWN(gc_strafeleft))
+	if (G_CheckDigitalPlayerInput(0, gc_strafeleft))
 		side -= sidemove[speed];
 
-	if (PLAYER1INPUTDOWN(gc_weaponnext))
+	if (G_PlayerInputDown(0, gc_weaponnext))
 		cmd->buttons |= BT_WEAPONNEXT; // Next Weapon
-	if (PLAYER1INPUTDOWN(gc_weaponprev))
+	if (G_PlayerInputDown(0, gc_weaponprev))
 		cmd->buttons |= BT_WEAPONPREV; // Previous Weapon
 
 #if NUM_WEAPONS > 10
@@ -1060,48 +1067,48 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 	//use the four avaliable bits to determine the weapon.
 	cmd->buttons &= ~BT_WEAPONMASK;
 	for (i = 0; i < NUM_WEAPONS; ++i)
-		if (PLAYER1INPUTDOWN(gc_wepslot1 + i))
+		if (G_PlayerInputDown(0, gc_wepslot1 + i))
 		{
 			cmd->buttons |= (UINT16)(i + 1);
 			break;
 		}
 
 	// fire with any button/key
-	axis = JoyAxis(AXISFIRE);
-	if (PLAYER1INPUTDOWN(gc_fire) || (cv_usejoystick.value && axis > 0))
+	axis = JoyAxis(0, AXISFIRE);
+	if (G_PlayerInputDown(0, gc_fire) || (usegamepad && axis > 0))
 		cmd->buttons |= BT_ATTACK;
 
 	// fire normal with any button/key
-	axis = JoyAxis(AXISFIRENORMAL);
-	if (PLAYER1INPUTDOWN(gc_firenormal) || (cv_usejoystick.value && axis > 0))
+	axis = JoyAxis(0, AXISFIRENORMAL);
+	if (G_PlayerInputDown(0, gc_firenormal) || (usegamepad && axis > 0))
 		cmd->buttons |= BT_FIRENORMAL;
 
-	if (PLAYER1INPUTDOWN(gc_tossflag))
+	if (G_PlayerInputDown(0, gc_tossflag))
 		cmd->buttons |= BT_TOSSFLAG;
 
 	// Lua scriptable buttons
-	if (PLAYER1INPUTDOWN(gc_custom1))
+	if (G_PlayerInputDown(0, gc_custom1))
 		cmd->buttons |= BT_CUSTOM1;
-	if (PLAYER1INPUTDOWN(gc_custom2))
+	if (G_PlayerInputDown(0, gc_custom2))
 		cmd->buttons |= BT_CUSTOM2;
-	if (PLAYER1INPUTDOWN(gc_custom3))
+	if (G_PlayerInputDown(0, gc_custom3))
 		cmd->buttons |= BT_CUSTOM3;
 
 	// use with any button/key
-	axis = JoyAxis(AXISSPIN);
-	if (PLAYER1INPUTDOWN(gc_use) || (cv_usejoystick.value && axis > 0))
+	axis = JoyAxis(0, AXISSPIN);
+	if (G_PlayerInputDown(0, gc_use) || (usegamepad && axis > 0))
 		cmd->buttons |= BT_USE;
 
 	// Camera Controls
 	if (cv_debug || cv_analog.value || demoplayback || objectplacing || player->pflags & PF_NIGHTSMODE)
 	{
-		if (PLAYER1INPUTDOWN(gc_camleft))
+		if (G_PlayerInputDown(0, gc_camleft))
 			cmd->buttons |= BT_CAMLEFT;
-		if (PLAYER1INPUTDOWN(gc_camright))
+		if (G_PlayerInputDown(0, gc_camright))
 			cmd->buttons |= BT_CAMRIGHT;
 	}
 
-	if (PLAYER1INPUTDOWN(gc_camreset))
+	if (G_PlayerInputDown(0, gc_camreset))
 	{
 		if (camera.chase && !resetdown)
 			P_ResetCamera(&players[displayplayer], &camera);
@@ -1111,8 +1118,8 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 		resetdown = false;
 
 	// jump button
-	axis = JoyAxis(AXISJUMP);
-	if (PLAYER1INPUTDOWN(gc_jump) || (cv_usejoystick.value && axis > 0))
+	axis = JoyAxis(0, AXISJUMP);
+	if (G_PlayerInputDown(0, gc_jump) || (usegamepad && axis > 0))
 		cmd->buttons |= BT_JUMP;
 
 	// player aiming shit, ahhhh...
@@ -1132,27 +1139,27 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 			localaiming += (mlooky<<19)*player_invert*screen_invert;
 		}
 
-		axis = JoyAxis(AXISLOOK);
-		if (analogjoystickmove && joyaiming && axis != 0 && cv_lookaxis.value != 0)
-			localaiming += (axis<<16) * screen_invert;
+		axis = altaxis;
+		if (analogjoystickmove && joyaiming && axis != 0)
+			localaiming += (axis<<11) * screen_invert;
 
 		// spring back if not using keyboard neither mouselookin'
-		if (!keyboard_look && cv_lookaxis.value == 0 && !joyaiming && !mouseaiming)
+		if (!keyboard_look && cv_lookaxis[0].value == 0 && !joyaiming && !mouseaiming)
 			localaiming = 0;
 
 		if (!(player->pflags & PF_NIGHTSMODE))
 		{
-			if (PLAYER1INPUTDOWN(gc_lookup) || (gamepadjoystickmove && axis < 0))
+			if (G_CheckDigitalPlayerInput(0, gc_lookup) || (gamepadjoystickmove && axis < 0))
 			{
 				localaiming += KB_LOOKSPEED * screen_invert;
 				keyboard_look = true;
 			}
-			else if (PLAYER1INPUTDOWN(gc_lookdown) || (gamepadjoystickmove && axis > 0))
+			else if (G_CheckDigitalPlayerInput(0, gc_lookdown) || (gamepadjoystickmove && axis > 0))
 			{
 				localaiming -= KB_LOOKSPEED * screen_invert;
 				keyboard_look = true;
 			}
-			else if (PLAYER1INPUTDOWN(gc_centerview))
+			else if (G_PlayerInputDown(0, gc_centerview))
 				localaiming = 0;
 		}
 
@@ -1226,6 +1233,7 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 	boolean forcestrafe = false;
 	INT32 tspeed, forward, side, axis, altaxis, i;
 	const INT32 speed = 1;
+	INT32 usegamepad;
 	// these ones used for multiple conditions
 	boolean turnleft, turnright, mouseaiming, analogjoystickmove, gamepadjoystickmove, thisjoyaiming;
 	player_t *player = &players[secondarydisplayplayer];
@@ -1238,6 +1246,8 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 
 	G_CopyTiccmd(cmd,  I_BaseTiccmd2(), 1); // empty, or external driver
 
+	usegamepad = cv_usegamepad[1].value;
+
 	//why build a ticcmd if we're paused?
 	// Or, for that matter, if we're being reborn.
 	if (paused || P_AutoPause() || player->playerstate == PST_REBORN)
@@ -1247,12 +1257,13 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 		return;
 	}
 
-	turnright = PLAYER2INPUTDOWN(gc_turnright);
-	turnleft = PLAYER2INPUTDOWN(gc_turnleft);
-	mouseaiming = (PLAYER2INPUTDOWN(gc_mouseaiming)) ^
+	// Axes for turning are ignored here
+	turnright = G_CheckDigitalPlayerInput(1, gc_turnright);
+	turnleft = G_CheckDigitalPlayerInput(1, gc_turnleft);
+	mouseaiming = (G_PlayerInputDown(1, gc_mouseaiming)) ^
 		(cv_chasecam2.value ? cv_chasefreelook2.value : cv_alwaysfreelook2.value);
-	analogjoystickmove = cv_usejoystick2.value && !Joystick2.bGamepadStyle;
-	gamepadjoystickmove = cv_usejoystick2.value && Joystick2.bGamepadStyle;
+	analogjoystickmove = usegamepad && !gamepads[1].digital;
+	gamepadjoystickmove = usegamepad && gamepads[1].digital;
 
 	thisjoyaiming = (cv_chasecam2.value) ? cv_chasefreelook2.value : cv_alwaysfreelook2.value;
 
@@ -1261,7 +1272,13 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 		localaiming2 = 0;
 	joyaiming = thisjoyaiming;
 
-	axis = Joy2Axis(AXISTURN);
+	axis = JoyAxis(1, AXISTURN);
+	if (usegamepad)
+	{
+		axis -= GetAnalogInput(1, gc_turnleft);
+		axis += GetAnalogInput(1, gc_turnright);
+	}
+
 	if (gamepadjoystickmove && axis != 0)
 	{
 		turnright = turnright || (axis > 0);
@@ -1305,8 +1322,8 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 
 		if (analogjoystickmove && axis != 0)
 		{
-			// JOYAXISRANGE is supposed to be 1023 (divide by 1024)
-			side += ((axis * sidemove[1]) >> 10);
+			// JOYAXISRANGE is supposed to be 32767 (divide by 32768)
+			side += ((axis * sidemove[1]) >> 15);
 		}
 	}
 	else
@@ -1318,97 +1335,115 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 
 		if (analogjoystickmove && axis != 0)
 		{
-			// JOYAXISRANGE should be 1023 (divide by 1024)
-			cmd->angleturn = (INT16)(cmd->angleturn - (FixedMul(((axis * angleturn[1]) >> 10)<<FRACBITS, cv_cam2_turnmultiplier.value)>>FRACBITS)); // ANALOG!
+			// JOYAXISRANGE should be 32767 (divide by 32768)
+			cmd->angleturn = (INT16)(cmd->angleturn - (FixedMul(((axis * angleturn[1]) >> 15)<<FRACBITS, cv_cam2_turnmultiplier.value)>>FRACBITS)); // ANALOG!
 		}
 	}
 
-	axis = Joy2Axis(AXISSTRAFE);
+	axis = JoyAxis(1, AXISSTRAFE);
+	if (usegamepad && CheckAxesUsable(1, gc_strafeleft, gc_straferight))
+	{
+		axis -= GetAnalogInput(1, gc_strafeleft);
+		axis += GetAnalogInput(1, gc_straferight);
+	}
+
 	if (gamepadjoystickmove && axis != 0)
 	{
-		if (axis < 0)
+		if (axis > 0)
 			side += sidemove[speed];
-		else if (axis > 0)
+		else if (axis < 0)
 			side -= sidemove[speed];
 	}
 	else if (analogjoystickmove && axis != 0)
 	{
-		// JOYAXISRANGE is supposed to be 1023 (divide by 1024)
-		side += ((axis * sidemove[1]) >> 10);
+		// JOYAXISRANGE is supposed to be 32767 (divide by 32768)
+		side += ((axis * sidemove[1]) >> 15);
 	}
 
 	// forward with key or button
-	axis = Joy2Axis(AXISMOVE);
-	altaxis = Joy2Axis(AXISLOOK);
-	if (PLAYER2INPUTDOWN(gc_forward) || (gamepadjoystickmove && axis < 0)
+	axis = JoyAxis(1, AXISMOVE);
+	if (usegamepad && CheckAxesUsable(1, gc_forward, gc_backward))
+	{
+		axis -= GetAnalogInput(1, gc_forward);
+		axis += GetAnalogInput(1, gc_backward);
+	}
+
+	altaxis = JoyAxis(1, AXISLOOK);
+	if (usegamepad)
+	{
+		altaxis += GetAnalogInput(1, gc_lookup);
+		altaxis -= GetAnalogInput(1, gc_lookdown);
+	}
+
+	if (G_CheckDigitalPlayerInput(1, gc_forward) || (gamepadjoystickmove && axis < 0)
 		|| ((player->pflags & PF_NIGHTSMODE)
-			&& (PLAYER2INPUTDOWN(gc_lookup) || (gamepadjoystickmove && altaxis < 0))))
+			&& (G_CheckDigitalPlayerInput(1, gc_lookup) || (gamepadjoystickmove && altaxis < 0))))
 		forward = forwardmove[speed];
-	if (PLAYER2INPUTDOWN(gc_backward) || (gamepadjoystickmove && axis > 0)
+	if (G_CheckDigitalPlayerInput(1, gc_backward) || (gamepadjoystickmove && axis > 0)
 		|| ((player->pflags & PF_NIGHTSMODE)
-			&& (PLAYER2INPUTDOWN(gc_lookdown) || (gamepadjoystickmove && altaxis > 0))))
+			&& (G_CheckDigitalPlayerInput(1, gc_lookdown) || (gamepadjoystickmove && altaxis > 0))))
 		forward -= forwardmove[speed];
 
 	if (analogjoystickmove && axis != 0)
-		forward -= ((axis * forwardmove[1]) >> 10); // ANALOG!
+		forward -= ((axis * forwardmove[1]) >> 15); // ANALOG!
 
 	// some people strafe left & right with mouse buttons
 	// those people are (still) weird
-	if (PLAYER2INPUTDOWN(gc_straferight))
+	if (G_CheckDigitalPlayerInput(1, gc_straferight))
 		side += sidemove[speed];
-	if (PLAYER2INPUTDOWN(gc_strafeleft))
+	if (G_CheckDigitalPlayerInput(1, gc_strafeleft))
 		side -= sidemove[speed];
 
-	if (PLAYER2INPUTDOWN(gc_weaponnext))
+	if (G_PlayerInputDown(1, gc_weaponnext))
 		cmd->buttons |= BT_WEAPONNEXT; // Next Weapon
-	if (PLAYER2INPUTDOWN(gc_weaponprev))
+	if (G_PlayerInputDown(1, gc_weaponprev))
 		cmd->buttons |= BT_WEAPONPREV; // Previous Weapon
 
 	//use the four avaliable bits to determine the weapon.
 	cmd->buttons &= ~BT_WEAPONMASK;
 	for (i = 0; i < NUM_WEAPONS; ++i)
-		if (PLAYER2INPUTDOWN(gc_wepslot1 + i))
+		if (G_PlayerInputDown(1, gc_wepslot1 + i))
 		{
 			cmd->buttons |= (UINT16)(i + 1);
 			break;
 		}
 
 	// fire with any button/key
-	axis = Joy2Axis(AXISFIRE);
-	if (PLAYER2INPUTDOWN(gc_fire) || (cv_usejoystick2.value && axis > 0))
+	axis = JoyAxis(1, AXISFIRE);
+	if (G_PlayerInputDown(1, gc_fire) || (usegamepad && axis > 0))
 		cmd->buttons |= BT_ATTACK;
 
 	// fire normal with any button/key
-	axis = Joy2Axis(AXISFIRENORMAL);
-	if (PLAYER2INPUTDOWN(gc_firenormal) || (cv_usejoystick2.value && axis > 0))
+	axis = JoyAxis(1, AXISFIRENORMAL);
+	if (G_PlayerInputDown(1, gc_firenormal) || (usegamepad && axis > 0))
 		cmd->buttons |= BT_FIRENORMAL;
 
-	if (PLAYER2INPUTDOWN(gc_tossflag))
+	if (G_PlayerInputDown(1, gc_tossflag))
 		cmd->buttons |= BT_TOSSFLAG;
 
 	// Lua scriptable buttons
-	if (PLAYER2INPUTDOWN(gc_custom1))
+	if (G_PlayerInputDown(1, gc_custom1))
 		cmd->buttons |= BT_CUSTOM1;
-	if (PLAYER2INPUTDOWN(gc_custom2))
+	if (G_PlayerInputDown(1, gc_custom2))
 		cmd->buttons |= BT_CUSTOM2;
-	if (PLAYER2INPUTDOWN(gc_custom3))
+	if (G_PlayerInputDown(1, gc_custom3))
 		cmd->buttons |= BT_CUSTOM3;
 
 	// use with any button/key
-	axis = Joy2Axis(AXISSPIN);
-	if (PLAYER2INPUTDOWN(gc_use) || (cv_usejoystick2.value && axis > 0))
+	axis = JoyAxis(1, AXISSPIN);
+	if (G_PlayerInputDown(1, gc_use) || (usegamepad && axis > 0))
 		cmd->buttons |= BT_USE;
 
 	// Camera Controls
 	if (cv_debug || cv_analog2.value || player->pflags & PF_NIGHTSMODE)
 	{
-		if (PLAYER2INPUTDOWN(gc_camleft))
+		if (G_PlayerInputDown(1, gc_camleft))
 			cmd->buttons |= BT_CAMLEFT;
-		if (PLAYER2INPUTDOWN(gc_camright))
+		if (G_PlayerInputDown(1, gc_camright))
 			cmd->buttons |= BT_CAMRIGHT;
 	}
 
-	if (PLAYER2INPUTDOWN(gc_camreset))
+	if (G_PlayerInputDown(1, gc_camreset))
 	{
 		if (camera2.chase && !resetdown)
 			P_ResetCamera(&players[secondarydisplayplayer], &camera2);
@@ -1418,8 +1453,8 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 		resetdown = false;
 
 	// jump button
-	axis = Joy2Axis(AXISJUMP);
-	if (PLAYER2INPUTDOWN(gc_jump) || (cv_usejoystick2.value && axis > 0))
+	axis = JoyAxis(1, AXISJUMP);
+	if (G_PlayerInputDown(1, gc_jump) || (usegamepad && axis > 0))
 		cmd->buttons |= BT_JUMP;
 
 	// player aiming shit, ahhhh...
@@ -1439,27 +1474,27 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 			localaiming2 += (mlook2y<<19)*player_invert*screen_invert;
 		}
 
-		axis = Joy2Axis(AXISLOOK);
-		if (analogjoystickmove && joyaiming && axis != 0 && cv_lookaxis2.value != 0)
-			localaiming2 += (axis<<16) * screen_invert;
+		axis = altaxis;
+		if (analogjoystickmove && joyaiming && axis != 0)
+			localaiming2 += (axis<<11) * screen_invert;
 
 		// spring back if not using keyboard neither mouselookin'
-		if (!keyboard_look && cv_lookaxis2.value == 0 && !joyaiming && !mouseaiming)
+		if (!keyboard_look && cv_lookaxis[1].value == 0 && !joyaiming && !mouseaiming)
 			localaiming2 = 0;
 
 		if (!(player->pflags & PF_NIGHTSMODE))
 		{
-			if (PLAYER2INPUTDOWN(gc_lookup) || (gamepadjoystickmove && axis < 0))
+			if (G_CheckDigitalPlayerInput(1, gc_lookup) || (gamepadjoystickmove && axis < 0))
 			{
 				localaiming2 += KB_LOOKSPEED * screen_invert;
 				keyboard_look = true;
 			}
-			else if (PLAYER2INPUTDOWN(gc_lookdown) || (gamepadjoystickmove && axis > 0))
+			else if (G_CheckDigitalPlayerInput(1, gc_lookdown) || (gamepadjoystickmove && axis > 0))
 			{
 				localaiming2 -= KB_LOOKSPEED * screen_invert;
 				keyboard_look = true;
 			}
-			else if (PLAYER2INPUTDOWN(gc_centerview))
+			else if (G_PlayerInputDown(1, gc_centerview))
 				localaiming2 = 0;
 		}
 
@@ -1585,6 +1620,24 @@ static void Analog2_OnChange(void)
 	SendWeaponPref2();
 }
 
+static void G_ResetInputs(void)
+{
+	UINT8 i, j;
+
+	memset(gamekeydown, 0, sizeof (gamekeydown));
+
+	// Axes aren't cleared since they only send events when they move,
+	// so a stick being held across levels would stop working otherwise
+	for (i = 0; i < NUM_GAMEPADS; i++)
+		for (j = 0; j < NUM_GAMEPAD_BUTTONS; j++)
+			gamepads[i].buttons[j] = 0;
+
+	mousex = mousey = 0;
+	mouse2x = mouse2y = 0;
+
+	P_StopRumble(NULL);
+}
+
 //
 // G_DoLoadLevel
 //
@@ -1639,14 +1692,7 @@ void G_DoLoadLevel(boolean resetplayer)
 		P_ResetCamera(&players[secondarydisplayplayer], &camera2);
 
 	// clear cmd building stuff
-	memset(gamekeydown, 0, sizeof (gamekeydown));
-	for (i = 0;i < JOYAXISSET; i++)
-	{
-		joyxmove[i] = joyymove[i] = 0;
-		joy2xmove[i] = joy2ymove[i] = 0;
-	}
-	mousex = mousey = 0;
-	mouse2x = mouse2y = 0;
+	G_ResetInputs();
 
 	// clear hud messages remains (usually from game startup)
 	CON_ClearHUD();
@@ -1661,9 +1707,17 @@ static INT32 camtoggledelay, camtoggledelay2 = 0;
 //
 boolean G_Responder(event_t *ev)
 {
+	INT32 evtype = ev->type;
+	INT32 key = G_RemapGamepadEvent(ev, &evtype);
+
+	// Each gamepad only triggers the controls of its own player
+	const boolean isgamepad = (ev->type == ev_gamepad_up || ev->type == ev_gamepad_down || ev->type == ev_gamepad_axis);
+	const boolean forplayer1 = (!isgamepad || ev->which == 0);
+	const boolean forplayer2 = (!isgamepad || ev->which == 1);
+
 	// allow spy mode changes even during the demo
-	if (gamestate == GS_LEVEL && ev->type == ev_keydown
-		&& (ev->data1 == KEY_F12 || ev->data1 == gamecontrol[gc_viewpoint][0] || ev->data1 == gamecontrol[gc_viewpoint][1]))
+	if (gamestate == GS_LEVEL && evtype == ev_keydown
+		&& (key == KEY_F12 || (forplayer1 && (key == gamecontrol[gc_viewpoint][0] || key == gamecontrol[gc_viewpoint][1]))))
 	{
 		if (splitscreen || !netgame)
 			displayplayer = consoleplayer;
@@ -1724,7 +1778,7 @@ boolean G_Responder(event_t *ev)
 	if (gameaction == ga_nothing && !singledemo &&
 		((demoplayback && !modeattacking && !titledemo) || gamestate == GS_TITLESCREEN))
 	{
-		if (ev->type == ev_keydown && ev->data1 != 301)
+		if (evtype == ev_keydown && key != 301)
 		{
 			M_StartControlPanel();
 			return true;
@@ -1802,12 +1856,11 @@ boolean G_Responder(event_t *ev)
 	// update keys current state
 	G_MapEventsToControls(ev);
 
-	switch (ev->type)
+	switch (evtype)
 	{
 		case ev_keydown:
-			if (ev->data1 == gamecontrol[gc_pause][0]
-				|| ev->data1 == gamecontrol[gc_pause][1]
-				|| ev->data1 == KEY_PAUSE)
+			if ((forplayer1 && (key == gamecontrol[gc_pause][0] || key == gamecontrol[gc_pause][1]))
+				|| key == KEY_PAUSE)
 			{
 				if (!pausedelay)
 				{
@@ -1821,8 +1874,7 @@ boolean G_Responder(event_t *ev)
 				else
 					pausedelay = NEWTICRATE/7;
 			}
-			if (ev->data1 == gamecontrol[gc_camtoggle][0]
-				|| ev->data1 == gamecontrol[gc_camtoggle][1])
+			if (forplayer1 && (key == gamecontrol[gc_camtoggle][0] || key == gamecontrol[gc_camtoggle][1]))
 			{
 				if (!camtoggledelay)
 				{
@@ -1830,8 +1882,7 @@ boolean G_Responder(event_t *ev)
 					CV_SetValue(&cv_chasecam, cv_chasecam.value ? 0 : 1);
 				}
 			}
-			if (ev->data1 == gamecontrolbis[gc_camtoggle][0]
-				|| ev->data1 == gamecontrolbis[gc_camtoggle][1])
+			if (forplayer2 && (key == gamecontrolbis[gc_camtoggle][0] || key == gamecontrolbis[gc_camtoggle][1]))
 			{
 				if (!camtoggledelay2)
 				{
@@ -1846,13 +1897,6 @@ boolean G_Responder(event_t *ev)
 
 		case ev_mouse:
 			return true; // eat events
-
-		case ev_joystick:
-			return true; // eat events
-
-		case ev_joystick2:
-			return true; // eat events
-
 
 		default:
 			break;
@@ -2533,14 +2577,7 @@ void G_DoReborn(INT32 playernum)
 				P_ResetCamera(&players[secondarydisplayplayer], &camera2);
 
 			// clear cmd building stuff
-			memset(gamekeydown, 0, sizeof (gamekeydown));
-			for (i = 0;i < JOYAXISSET; i++)
-			{
-				joyxmove[i] = joyymove[i] = 0;
-				joy2xmove[i] = joy2ymove[i] = 0;
-			}
-			mousex = mousey = 0;
-			mouse2x = mouse2y = 0;
+			G_ResetInputs();
 
 			// clear hud messages remains (usually from game startup)
 			CON_ClearHUD();
@@ -3497,6 +3534,8 @@ void G_LoadGame(UINT32 slot, INT16 mapoverride)
 //	paused = false;
 //	automapactive = false;
 
+	P_StopRumble(NULL);
+
 	// dearchive all the modifications
 	if (!P_LoadGame(mapoverride))
 	{
@@ -3629,6 +3668,8 @@ void G_DeferedInitNew(boolean pultmode, const char *mapname, INT32 pickedchar, b
 void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean skipprecutscene)
 {
 	INT32 i;
+
+	P_StopRumble(NULL);
 
 	if (paused)
 	{
@@ -3841,6 +3882,54 @@ ticcmd_t *G_MoveTiccmd(ticcmd_t* dest, const ticcmd_t* src, const size_t n)
 		dest[i].buttons = (UINT16)SHORT(src[i].buttons);
 	}
 	return dest;
+}
+
+static player_t *G_GetInputPlayer(UINT8 which)
+{
+	if (which == 0)
+		return &players[displayplayer];
+	else if (which == 1 && (splitscreen || botingame))
+		return &players[secondarydisplayplayer];
+
+	return NULL;
+}
+
+// Returns a player's gamepad index, even if it's disabled
+// Gamepad indexes correspond to the local player index.
+INT16 G_GetGamepadForPlayer(player_t *player)
+{
+	UINT8 i;
+
+	for (i = 0; i < 2; i++)
+	{
+		if (player == G_GetInputPlayer(i))
+			return i;
+	}
+
+	return -1;
+}
+
+// Gets the user-set gamepad device for a specific player
+INT32 G_GetGamepadDeviceIndex(INT32 player)
+{
+#ifdef GAMEPAD_HOTPLUG
+	if (atoi(cv_usegamepad[player].string) > I_NumGamepads())
+		return atoi(cv_usegamepad[player].string);
+	else
+#endif
+		return cv_usegamepad[player].value;
+}
+
+void G_OnGamepadDisconnect(UINT8 which)
+{
+	if (!cv_gamepad_autopause.value)
+		return;
+
+	if (gamestate != GS_LEVEL || paused || netgame || splitscreen)
+		return;
+
+	if (which == 0 || (which == 1 && botingame))
+		COM_ImmedExecute("pause");
 }
 
 void G_ReadDemoTiccmd(ticcmd_t *cmd, INT32 playernum)

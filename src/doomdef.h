@@ -203,7 +203,7 @@ RELEASES \
 // to an increment in MODVERSION. This might never happen in practice.
 // If MODVERSION increases, set MINOREXECVERSION to 0.
 #define MAJOREXECVERSION MODVERSION
-#define MINOREXECVERSION 0
+#define MINOREXECVERSION 1
 // (It would have been nice to use VERSION and SUBVERSION but those are zero'd out for DEVELOP builds)
 
 // Macros

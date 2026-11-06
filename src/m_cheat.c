@@ -200,29 +200,31 @@ static UINT8 cht_CheckCheat(cheatseq_t *cht, char key)
 boolean cht_Responder(event_t *ev)
 {
 	UINT8 ret = 0, ch = 0;
-	if (ev->type != ev_keydown)
+	INT32 type = ev->type;
+	INT32 key = G_RemapGamepadEvent(ev, &type);
+
+	if (type != ev_keydown)
 		return false;
 
-	if (ev->data1 > 0xFF)
+	if (key > 0xFF)
 	{
-		// map some fake (joy) inputs into keys
-		// map joy inputs into keys
-		switch (ev->data1)
+		// map gamepad inputs into keys
+		switch (key)
 		{
-			case KEY_JOY1:
-			case KEY_JOY1 + 2:
+			case GAMEPAD_KEY(A):
+			case GAMEPAD_KEY(X):
 				ch = KEY_ENTER;
 				break;
-			case KEY_HAT1:
+			case GAMEPAD_KEY(DPAD_UP):
 				ch = KEY_UPARROW;
 				break;
-			case KEY_HAT1 + 1:
+			case GAMEPAD_KEY(DPAD_DOWN):
 				ch = KEY_DOWNARROW;
 				break;
-			case KEY_HAT1 + 2:
+			case GAMEPAD_KEY(DPAD_LEFT):
 				ch = KEY_LEFTARROW;
 				break;
-			case KEY_HAT1 + 3:
+			case GAMEPAD_KEY(DPAD_RIGHT):
 				ch = KEY_RIGHTARROW;
 				break;
 			default:
@@ -231,7 +233,7 @@ boolean cht_Responder(event_t *ev)
 		}
 	}
 	else
-		ch = (UINT8)ev->data1;
+		ch = (UINT8)key;
 
 	ret += cht_CheckCheat(&cheat_ultimate, (char)ch);
 	ret += cht_CheckCheat(&cheat_ultimate_joy, (char)ch);

@@ -25,18 +25,20 @@ typedef enum
 	ev_text,
 	ev_console,
 	ev_mouse,
-	ev_joystick,
 	ev_mouse2,
-	ev_joystick2,
+	ev_gamepad_up,
+	ev_gamepad_down,
+	ev_gamepad_axis
 } evtype_t;
 
 // Event structure.
 typedef struct
 {
 	evtype_t type;
-	INT32 data1; // keys / mouse/joystick buttons
-	INT32 data2; // mouse/joystick x move
-	INT32 data3; // mouse/joystick y move
+	INT32 data1; // key, mouse button, or gamepad button/axis type
+	INT32 data2; // mouse x move, or gamepad axis value
+	INT32 data3; // mouse y move
+	UINT8 which; // which gamepad
 } event_t;
 
 //

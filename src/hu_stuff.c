@@ -920,7 +920,7 @@ void HU_Ticker(void)
 	hu_tick++;
 	hu_tick &= 7; // currently only to blink chat input cursor
 
-	if (PLAYER1INPUTDOWN(gc_scores))
+	if (G_PlayerInputDown(0, gc_scores))
 		hu_showscores = !chat_on;
 	else
 		hu_showscores = false;
@@ -1119,8 +1119,10 @@ boolean HU_Responder(event_t *ev)
 #ifndef NONET
 	INT32 c=0;
 #endif
+	INT32 evtype = ev->type;
+	INT32 key = G_RemapGamepadEvent(ev, &evtype);
 
-	if (ev->type != ev_keydown && ev->type != ev_text)
+	if (evtype != ev_keydown && evtype != ev_text)
 		return false;
 
 	// only KeyDown events now...
@@ -1146,14 +1148,14 @@ boolean HU_Responder(event_t *ev)
 	}*/	//We don't actually care about that unless we get splitscreen netgames. :V
 
 #ifndef NONET
-	c = (INT32)ev->data1;
+	c = key;
 
 	if (!chat_on)
 	{
 		if (ev->type == ev_text)
 			return false;
 		// enter chat mode
-		if ((ev->data1 == gamecontrol[gc_talkkey][0] || ev->data1 == gamecontrol[gc_talkkey][1])
+		if ((key == gamecontrol[gc_talkkey][0] || key == gamecontrol[gc_talkkey][1])
 			&& netgame && !OLD_MUTE) // check for old chat mute, still let the players open the chat incase they want to scroll otherwise.
 		{
 			I_SetTextInputMode(true);
@@ -1165,7 +1167,7 @@ boolean HU_Responder(event_t *ev)
 			typelines = 1;
 			return true;
 		}
-		if ((ev->data1 == gamecontrol[gc_teamkey][0] || ev->data1 == gamecontrol[gc_teamkey][1])
+		if ((key == gamecontrol[gc_teamkey][0] || key == gamecontrol[gc_teamkey][1])
 			&& netgame && !OLD_MUTE)
 		{
 			I_SetTextInputMode(true);

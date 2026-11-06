@@ -8,12 +8,14 @@
 // See the 'LICENSE' file for more details.
 //-----------------------------------------------------------------------------
 /// \file  g_input.c
-/// \brief handle mouse/keyboard/joystick inputs,
+/// \brief handle mouse/keyboard/gamepad inputs,
 ///        maps inputs to game controls (forward, spin, jump...)
 
 #include "doomdef.h"
 #include "doomstat.h"
+#include "g_game.h"
 #include "g_input.h"
+#include "i_gamepad.h"
 #include "keys.h"
 #include "hu_stuff.h" // need HUFONT start & end
 #include "d_net.h"
@@ -36,8 +38,7 @@ INT32 mlooky; // like mousey but with a custom sensitivity for mlook
 
 INT32 mouse2x, mouse2y, mlook2y;
 
-// joystick values are repeated
-INT32 joyxmove[JOYAXISSET], joyymove[JOYAXISSET], joy2xmove[JOYAXISSET], joy2ymove[JOYAXISSET];
+gamepad_t gamepads[NUM_GAMEPADS];
 
 // current state of the keys: true if pushed
 UINT8 gamekeydown[NUMINPUTS];
@@ -46,6 +47,78 @@ UINT8 gamekeydown[NUMINPUTS];
 INT32 gamecontrol[num_gamecontrols][2];
 INT32 gamecontrolbis[num_gamecontrols][2]; // secondary splitscreen player
 
+// Axes don't drive the game while the menu, console or chat has the focus
+static boolean GamepadAxesAreBlocked(void)
+{
+	return menuactive || CON_Ready() || chat_on;
+}
+
+static boolean CheckInputDown(UINT8 which, gamecontrols_e gc, boolean checkaxes)
+{
+	INT32 (*controls)[2] = which == 0 ? gamecontrol : gamecontrolbis;
+	UINT8 i;
+
+	for (i = 0; i < 2; i++)
+	{
+		INT32 key = controls[gc][i];
+
+		if (key >= KEY_GAMEPAD && key < KEY_AXES)
+		{
+			if (gamepads[which].buttons[key - KEY_GAMEPAD])
+				return true;
+		}
+		else if (key >= KEY_AXES && key < KEY_INV_AXES + NUM_GAMEPAD_AXES)
+		{
+			if (checkaxes && !GamepadAxesAreBlocked())
+			{
+				const UINT16 jdeadzone = G_GetGamepadDigitalDeadZone(which);
+				const INT16 value = G_GetGamepadAxisValue(which, (key - KEY_AXES) % NUM_GAMEPAD_AXES);
+
+				if (key < KEY_INV_AXES ? value > jdeadzone : value < -jdeadzone)
+					return true;
+			}
+		}
+		else if (gamekeydown[key])
+			return true;
+	}
+
+	return false;
+}
+
+boolean G_PlayerInputDown(UINT8 which, gamecontrols_e gc)
+{
+	return CheckInputDown(which, gc, true);
+}
+
+boolean G_CheckDigitalPlayerInput(UINT8 which, gamecontrols_e gc)
+{
+	return CheckInputDown(which, gc, false);
+}
+
+SINT8 G_PlayerInputIsAnalog(UINT8 which, gamecontrols_e gc, UINT8 settings)
+{
+	INT32 (*controls)[2] = which == 0 ? gamecontrol : gamecontrolbis;
+	INT32 key = controls[gc][settings];
+
+	if (key >= KEY_AXES && key < KEY_AXES + NUM_GAMEPAD_AXES)
+		return 1;
+	else if (key >= KEY_INV_AXES && key < KEY_INV_AXES + NUM_GAMEPAD_AXES)
+		return -1;
+
+	return 0;
+}
+
+INT16 G_GetAnalogPlayerInput(UINT8 which, gamecontrols_e gc, UINT8 settings)
+{
+	INT32 (*controls)[2] = which == 0 ? gamecontrol : gamecontrolbis;
+	INT32 key = controls[gc][settings];
+
+	if (key >= KEY_AXES && key < KEY_INV_AXES + NUM_GAMEPAD_AXES && !GamepadAxesAreBlocked())
+		return G_GetGamepadAxisValue(which, (key - KEY_AXES) % NUM_GAMEPAD_AXES);
+
+	return 0;
+}
+
 typedef struct
 {
 	UINT8 time;
@@ -53,9 +126,7 @@ typedef struct
 	UINT8 clicks;
 } dclick_t;
 static dclick_t mousedclicks[MOUSEBUTTONS];
-static dclick_t joydclicks[JOYBUTTONS + JOYHATS*4];
 static dclick_t mouse2dclicks[MOUSEBUTTONS];
-static dclick_t joy2dclicks[JOYBUTTONS + JOYHATS*4];
 
 // protos
 static UINT8 G_CheckDoubleClick(UINT8 state, dclick_t *dt);
@@ -65,7 +136,7 @@ static UINT8 G_CheckDoubleClick(UINT8 state, dclick_t *dt);
 //
 // A game control can be triggered by one or more keys/buttons.
 //
-// Each key/mousebutton/joybutton triggers ONLY ONE game control.
+// Each key/mouse button/gamepad button triggers ONLY ONE game control.
 //
 void G_MapEventsToControls(event_t *ev)
 {
@@ -105,20 +176,15 @@ void G_MapEventsToControls(event_t *ev)
 			mlooky = (INT32)(ev->data3*((cv_mouseysens.value*cv_mousesens.value)/110.0f + 0.1f));
 			break;
 
-		case ev_joystick: // buttons are virtual keys
-			i = ev->data1;
-			if (i >= JOYAXISSET || menuactive || CON_Ready() || chat_on)
-				break;
-			if (ev->data2 != INT32_MAX) joyxmove[i] = ev->data2;
-			if (ev->data3 != INT32_MAX) joyymove[i] = ev->data3;
+		case ev_gamepad_down:
+		case ev_gamepad_up:
+			if (ev->which < NUM_GAMEPADS)
+				gamepads[ev->which].buttons[ev->data1] = ev->type == ev_gamepad_down ? 1 : 0;
 			break;
 
-		case ev_joystick2: // buttons are virtual keys
-			i = ev->data1;
-			if (i >= JOYAXISSET || menuactive || CON_Ready() || chat_on)
-				break;
-			if (ev->data2 != INT32_MAX) joy2xmove[i] = ev->data2;
-			if (ev->data3 != INT32_MAX) joy2ymove[i] = ev->data3;
+		case ev_gamepad_axis:
+			if (ev->which < NUM_GAMEPADS)
+				gamepads[ev->which].axes[ev->data1] = ev->data2;
 			break;
 
 		case ev_mouse2: // buttons are virtual keys
@@ -133,29 +199,17 @@ void G_MapEventsToControls(event_t *ev)
 			break;
 	}
 
-	// ALWAYS check for mouse & joystick double-clicks even if no mouse event
+	// ALWAYS check for mouse double-clicks even if there were no such events
 	for (i = 0; i < MOUSEBUTTONS; i++)
 	{
 		flag = G_CheckDoubleClick(gamekeydown[KEY_MOUSE1+i], &mousedclicks[i]);
 		gamekeydown[KEY_DBLMOUSE1+i] = flag;
 	}
 
-	for (i = 0; i < JOYBUTTONS + JOYHATS*4; i++)
-	{
-		flag = G_CheckDoubleClick(gamekeydown[KEY_JOY1+i], &joydclicks[i]);
-		gamekeydown[KEY_DBLJOY1+i] = flag;
-	}
-
 	for (i = 0; i < MOUSEBUTTONS; i++)
 	{
 		flag = G_CheckDoubleClick(gamekeydown[KEY_2MOUSE1+i], &mouse2dclicks[i]);
 		gamekeydown[KEY_DBL2MOUSE1+i] = flag;
-	}
-
-	for (i = 0; i < JOYBUTTONS + JOYHATS*4; i++)
-	{
-		flag = G_CheckDoubleClick(gamekeydown[KEY_2JOY1+i], &joy2dclicks[i]);
-		gamekeydown[KEY_DBL2JOY1+i] = flag;
 	}
 }
 
@@ -188,6 +242,565 @@ static UINT8 G_CheckDoubleClick(UINT8 state, dclick_t *dt)
 	}
 	return false;
 }
+
+const char *const gamepad_button_names[NUM_GAMEPAD_BUTTONS + 1] = {
+	"a",
+	"b",
+	"x",
+	"y",
+	"back",
+	"guide",
+	"start",
+	"left-stick",
+	"right-stick",
+	"left-shoulder",
+	"right-shoulder",
+	"dpad-up",
+	"dpad-down",
+	"dpad-left",
+	"dpad-right",
+	"misc1",
+	"paddle1",
+	"paddle2",
+	"paddle3",
+	"paddle4",
+	"touchpad",
+	NULL};
+
+const char *const gamepad_axis_names[NUM_GAMEPAD_AXES + 1] = {
+	"left-x",
+	"left-y",
+	"right-x",
+	"right-y",
+	"trigger-left",
+	"trigger-right",
+	NULL};
+
+boolean G_GamepadTypeIsXbox(gamepadtype_e type)
+{
+	switch (type)
+	{
+	case GAMEPAD_TYPE_XBOX360:
+	case GAMEPAD_TYPE_XBOXONE:
+	case GAMEPAD_TYPE_XBOX_SERIES_XS:
+	case GAMEPAD_TYPE_XBOX_ELITE:
+		return true;
+	default:
+		return false;
+	}
+}
+
+boolean G_GamepadTypeIsPlayStation(gamepadtype_e type)
+{
+	switch (type)
+	{
+	case GAMEPAD_TYPE_PS3:
+	case GAMEPAD_TYPE_PS4:
+	case GAMEPAD_TYPE_PS5:
+		return true;
+	default:
+		return false;
+	}
+}
+
+boolean G_GamepadTypeIsNintendoSwitch(gamepadtype_e type)
+{
+	switch (type)
+	{
+	case GAMEPAD_TYPE_NINTENDO_SWITCH_PRO:
+	case GAMEPAD_TYPE_NINTENDO_SWITCH_JOY_CON_GRIP:
+		return true;
+	default:
+		return G_GamepadTypeIsJoyCon(type);
+	}
+}
+
+boolean G_GamepadTypeIsJoyCon(gamepadtype_e type)
+{
+	switch (type)
+	{
+	case GAMEPAD_TYPE_NINTENDO_SWITCH_JOY_CON_LEFT:
+	case GAMEPAD_TYPE_NINTENDO_SWITCH_JOY_CON_RIGHT:
+		return true;
+	default:
+		return false;
+	}
+}
+
+boolean G_RumbleSupported(UINT8 which)
+{
+	if (!I_RumbleSupported() || which >= NUM_GAMEPADS)
+		return 0;
+
+	return I_GetGamepadRumbleSupported(which);
+}
+
+boolean G_RumbleGamepad(UINT8 which, fixed_t large_magnitude, fixed_t small_magnitude, tic_t duration)
+{
+	haptic_t effect;
+
+	if (!G_RumbleSupported(which))
+		return false;
+
+	effect.large_magnitude = large_magnitude;
+	effect.small_magnitude = small_magnitude;
+	effect.duration = duration;
+
+	return I_RumbleGamepad(which, &effect);
+}
+
+void G_StopGamepadRumble(UINT8 which)
+{
+	if (G_RumbleSupported(which))
+		I_StopGamepadRumble(which);
+}
+
+fixed_t G_GetLargeMotorFreq(UINT8 which)
+{
+	if (!G_RumbleSupported(which) || which >= NUM_GAMEPADS)
+		return 0;
+
+	gamepad_t *gamepad = &gamepads[which];
+	return gamepad->rumble.data.large_magnitude;
+}
+
+fixed_t G_GetSmallMotorFreq(UINT8 which)
+{
+	if (!G_RumbleSupported(which) || which >= NUM_GAMEPADS)
+		return 0;
+
+	gamepad_t *gamepad = &gamepads[which];
+	return gamepad->rumble.data.small_magnitude;
+}
+
+boolean G_GetGamepadRumblePaused(UINT8 which)
+{
+	return I_GetGamepadRumblePaused(which);
+}
+
+boolean G_SetLargeMotorFreq(UINT8 which, fixed_t freq)
+{
+	return I_SetGamepadLargeMotorFreq(which, freq);
+}
+
+boolean G_SetSmallMotorFreq(UINT8 which, fixed_t freq)
+{
+	return I_SetGamepadSmallMotorFreq(which, freq);
+}
+
+void G_SetGamepadRumblePaused(UINT8 which, boolean pause)
+{
+	if (G_RumbleSupported(which))
+		I_SetGamepadRumblePaused(which, pause);
+}
+
+// Obtains the value of an axis, and makes it digital if needed
+INT16 G_GamepadAxisEventValue(UINT8 which, INT16 value)
+{
+	gamepad_t *gamepad = &gamepads[which];
+
+	if (gamepad->digital)
+	{
+		const UINT16 jdeadzone = G_GetGamepadDigitalDeadZone(which);
+
+		if (value < -jdeadzone)
+			value = -JOYAXISRANGE - 1;
+		else if (value > jdeadzone)
+			value = JOYAXISRANGE;
+		else
+			value = 0;
+	}
+
+	return value;
+}
+
+INT16 G_GetGamepadAxisValue(UINT8 which, gamepad_axis_e axis)
+{
+	gamepad_t *gamepad = &gamepads[which];
+
+	if (axis >= NUM_GAMEPAD_AXES)
+		return 0;
+
+	return G_GamepadAxisEventValue(which, gamepad->axes[axis]);
+}
+
+fixed_t G_GetAdjustedGamepadAxis(UINT8 which, gamepad_axis_e axis, boolean applyDeadzone)
+{
+	gamepad_t *gamepad = &gamepads[which];
+
+	if (axis >= NUM_GAMEPAD_AXES)
+		return 0;
+
+	INT32 value = gamepad->axes[axis];
+
+	if (applyDeadzone && gamepad->digital)
+	{
+		INT16 deadzone = G_GetGamepadDigitalDeadZone(which);
+
+		if (value < -deadzone)
+			value = -JOYAXISRANGE;
+		else if (value > deadzone)
+			value = JOYAXISRANGE;
+		else
+			value = 0;
+	}
+	else if (applyDeadzone)
+	{
+		INT32 sign = value < 0 ? -1 : 1;
+		INT16 deadzone = G_GetGamepadDeadZone(which);
+		INT32 magnitude = value * value;
+		INT32 nAxis = magnitude / JOYAXISRANGE;
+		INT32 nMagnitude = G_BasicDeadZoneCalculation(magnitude, deadzone);
+
+		value = (nAxis * nMagnitude) / JOYAXISRANGE;
+		value = min(value * sign, JOYAXISRANGE);
+		value = max(value, -JOYAXISRANGE);
+	}
+
+	return (value / 32767.0) * FRACUNIT;
+}
+
+static UINT16 CalcGamepadDeadZone(fixed_t deadzone)
+{
+	INT32 value = (JOYAXISRANGE * deadzone) / FRACUNIT;
+
+	if (value < 0)
+		value = 0;
+	else if (value > JOYAXISRANGE)
+		value = JOYAXISRANGE;
+
+	return value;
+}
+
+UINT16 G_GetGamepadDeadZone(UINT8 which)
+{
+	return CalcGamepadDeadZone(cv_deadzone[which].value);
+}
+
+UINT16 G_GetGamepadDigitalDeadZone(UINT8 which)
+{
+	return CalcGamepadDeadZone(cv_digitaldeadzone[which].value);
+}
+
+// Take a magnitude of two axes, and adjust it to take out the deadzone
+// Will return a value between 0 and JOYAXISRANGE
+INT32 G_BasicDeadZoneCalculation(INT32 magnitude, const UINT16 jdeadzone)
+{
+	INT32 deadzoneAppliedValue = 0;
+	INT32 adjustedMagnitude = abs(magnitude);
+
+	if (jdeadzone >= JOYAXISRANGE && adjustedMagnitude >= JOYAXISRANGE) // If the deadzone and magnitude are both 100%...
+		return JOYAXISRANGE; // ...return 100% input directly, to avoid dividing by 0
+	else if (adjustedMagnitude > jdeadzone) // Otherwise, calculate how much the magnitude exceeds the deadzone
+	{
+		adjustedMagnitude = min(adjustedMagnitude, JOYAXISRANGE);
+
+		adjustedMagnitude -= jdeadzone;
+
+		deadzoneAppliedValue = (adjustedMagnitude * JOYAXISRANGE) / (JOYAXISRANGE - jdeadzone);
+	}
+
+	return deadzoneAppliedValue;
+}
+
+INT32 G_RemapGamepadEvent(event_t *event, INT32 *type)
+{
+	if (event->type == ev_gamepad_down)
+	{
+		*type = ev_keydown;
+		return KEY_GAMEPAD + event->data1;
+	}
+	else if (event->type == ev_gamepad_up)
+	{
+		*type = ev_keyup;
+		return KEY_GAMEPAD + event->data1;
+	}
+	else if (event->type == ev_gamepad_axis)
+	{
+		const UINT16 jdeadzone = G_GetGamepadDigitalDeadZone(event->which);
+		const INT16 value = G_GetGamepadAxisValue(event->which, event->data1);
+
+		if (value < -jdeadzone || value > jdeadzone)
+			*type = ev_keydown;
+		else
+			*type = ev_keyup;
+
+		if (value < -jdeadzone)
+			return KEY_INV_AXES + event->data1;
+		else
+			return KEY_AXES + event->data1;
+	}
+
+	return event->data1;
+}
+
+typedef struct
+{
+	const char *name;
+	const char *menu1;
+	const char *menu2;
+} button_strings_t;
+
+#define DEF_NAME_BUTTON(str) {.name = str, .menu1 = str " Button", .menu2 = "the " str " Button"}
+#define DEF_NAME_SIMPLE(str) {.name = str, .menu1 = NULL, .menu2 = "the " str}
+#define DEF_NAME_DPAD(a, b)  {.name = "D-Pad " a, .menu1 = "D-Pad " b, .menu2 = a}
+
+#define PARTIAL_DEF_START [GAMEPAD_BUTTON_A] = { NULL }
+#define PARTIAL_DEF_END [NUM_GAMEPAD_BUTTONS - 1] = { NULL }
+
+static const char *GetStringFromButtonList(const button_strings_t *names, gamepad_button_e button, gamepad_string_e type)
+{
+	switch (type)
+	{
+	case GAMEPAD_STRING_DEFAULT:
+		return names[button].name;
+	case GAMEPAD_STRING_MENU1:
+		if (names[button].menu1)
+			return names[button].menu1;
+		else
+			return names[button].name;
+	case GAMEPAD_STRING_MENU2:
+		if (names[button].menu2)
+			return names[button].menu2;
+		else
+			return names[button].name;
+	}
+
+	return NULL;
+}
+
+const char *G_GetGamepadButtonString(gamepadtype_e type, gamepad_button_e button, gamepad_string_e strtype)
+{
+	static const button_strings_t base_names[] = {
+		[GAMEPAD_BUTTON_A]             = DEF_NAME_BUTTON("A"),
+		[GAMEPAD_BUTTON_B]             = DEF_NAME_BUTTON("B"),
+		[GAMEPAD_BUTTON_X]             = DEF_NAME_BUTTON("X"),
+		[GAMEPAD_BUTTON_Y]             = DEF_NAME_BUTTON("Y"),
+		[GAMEPAD_BUTTON_BACK]          = DEF_NAME_BUTTON("Back"),
+		[GAMEPAD_BUTTON_GUIDE]         = DEF_NAME_BUTTON("Guide"),
+		[GAMEPAD_BUTTON_START]         = DEF_NAME_BUTTON("Start"),
+		[GAMEPAD_BUTTON_LEFTSTICK]     = DEF_NAME_SIMPLE("Left Stick"),
+		[GAMEPAD_BUTTON_RIGHTSTICK]    = DEF_NAME_SIMPLE("Right Stick"),
+		[GAMEPAD_BUTTON_LEFTSHOULDER]  = DEF_NAME_SIMPLE("Left Shoulder"),
+		[GAMEPAD_BUTTON_RIGHTSHOULDER] = DEF_NAME_SIMPLE("Right Shoulder"),
+		[GAMEPAD_BUTTON_DPAD_UP]       = DEF_NAME_DPAD("Up", "\x1A"),
+		[GAMEPAD_BUTTON_DPAD_DOWN]     = DEF_NAME_DPAD("Down", "\x1B"),
+		[GAMEPAD_BUTTON_DPAD_LEFT]     = DEF_NAME_DPAD("Left", "\x1C"),
+		[GAMEPAD_BUTTON_DPAD_RIGHT]    = DEF_NAME_DPAD("Right", "\x1D"),
+		[GAMEPAD_BUTTON_PADDLE1]       = DEF_NAME_SIMPLE("Paddle 1"),
+		[GAMEPAD_BUTTON_PADDLE2]       = DEF_NAME_SIMPLE("Paddle 2"),
+		[GAMEPAD_BUTTON_PADDLE3]       = DEF_NAME_SIMPLE("Paddle 3"),
+		[GAMEPAD_BUTTON_PADDLE4]       = DEF_NAME_SIMPLE("Paddle 4"),
+		[GAMEPAD_BUTTON_TOUCHPAD]      = DEF_NAME_SIMPLE("Touchpad"),
+
+		// This one's a bit weird
+		// Suffix the numbers in the event SDL adds more misc buttons
+		[GAMEPAD_BUTTON_MISC1] = {
+			.name  = "Misc. Button",
+			.menu1 = "Gamepad Misc.",
+			.menu2 = "the Misc. Button"
+		},
+	};
+
+	button_strings_t const *names = NULL;
+
+	if (G_GamepadTypeIsXbox(type))
+	{
+		#define BASE_XBOX_NAMES \
+			[GAMEPAD_BUTTON_LEFTSHOULDER]  = DEF_NAME_SIMPLE("Left Bumper"), \
+			[GAMEPAD_BUTTON_RIGHTSHOULDER] = DEF_NAME_SIMPLE("Right Bumper")
+
+		static const button_strings_t xbox_names[] = { PARTIAL_DEF_START,
+			BASE_XBOX_NAMES,
+		PARTIAL_DEF_END };
+
+		static const button_strings_t series_xs_names[] = { PARTIAL_DEF_START,
+			BASE_XBOX_NAMES,
+			[GAMEPAD_BUTTON_MISC1]         = DEF_NAME_BUTTON("Share"),
+		PARTIAL_DEF_END };
+
+		static const button_strings_t elite_names[] = { PARTIAL_DEF_START,
+			BASE_XBOX_NAMES,
+			[GAMEPAD_BUTTON_PADDLE1]       = DEF_NAME_SIMPLE("P1 Paddle"),
+			[GAMEPAD_BUTTON_PADDLE2]       = DEF_NAME_SIMPLE("P2 Paddle"),
+			[GAMEPAD_BUTTON_PADDLE3]       = DEF_NAME_SIMPLE("P3 Paddle"),
+			[GAMEPAD_BUTTON_PADDLE4]       = DEF_NAME_SIMPLE("P4 Paddle"),
+		PARTIAL_DEF_END };
+
+		if (type == GAMEPAD_TYPE_XBOX_SERIES_XS) // X|S controllers have a Share button
+			names = series_xs_names;
+		else if (type == GAMEPAD_TYPE_XBOX_ELITE) // Elite controller has paddles
+			names = elite_names;
+		else
+			names = xbox_names;
+
+		#undef BASE_XBOX_NAMES
+	}
+	else if (G_GamepadTypeIsPlayStation(type))
+	{
+		#define BASE_PS_NAMES \
+			[GAMEPAD_BUTTON_A]             = DEF_NAME_BUTTON("Cross"), \
+			[GAMEPAD_BUTTON_B]             = DEF_NAME_BUTTON("Circle"), \
+			[GAMEPAD_BUTTON_X]             = DEF_NAME_BUTTON("Square"), \
+			[GAMEPAD_BUTTON_Y]             = DEF_NAME_BUTTON("Triangle"), \
+			[GAMEPAD_BUTTON_BACK]          = DEF_NAME_BUTTON("Select"), \
+			[GAMEPAD_BUTTON_GUIDE]         = DEF_NAME_BUTTON("PS"), \
+			[GAMEPAD_BUTTON_LEFTSTICK]     = DEF_NAME_BUTTON("L3"), \
+			[GAMEPAD_BUTTON_RIGHTSTICK]    = DEF_NAME_BUTTON("R3"), \
+			[GAMEPAD_BUTTON_LEFTSHOULDER]  = DEF_NAME_BUTTON("L1"), \
+			[GAMEPAD_BUTTON_RIGHTSHOULDER] = DEF_NAME_BUTTON("R1")
+
+		static const button_strings_t ps_names[] = {
+			BASE_PS_NAMES,
+		PARTIAL_DEF_END };
+
+		static const button_strings_t ps5_names[] = {
+			BASE_PS_NAMES,
+			[GAMEPAD_BUTTON_MISC1] = DEF_NAME_BUTTON("Microphone"),
+		PARTIAL_DEF_END };
+
+		names = type == GAMEPAD_TYPE_PS5 ? ps5_names : ps_names;
+		#undef BASE_PS_NAMES
+	}
+	else if (G_GamepadTypeIsNintendoSwitch(type))
+	{
+		static const button_strings_t switch_names[] = { PARTIAL_DEF_START,
+			[GAMEPAD_BUTTON_BACK]          = DEF_NAME_BUTTON("-"),
+			[GAMEPAD_BUTTON_GUIDE]         = DEF_NAME_BUTTON("HOME"),
+			[GAMEPAD_BUTTON_START]         = DEF_NAME_BUTTON("+"),
+			[GAMEPAD_BUTTON_LEFTSHOULDER]  = DEF_NAME_BUTTON("L"),
+			[GAMEPAD_BUTTON_RIGHTSHOULDER] = DEF_NAME_BUTTON("R"),
+			[GAMEPAD_BUTTON_MISC1]         = DEF_NAME_BUTTON("Capture"),
+		PARTIAL_DEF_END };
+
+		names = switch_names;
+	}
+	else if (type == GAMEPAD_TYPE_AMAZON_LUNA)
+	{
+		static const button_strings_t luna_names[] = { PARTIAL_DEF_START,
+			[GAMEPAD_BUTTON_MISC1] = DEF_NAME_BUTTON("Microphone"),
+		PARTIAL_DEF_END };
+
+		names = luna_names;
+	}
+
+	const char *str = NULL;
+
+	if (names)
+		str = GetStringFromButtonList(names, button, strtype);
+	if (str == NULL)
+		str = GetStringFromButtonList(base_names, button, strtype);
+	if (str)
+		return str;
+
+	return "Unknown";
+}
+
+#undef DEF_NAME_BUTTON
+#undef DEF_NAME_SIMPLE
+#undef DEF_NAME_DPAD
+
+#undef PARTIAL_DEF_START
+#undef PARTIAL_DEF_END
+
+typedef struct
+{
+	const char *name;
+	const char *menu1;
+	const char *menu2;
+	const char *name_inv;
+	const char *menu1_inv;
+	const char *menu2_inv;
+} axis_strings_t;
+
+#define DEF_NAME_AXIS(str, a, inv_a, b, inv_b) {\
+	str " " a, str " " b, "the " str " " b, \
+	str " " inv_a, str " " inv_b, "the " str " " inv_b}
+#define DEF_NAME_TRIGGER(str) {str, NULL, "the " str, NULL, NULL, NULL}
+#define DEF_NAME_BUTTON(str) {str, str " Button", "the " str " Button", NULL, NULL, NULL}
+
+#define PARTIAL_DEF_START [GAMEPAD_AXIS_LEFTX] = { NULL }
+
+static const char *GetStringFromAxisList(const axis_strings_t *names, gamepad_axis_e axis, gamepad_string_e type, boolean inv)
+{
+	switch (type)
+	{
+	case GAMEPAD_STRING_DEFAULT:
+		if (inv && names[axis].name_inv)
+			return names[axis].name_inv;
+		else
+			return names[axis].name;
+		break;
+	case GAMEPAD_STRING_MENU1:
+		if (inv && names[axis].menu1_inv)
+			return names[axis].menu1_inv;
+		if (names[axis].menu1)
+			return names[axis].menu1;
+		else
+			return names[axis].name;
+		break;
+	case GAMEPAD_STRING_MENU2:
+		if (inv && names[axis].menu2_inv)
+			return names[axis].menu2_inv;
+		if (names[axis].menu2)
+			return names[axis].menu2;
+		else
+			return names[axis].name;
+		break;
+	}
+
+	return NULL;
+}
+
+const char *G_GetGamepadAxisString(gamepadtype_e type, gamepad_axis_e axis, gamepad_string_e strtype, boolean inv)
+{
+	static const axis_strings_t base_names[] = {
+		[GAMEPAD_AXIS_LEFTX]        = DEF_NAME_AXIS("Left Stick",  "X", "X-", "\x1D", "\x1C"),
+		[GAMEPAD_AXIS_LEFTY]        = DEF_NAME_AXIS("Left Stick",  "Y", "Y-", "\x1B", "\x1A"),
+		[GAMEPAD_AXIS_RIGHTX]       = DEF_NAME_AXIS("Right Stick", "X", "X-", "\x1D", "\x1C"),
+		[GAMEPAD_AXIS_RIGHTY]       = DEF_NAME_AXIS("Right Stick", "Y", "Y-", "\x1B", "\x1A"),
+		[GAMEPAD_AXIS_TRIGGERLEFT]  = DEF_NAME_TRIGGER("Left Trigger"),
+		[GAMEPAD_AXIS_TRIGGERRIGHT] = DEF_NAME_TRIGGER("Right Trigger")
+	};
+
+	axis_strings_t const *names = NULL;
+
+	if (G_GamepadTypeIsPlayStation(type))
+	{
+		static const axis_strings_t ps_names[] = { PARTIAL_DEF_START,
+			[GAMEPAD_AXIS_TRIGGERLEFT]  = DEF_NAME_BUTTON("L2"),
+			[GAMEPAD_AXIS_TRIGGERRIGHT] = DEF_NAME_BUTTON("R2"),
+		};
+
+		names = ps_names;
+	}
+	else if (G_GamepadTypeIsNintendoSwitch(type))
+	{
+		static const axis_strings_t switch_names[] = { PARTIAL_DEF_START,
+			[GAMEPAD_AXIS_TRIGGERLEFT]  = DEF_NAME_BUTTON("ZL"),
+			[GAMEPAD_AXIS_TRIGGERRIGHT] = DEF_NAME_BUTTON("ZR"),
+		};
+
+		names = switch_names;
+	}
+
+	const char *str = NULL;
+
+	if (names)
+		str = GetStringFromAxisList(names, axis, strtype, inv);
+	if (str == NULL)
+		str = GetStringFromAxisList(base_names, axis, strtype, inv);
+	if (str)
+		return str;
+
+	return "Unknown";
+}
+
+#undef DEF_NAME_AXIS
+#undef DEF_NAME_TRIGGER
+#undef DEF_NAME_BUTTON
+
+#undef PARTIAL_DEF_START
 
 typedef struct
 {
@@ -291,45 +904,49 @@ static keyname_t keynames[] =
 	{KEY_2MOUSEWHEELDOWN, "Wheel 2 Down"},
 
 	// we use up to 32 buttons in DirectInput
-	{KEY_JOY1+9, "JOY10"},
-	{KEY_JOY1+10, "JOY11"},
-	{KEY_JOY1+11, "JOY12"},
-	{KEY_JOY1+12, "JOY13"},
-	{KEY_JOY1+13, "JOY14"},
-	{KEY_JOY1+14, "JOY15"},
-	{KEY_JOY1+15, "JOY16"},
-	{KEY_JOY1+16, "JOY17"},
-	{KEY_JOY1+17, "JOY18"},
-	{KEY_JOY1+18, "JOY19"},
-	{KEY_JOY1+19, "JOY20"},
-	{KEY_JOY1+20, "JOY21"},
-	{KEY_JOY1+21, "JOY22"},
-	{KEY_JOY1+22, "JOY23"},
-	{KEY_JOY1+23, "JOY24"},
-	{KEY_JOY1+24, "JOY25"},
-	{KEY_JOY1+25, "JOY26"},
-	{KEY_JOY1+26, "JOY27"},
-	{KEY_JOY1+27, "JOY28"},
-	{KEY_JOY1+28, "JOY29"},
-	{KEY_JOY1+29, "JOY30"},
-	{KEY_JOY1+30, "JOY31"},
-	{KEY_JOY1+31, "JOY32"},
-	{KEY_HAT1+0, "HATUP"},
-	{KEY_HAT1+1, "HATDOWN"},
-	{KEY_HAT1+2, "HATLEFT"},
-	{KEY_HAT1+3, "HATRIGHT"},
-	{KEY_HAT1+4, "HATUP2"},
-	{KEY_HAT1+5, "HATDOWN2"},
-	{KEY_HAT1+6, "HATLEFT2"},
-	{KEY_HAT1+7, "HATRIGHT2"},
-	{KEY_HAT1+8, "HATUP3"},
-	{KEY_HAT1+9, "HATDOWN3"},
-	{KEY_HAT1+10, "HATLEFT3"},
-	{KEY_HAT1+11, "HATRIGHT3"},
-	{KEY_HAT1+12, "HATUP4"},
-	{KEY_HAT1+13, "HATDOWN4"},
-	{KEY_HAT1+14, "HATLEFT4"},
-	{KEY_HAT1+15, "HATRIGHT4"},
+
+#define DEF_GAMEPAD_NAME(btn, name) {KEY_GAMEPAD+GAMEPAD_BUTTON_##btn, name}
+#define DEF_GAMEPAD_AXIS(ax, name) \
+	{KEY_AXES+GAMEPAD_AXIS_##ax, name}, \
+	{KEY_INV_AXES+GAMEPAD_AXIS_##ax, name "-"}
+
+	DEF_GAMEPAD_NAME(A, "a button"),
+	DEF_GAMEPAD_NAME(B, "b button"),
+	DEF_GAMEPAD_NAME(X, "x button"),
+	DEF_GAMEPAD_NAME(Y, "y button"),
+
+	DEF_GAMEPAD_NAME(BACK, "back button"),
+	DEF_GAMEPAD_NAME(GUIDE, "guide button"),
+	DEF_GAMEPAD_NAME(START, "start button"),
+	DEF_GAMEPAD_NAME(LEFTSTICK, "left stick"),
+	DEF_GAMEPAD_NAME(RIGHTSTICK, "right stick"),
+
+	DEF_GAMEPAD_NAME(LEFTSHOULDER, "left shoulder"),
+	DEF_GAMEPAD_NAME(RIGHTSHOULDER, "right shoulder"),
+
+	DEF_GAMEPAD_NAME(DPAD_UP, "d-pad up"),
+	DEF_GAMEPAD_NAME(DPAD_DOWN, "d-pad down"),
+	DEF_GAMEPAD_NAME(DPAD_LEFT, "d-pad left"),
+	DEF_GAMEPAD_NAME(DPAD_RIGHT, "d-pad right"),
+
+	DEF_GAMEPAD_NAME(MISC1, "gamepad misc 1"),
+	DEF_GAMEPAD_NAME(PADDLE1, "paddle 1"),
+	DEF_GAMEPAD_NAME(PADDLE2, "paddle 2"),
+	DEF_GAMEPAD_NAME(PADDLE3, "paddle 3"),
+	DEF_GAMEPAD_NAME(PADDLE4, "paddle 4"),
+	DEF_GAMEPAD_NAME(TOUCHPAD, "touchpad"),
+
+	DEF_GAMEPAD_AXIS(LEFTX, "left stick x"),
+	DEF_GAMEPAD_AXIS(LEFTY, "left stick y"),
+
+	DEF_GAMEPAD_AXIS(RIGHTX, "right stick x"),
+	DEF_GAMEPAD_AXIS(RIGHTY, "right stick y"),
+
+	DEF_GAMEPAD_AXIS(TRIGGERLEFT, "left trigger"),
+	DEF_GAMEPAD_AXIS(TRIGGERRIGHT, "right trigger"),
+
+#undef DEF_GAMEPAD_NAME
+#undef DEF_GAMEPAD_AXIS
 
 	{KEY_DBLMOUSE1+0, "DBLMOUSE1"},
 	{KEY_DBLMOUSE1+1, "DBLMOUSE2"},
@@ -348,153 +965,9 @@ static keyname_t keynames[] =
 	{KEY_DBL2MOUSE1+6, "DBLSEC_MOUSE7"},
 	{KEY_DBL2MOUSE1+7, "DBLSEC_MOUSE8"},
 
-	{KEY_DBLJOY1+0, "DBLJOY1"},
-	{KEY_DBLJOY1+1, "DBLJOY2"},
-	{KEY_DBLJOY1+2, "DBLJOY3"},
-	{KEY_DBLJOY1+3, "DBLJOY4"},
-	{KEY_DBLJOY1+4, "DBLJOY5"},
-	{KEY_DBLJOY1+5, "DBLJOY6"},
-	{KEY_DBLJOY1+6, "DBLJOY7"},
-	{KEY_DBLJOY1+7, "DBLJOY8"},
-	{KEY_DBLJOY1+8, "DBLJOY9"},
-	{KEY_DBLJOY1+9, "DBLJOY10"},
-	{KEY_DBLJOY1+10, "DBLJOY11"},
-	{KEY_DBLJOY1+11, "DBLJOY12"},
-	{KEY_DBLJOY1+12, "DBLJOY13"},
-	{KEY_DBLJOY1+13, "DBLJOY14"},
-	{KEY_DBLJOY1+14, "DBLJOY15"},
-	{KEY_DBLJOY1+15, "DBLJOY16"},
-	{KEY_DBLJOY1+16, "DBLJOY17"},
-	{KEY_DBLJOY1+17, "DBLJOY18"},
-	{KEY_DBLJOY1+18, "DBLJOY19"},
-	{KEY_DBLJOY1+19, "DBLJOY20"},
-	{KEY_DBLJOY1+20, "DBLJOY21"},
-	{KEY_DBLJOY1+21, "DBLJOY22"},
-	{KEY_DBLJOY1+22, "DBLJOY23"},
-	{KEY_DBLJOY1+23, "DBLJOY24"},
-	{KEY_DBLJOY1+24, "DBLJOY25"},
-	{KEY_DBLJOY1+25, "DBLJOY26"},
-	{KEY_DBLJOY1+26, "DBLJOY27"},
-	{KEY_DBLJOY1+27, "DBLJOY28"},
-	{KEY_DBLJOY1+28, "DBLJOY29"},
-	{KEY_DBLJOY1+29, "DBLJOY30"},
-	{KEY_DBLJOY1+30, "DBLJOY31"},
-	{KEY_DBLJOY1+31, "DBLJOY32"},
-	{KEY_DBLHAT1+0, "DBLHATUP"},
-	{KEY_DBLHAT1+1, "DBLHATDOWN"},
-	{KEY_DBLHAT1+2, "DBLHATLEFT"},
-	{KEY_DBLHAT1+3, "DBLHATRIGHT"},
-	{KEY_DBLHAT1+4, "DBLHATUP2"},
-	{KEY_DBLHAT1+5, "DBLHATDOWN2"},
-	{KEY_DBLHAT1+6, "DBLHATLEFT2"},
-	{KEY_DBLHAT1+7, "DBLHATRIGHT2"},
-	{KEY_DBLHAT1+8, "DBLHATUP3"},
-	{KEY_DBLHAT1+9, "DBLHATDOWN3"},
-	{KEY_DBLHAT1+10, "DBLHATLEFT3"},
-	{KEY_DBLHAT1+11, "DBLHATRIGHT3"},
-	{KEY_DBLHAT1+12, "DBLHATUP4"},
-	{KEY_DBLHAT1+13, "DBLHATDOWN4"},
-	{KEY_DBLHAT1+14, "DBLHATLEFT4"},
-	{KEY_DBLHAT1+15, "DBLHATRIGHT4"},
 
-	{KEY_2JOY1+0, "SEC_JOY1"},
-	{KEY_2JOY1+1, "SEC_JOY2"},
-	{KEY_2JOY1+2, "SEC_JOY3"},
-	{KEY_2JOY1+3, "SEC_JOY4"},
-	{KEY_2JOY1+4, "SEC_JOY5"},
-	{KEY_2JOY1+5, "SEC_JOY6"},
-	{KEY_2JOY1+6, "SEC_JOY7"},
-	{KEY_2JOY1+7, "SEC_JOY8"},
 	// we use up to 32 buttons in DirectInput
-	{KEY_2JOY1+8, "SEC_JOY9"},
-	{KEY_2JOY1+9, "SEC_JOY10"},
-	{KEY_2JOY1+10, "SEC_JOY11"},
-	{KEY_2JOY1+11, "SEC_JOY12"},
-	{KEY_2JOY1+12, "SEC_JOY13"},
-	{KEY_2JOY1+13, "SEC_JOY14"},
-	{KEY_2JOY1+14, "SEC_JOY15"},
-	{KEY_2JOY1+15, "SEC_JOY16"},
-	{KEY_2JOY1+16, "SEC_JOY17"},
-	{KEY_2JOY1+17, "SEC_JOY18"},
-	{KEY_2JOY1+18, "SEC_JOY19"},
-	{KEY_2JOY1+19, "SEC_JOY20"},
-	{KEY_2JOY1+20, "SEC_JOY21"},
-	{KEY_2JOY1+21, "SEC_JOY22"},
-	{KEY_2JOY1+22, "SEC_JOY23"},
-	{KEY_2JOY1+23, "SEC_JOY24"},
-	{KEY_2JOY1+24, "SEC_JOY25"},
-	{KEY_2JOY1+25, "SEC_JOY26"},
-	{KEY_2JOY1+26, "SEC_JOY27"},
-	{KEY_2JOY1+27, "SEC_JOY28"},
-	{KEY_2JOY1+28, "SEC_JOY29"},
-	{KEY_2JOY1+29, "SEC_JOY30"},
-	{KEY_2JOY1+30, "SEC_JOY31"},
-	{KEY_2JOY1+31, "SEC_JOY32"},
-	{KEY_2HAT1+0,  "SEC_HATUP"},
-	{KEY_2HAT1+1,  "SEC_HATDOWN"},
-	{KEY_2HAT1+2,  "SEC_HATLEFT"},
-	{KEY_2HAT1+3,  "SEC_HATRIGHT"},
-	{KEY_2HAT1+4, "SEC_HATUP2"},
-	{KEY_2HAT1+5, "SEC_HATDOWN2"},
-	{KEY_2HAT1+6, "SEC_HATLEFT2"},
-	{KEY_2HAT1+7, "SEC_HATRIGHT2"},
-	{KEY_2HAT1+8, "SEC_HATUP3"},
-	{KEY_2HAT1+9, "SEC_HATDOWN3"},
-	{KEY_2HAT1+10, "SEC_HATLEFT3"},
-	{KEY_2HAT1+11, "SEC_HATRIGHT3"},
-	{KEY_2HAT1+12, "SEC_HATUP4"},
-	{KEY_2HAT1+13, "SEC_HATDOWN4"},
-	{KEY_2HAT1+14, "SEC_HATLEFT4"},
-	{KEY_2HAT1+15, "SEC_HATRIGHT4"},
 
-	{KEY_DBL2JOY1+0, "DBLSEC_JOY1"},
-	{KEY_DBL2JOY1+1, "DBLSEC_JOY2"},
-	{KEY_DBL2JOY1+2, "DBLSEC_JOY3"},
-	{KEY_DBL2JOY1+3, "DBLSEC_JOY4"},
-	{KEY_DBL2JOY1+4, "DBLSEC_JOY5"},
-	{KEY_DBL2JOY1+5, "DBLSEC_JOY6"},
-	{KEY_DBL2JOY1+6, "DBLSEC_JOY7"},
-	{KEY_DBL2JOY1+7, "DBLSEC_JOY8"},
-	{KEY_DBL2JOY1+8, "DBLSEC_JOY9"},
-	{KEY_DBL2JOY1+9, "DBLSEC_JOY10"},
-	{KEY_DBL2JOY1+10, "DBLSEC_JOY11"},
-	{KEY_DBL2JOY1+11, "DBLSEC_JOY12"},
-	{KEY_DBL2JOY1+12, "DBLSEC_JOY13"},
-	{KEY_DBL2JOY1+13, "DBLSEC_JOY14"},
-	{KEY_DBL2JOY1+14, "DBLSEC_JOY15"},
-	{KEY_DBL2JOY1+15, "DBLSEC_JOY16"},
-	{KEY_DBL2JOY1+16, "DBLSEC_JOY17"},
-	{KEY_DBL2JOY1+17, "DBLSEC_JOY18"},
-	{KEY_DBL2JOY1+18, "DBLSEC_JOY19"},
-	{KEY_DBL2JOY1+19, "DBLSEC_JOY20"},
-	{KEY_DBL2JOY1+20, "DBLSEC_JOY21"},
-	{KEY_DBL2JOY1+21, "DBLSEC_JOY22"},
-	{KEY_DBL2JOY1+22, "DBLSEC_JOY23"},
-	{KEY_DBL2JOY1+23, "DBLSEC_JOY24"},
-	{KEY_DBL2JOY1+24, "DBLSEC_JOY25"},
-	{KEY_DBL2JOY1+25, "DBLSEC_JOY26"},
-	{KEY_DBL2JOY1+26, "DBLSEC_JOY27"},
-	{KEY_DBL2JOY1+27, "DBLSEC_JOY28"},
-	{KEY_DBL2JOY1+28, "DBLSEC_JOY29"},
-	{KEY_DBL2JOY1+29, "DBLSEC_JOY30"},
-	{KEY_DBL2JOY1+30, "DBLSEC_JOY31"},
-	{KEY_DBL2JOY1+31, "DBLSEC_JOY32"},
-	{KEY_DBL2HAT1+0, "DBLSEC_HATUP"},
-	{KEY_DBL2HAT1+1, "DBLSEC_HATDOWN"},
-	{KEY_DBL2HAT1+2, "DBLSEC_HATLEFT"},
-	{KEY_DBL2HAT1+3, "DBLSEC_HATRIGHT"},
-	{KEY_DBL2HAT1+4, "DBLSEC_HATUP2"},
-	{KEY_DBL2HAT1+5, "DBLSEC_HATDOWN2"},
-	{KEY_DBL2HAT1+6, "DBLSEC_HATLEFT2"},
-	{KEY_DBL2HAT1+7, "DBLSEC_HATRIGHT2"},
-	{KEY_DBL2HAT1+8, "DBLSEC_HATUP3"},
-	{KEY_DBL2HAT1+9, "DBLSEC_HATDOWN3"},
-	{KEY_DBL2HAT1+10, "DBLSEC_HATLEFT3"},
-	{KEY_DBL2HAT1+11, "DBLSEC_HATRIGHT3"},
-	{KEY_DBL2HAT1+12, "DBLSEC_HATUP4"},
-	{KEY_DBL2HAT1+13, "DBLSEC_HATDOWN4"},
-	{KEY_DBL2HAT1+14, "DBLSEC_HATLEFT4"},
-	{KEY_DBL2HAT1+15, "DBLSEC_HATRIGHT4"},
 
 };
 
@@ -548,6 +1021,40 @@ static const char *gamecontrolname[num_gamecontrols] =
 
 #define NUMKEYNAMES (sizeof (keynames)/sizeof (keyname_t))
 
+// Converts the name of a joystick button or hat from before the gamepad refactor.
+// Both players used to have their own names, but now they share the gamepad keys.
+// The buttons follow the layout of an Xbox controller, which the defaults were made for.
+// Anything else, such as double clicks on gamepad buttons, doesn't exist anymore.
+static INT32 G_OldGamepadKeyStringtoNum(const char *keystr)
+{
+	static const INT32 oldbuttons[] = {
+		GAMEPAD_KEY(A), GAMEPAD_KEY(B), GAMEPAD_KEY(X), GAMEPAD_KEY(Y),
+		GAMEPAD_KEY(LEFTSHOULDER), GAMEPAD_KEY(RIGHTSHOULDER),
+		GAMEPAD_KEY(BACK), GAMEPAD_KEY(START),
+		GAMEPAD_KEY(LEFTSTICK), GAMEPAD_KEY(RIGHTSTICK)
+	};
+
+	if (!strnicmp(keystr, "SEC_", 4))
+		keystr += 4;
+
+	if (!strnicmp(keystr, "JOY", 3))
+	{
+		INT32 button = atoi(&keystr[3]);
+		if (button >= 1 && button <= (INT32)(sizeof (oldbuttons) / sizeof (oldbuttons[0])))
+			return oldbuttons[button - 1];
+	}
+	else if (!stricmp(keystr, "HATUP"))
+		return GAMEPAD_KEY(DPAD_UP);
+	else if (!stricmp(keystr, "HATDOWN"))
+		return GAMEPAD_KEY(DPAD_DOWN);
+	else if (!stricmp(keystr, "HATLEFT"))
+		return GAMEPAD_KEY(DPAD_LEFT);
+	else if (!stricmp(keystr, "HATRIGHT"))
+		return GAMEPAD_KEY(DPAD_RIGHT);
+
+	return 0;
+}
+
 //
 // Detach any keys associated to the given game control
 // - pass the pointer to the gamecontrol table for the player being edited
@@ -568,7 +1075,7 @@ void G_ClearAllControlKeys(void)
 }
 
 //
-// Returns the name of a key (or virtual key for mouse and joy)
+// Returns the name of a key (or virtual key for mouse and gamepad)
 // the input value being an keynum
 //
 const char *G_KeynumToString(INT32 keynum)
@@ -609,7 +1116,39 @@ INT32 G_KeyStringtoNum(const char *keystr)
 		if (!stricmp(keynames[j].name, keystr))
 			return keynames[j].keynum;
 
-	return 0;
+	return G_OldGamepadKeyStringtoNum(keystr);
+}
+
+void G_InitGamepads(void)
+{
+	UINT8 i;
+
+	for (i = 0; i < NUM_GAMEPADS; i++)
+		gamepads[i].num = i;
+}
+
+const char *G_GamepadTypeToString(gamepadtype_e type)
+{
+	static const char *names[] = {
+		"unknown",
+		"xbox-360",
+		"xbox-one",
+		"xbox-series-xs",
+		"xbox-elite",
+		"ps3",
+		"ps4",
+		"ps5",
+		"switch-pro",
+		"switch-joy-con-grip",
+		"switch-joy-con-left",
+		"switch-joy-con-right",
+		"stadia",
+		"amazon-luna",
+		"steam-controller",
+		"virtual"
+	};
+
+	return names[type];
 }
 
 void G_Controldefault(void)
@@ -621,9 +1160,9 @@ void G_Controldefault(void)
 	gamecontrol[gc_turnleft   ][0] = KEY_LEFTARROW;
 	gamecontrol[gc_turnright  ][0] = KEY_RIGHTARROW;
 	gamecontrol[gc_weaponnext ][0] = 'e';
-	gamecontrol[gc_weaponnext ][1] = KEY_JOY1+1; // B
+	gamecontrol[gc_weaponnext ][1] = GAMEPAD_KEY(B); // B
 	gamecontrol[gc_weaponprev ][0] = 'q';
-	gamecontrol[gc_weaponprev ][1] = KEY_JOY1+2; // X
+	gamecontrol[gc_weaponprev ][1] = GAMEPAD_KEY(X); // X
 	gamecontrol[gc_wepslot1   ][0] = '1';
 	gamecontrol[gc_wepslot2   ][0] = '2';
 	gamecontrol[gc_wepslot3   ][0] = '3';
@@ -638,47 +1177,47 @@ void G_Controldefault(void)
 	gamecontrol[gc_fire       ][1] = KEY_MOUSE1+0;
 	gamecontrol[gc_firenormal ][0] = 'c';
 	gamecontrol[gc_tossflag   ][0] = '\'';
-	gamecontrol[gc_tossflag   ][1] = KEY_JOY1+0; // A
+	gamecontrol[gc_tossflag   ][1] = GAMEPAD_KEY(A); // A
 	gamecontrol[gc_use        ][0] = KEY_LSHIFT;
-	gamecontrol[gc_use        ][1] = KEY_JOY1+4; // LB
+	gamecontrol[gc_use        ][1] = GAMEPAD_KEY(LEFTSHOULDER); // LB
 	gamecontrol[gc_camtoggle  ][0] = 'v';
-	gamecontrol[gc_camtoggle  ][1] = KEY_HAT1+0; // D-Pad Up
+	gamecontrol[gc_camtoggle  ][1] = GAMEPAD_KEY(DPAD_UP); // D-Pad Up
 	gamecontrol[gc_camleft    ][0] = '[';
 	gamecontrol[gc_camright   ][0] = ']';
 	gamecontrol[gc_camreset   ][0] = 'r';
-	gamecontrol[gc_camreset   ][1] = KEY_JOY1+3; // Y
+	gamecontrol[gc_camreset   ][1] = GAMEPAD_KEY(Y); // Y
 	gamecontrol[gc_lookup     ][0] = KEY_UPARROW;
 	gamecontrol[gc_lookdown   ][0] = KEY_DOWNARROW;
 	gamecontrol[gc_centerview ][0] = KEY_END;
-	gamecontrol[gc_centerview ][1] = KEY_JOY1+9; // Right Stick
+	gamecontrol[gc_centerview ][1] = GAMEPAD_KEY(RIGHTSTICK); // Right Stick
 	gamecontrol[gc_talkkey    ][0] = 't';
-	gamecontrol[gc_talkkey    ][1] = KEY_HAT1+2; // D-Pad Left
+	gamecontrol[gc_talkkey    ][1] = GAMEPAD_KEY(DPAD_LEFT); // D-Pad Left
 	gamecontrol[gc_teamkey    ][0] = 'y';
 	gamecontrol[gc_scores     ][0] = KEY_TAB;
-	gamecontrol[gc_scores     ][1] = KEY_HAT1+3; // D-Pad Right
+	gamecontrol[gc_scores     ][1] = GAMEPAD_KEY(DPAD_RIGHT); // D-Pad Right
 	gamecontrol[gc_jump       ][0] = KEY_SPACE;
-	gamecontrol[gc_jump       ][1] = KEY_JOY1+5; // RB
+	gamecontrol[gc_jump       ][1] = GAMEPAD_KEY(RIGHTSHOULDER); // RB
 	gamecontrol[gc_console    ][0] = KEY_CONSOLE;
 	gamecontrol[gc_pause      ][0] = 'p';
-	gamecontrol[gc_pause      ][1] = KEY_JOY1+6; // Back
+	gamecontrol[gc_pause      ][1] = GAMEPAD_KEY(BACK); // Back
 	gamecontrol[gc_screenshot ][0] = KEY_F8;
-	gamecontrol[gc_screenshot ][1] = KEY_HAT1+1; // D-Pad Down
+	gamecontrol[gc_screenshot ][1] = GAMEPAD_KEY(DPAD_DOWN); // D-Pad Down
 	gamecontrol[gc_recordgif  ][0] = KEY_F9;
 	gamecontrol[gc_viewpoint  ][0] = KEY_F12;
-	gamecontrol[gc_systemmenu ][0] = KEY_JOY1+7; // Start
-	gamecontrolbis[gc_weaponnext][0] = KEY_2JOY1+1; // B
-	gamecontrolbis[gc_weaponprev][0] = KEY_2JOY1+2; // X
-	gamecontrolbis[gc_tossflag  ][0] = KEY_2JOY1+0; // A
-	gamecontrolbis[gc_use       ][0] = KEY_2JOY1+4; // LB
-	gamecontrolbis[gc_camreset  ][0] = KEY_2JOY1+3; // Y
-	gamecontrolbis[gc_centerview][0] = KEY_2JOY1+9; // Right Stick
-	gamecontrolbis[gc_jump      ][0] = KEY_2JOY1+5; // RB
-	//gamecontrolbis[gc_pause     ][0] = KEY_2JOY1+6; // Back
-	//gamecontrolbis[gc_systemmenu][0] = KEY_2JOY1+7; // Start
-	gamecontrolbis[gc_camtoggle ][0] = KEY_2HAT1+0; // D-Pad Up
-	gamecontrolbis[gc_screenshot][0] = KEY_2HAT1+1; // D-Pad Down
-	//gamecontrolbis[gc_talkkey   ][0] = KEY_2HAT1+2; // D-Pad Left
-	//gamecontrolbis[gc_scores    ][0] = KEY_2HAT1+3; // D-Pad Right
+	gamecontrol[gc_systemmenu ][0] = GAMEPAD_KEY(START); // Start
+	gamecontrolbis[gc_weaponnext][0] = GAMEPAD_KEY(B); // B
+	gamecontrolbis[gc_weaponprev][0] = GAMEPAD_KEY(X); // X
+	gamecontrolbis[gc_tossflag  ][0] = GAMEPAD_KEY(A); // A
+	gamecontrolbis[gc_use       ][0] = GAMEPAD_KEY(LEFTSHOULDER); // LB
+	gamecontrolbis[gc_camreset  ][0] = GAMEPAD_KEY(Y); // Y
+	gamecontrolbis[gc_centerview][0] = GAMEPAD_KEY(RIGHTSTICK); // Right Stick
+	gamecontrolbis[gc_jump      ][0] = GAMEPAD_KEY(RIGHTSHOULDER); // RB
+	//gamecontrolbis[gc_pause     ][0] = GAMEPAD_KEY(BACK); // Back
+	//gamecontrolbis[gc_systemmenu][0] = GAMEPAD_KEY(START); // Start
+	gamecontrolbis[gc_camtoggle ][0] = GAMEPAD_KEY(DPAD_UP); // D-Pad Up
+	gamecontrolbis[gc_screenshot][0] = GAMEPAD_KEY(DPAD_DOWN); // D-Pad Down
+	//gamecontrolbis[gc_talkkey   ][0] = GAMEPAD_KEY(DPAD_LEFT); // D-Pad Left
+	//gamecontrolbis[gc_scores    ][0] = GAMEPAD_KEY(DPAD_RIGHT); // D-Pad Right
 }
 
 void G_SaveKeySetting(FILE *f)
@@ -708,30 +1247,35 @@ void G_SaveKeySetting(FILE *f)
 	}
 }
 
-INT32 G_CheckDoubleUsage(INT32 keynum, boolean modify)
+// Gamepad keys are shared by both players, but each of them has their own gamepad,
+// so they only clash with the controls of the player that is being changed.
+INT32 G_CheckDoubleUsage(INT32 keynum, boolean modify, INT32 (*controls)[2])
 {
 	INT32 result = gc_null;
 	if (cv_controlperkey.value == 1)
 	{
+		const boolean isgamepadkey = (keynum >= KEY_GAMEPAD && keynum < KEY_INV_AXES + NUM_GAMEPAD_AXES);
+		const boolean check1 = (!isgamepadkey || controls == gamecontrol);
+		const boolean check2 = (!isgamepadkey || controls == gamecontrolbis);
 		INT32 i;
 		for (i = 0; i < num_gamecontrols; i++)
 		{
-			if (gamecontrol[i][0] == keynum)
+			if (check1 && gamecontrol[i][0] == keynum)
 			{
 				result = i;
 				if (modify) gamecontrol[i][0] = KEY_NULL;
 			}
-			if (gamecontrol[i][1] == keynum)
+			if (check1 && gamecontrol[i][1] == keynum)
 			{
 				result = i;
 				if (modify) gamecontrol[i][1] = KEY_NULL;
 			}
-			if (gamecontrolbis[i][0] == keynum)
+			if (check2 && gamecontrolbis[i][0] == keynum)
 			{
 				result = i;
 				if (modify) gamecontrolbis[i][0] = KEY_NULL;
 			}
-			if (gamecontrolbis[i][1] == keynum)
+			if (check2 && gamecontrolbis[i][1] == keynum)
 			{
 				result = i;
 				if (modify) gamecontrolbis[i][1] = KEY_NULL;
@@ -835,7 +1379,7 @@ static INT32 G_FilterKeyByVersion(INT32 numctrl, INT32 keyidx, INT32 player, INT
 		// Also, only check if we're actually overriding, to preserve behavior where
 		// config'd keys overwrite default keys.
 		if (defaultoverride)
-			existingctrl = G_CheckDoubleUsage(keynum, false);
+			existingctrl = G_CheckDoubleUsage(keynum, false, player == 1 ? gamecontrolbis : gamecontrol);
 
 		if (keynum && (!existingctrl || existingctrl == numctrl))
 			return keynum;
@@ -882,7 +1426,7 @@ static void setcontrol(INT32 (*gc)[2])
 
 	if (keynum >= 0)
 	{
-		(void)G_CheckDoubleUsage(keynum, true);
+		(void)G_CheckDoubleUsage(keynum, true, gc);
 
 		// if keynum was rejected, try it again with keynum2
 		if (!keynum && keynum2)
@@ -891,7 +1435,7 @@ static void setcontrol(INT32 (*gc)[2])
 			keynum2 = 0;
 			keynum = G_FilterKeyByVersion(numctrl, 0, player, &keynum1, &keynum2, &nestedoverride);
 			if (keynum >= 0)
-				(void)G_CheckDoubleUsage(keynum, true);
+				(void)G_CheckDoubleUsage(keynum, true, gc);
 		}
 	}
 

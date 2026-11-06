@@ -63,8 +63,11 @@ extern consvar_t cv_invertmouse, cv_alwaysfreelook, cv_chasefreelook, cv_mousemo
 extern consvar_t cv_invertmouse2, cv_alwaysfreelook2, cv_chasefreelook2, cv_mousemove2;
 extern consvar_t cv_useranalog, cv_useranalog2;
 extern consvar_t cv_analog, cv_analog2;
-extern consvar_t cv_sideaxis,cv_turnaxis,cv_moveaxis,cv_lookaxis,cv_jumpaxis,cv_spinaxis,cv_fireaxis,cv_firenaxis,cv_deadzone,cv_digitaldeadzone;
-extern consvar_t cv_sideaxis2,cv_turnaxis2,cv_moveaxis2,cv_lookaxis2,cv_jumpaxis2,cv_spinaxis2,cv_fireaxis2,cv_firenaxis2,cv_deadzone2,cv_digitaldeadzone2;
+extern consvar_t cv_sideaxis[2], cv_turnaxis[2], cv_moveaxis[2], cv_lookaxis[2],
+	cv_jumpaxis[2], cv_spinaxis[2], cv_fireaxis[2], cv_firenaxis[2],
+	cv_deadzone[2], cv_digitaldeadzone[2];
+
+extern CV_PossibleValue_t joyaxis_cons_t[];
 extern consvar_t cv_ghost_bestscore, cv_ghost_besttime, cv_ghost_bestrings, cv_ghost_last, cv_ghost_guest;
 
 // mouseaiming (looking up/down with the mouse or keyboard)
@@ -81,6 +84,15 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics);
 ticcmd_t *G_CopyTiccmd(ticcmd_t* dest, const ticcmd_t* src, const size_t n);
 // copy ticcmd_t to and fro network packets
 ticcmd_t *G_MoveTiccmd(ticcmd_t* dest, const ticcmd_t* src, const size_t n);
+
+// gets the user-set gamepad device for a specific player
+INT32 G_GetGamepadDeviceIndex(INT32 player);
+
+// returns a player's gamepad index
+INT16 G_GetGamepadForPlayer(player_t *player);
+
+// called when a player's gamepad is disconnected
+void G_OnGamepadDisconnect(UINT8 which);
 
 // clip the console player aiming to the view
 INT16 G_ClipAimingPitch(INT32 *aiming);

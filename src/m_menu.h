@@ -182,9 +182,11 @@ extern menu_t *currentMenu;
 extern menu_t MainDef;
 extern menu_t SP_LoadDef;
 
-// Call upon joystick hotplug
-void M_SetupJoystickMenu(INT32 choice);
-extern menu_t OP_JoystickSetDef;
+// Call when a gamepad is connected or disconnected
+void M_UpdateGamepadMenu(void);
+
+// Returns true if the player is on the gamepad selection menu
+boolean M_OnGamepadMenu(void);
 
 // Stuff for customizing the player select screen
 typedef struct

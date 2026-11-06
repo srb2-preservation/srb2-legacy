@@ -1831,12 +1831,12 @@ static boolean CV_FilterJoyAxisVars(consvar_t *v, const char *valstr)
 		// reset all axis settings to defaults
 		if (joyaxis_count == 6)
 		{
-			COM_BufInsertText(va("%s \"%s\"\n", cv_turnaxis.name, cv_turnaxis.defaultvalue));
-			COM_BufInsertText(va("%s \"%s\"\n", cv_moveaxis.name, cv_moveaxis.defaultvalue));
-			COM_BufInsertText(va("%s \"%s\"\n", cv_sideaxis.name, cv_sideaxis.defaultvalue));
-			COM_BufInsertText(va("%s \"%s\"\n", cv_lookaxis.name, cv_lookaxis.defaultvalue));
-			COM_BufInsertText(va("%s \"%s\"\n", cv_fireaxis.name, cv_fireaxis.defaultvalue));
-			COM_BufInsertText(va("%s \"%s\"\n", cv_firenaxis.name, cv_firenaxis.defaultvalue));
+			COM_BufInsertText(va("%s \"%s\"\n", cv_turnaxis[0].name, cv_turnaxis[0].defaultvalue));
+			COM_BufInsertText(va("%s \"%s\"\n", cv_moveaxis[0].name, cv_moveaxis[0].defaultvalue));
+			COM_BufInsertText(va("%s \"%s\"\n", cv_sideaxis[0].name, cv_sideaxis[0].defaultvalue));
+			COM_BufInsertText(va("%s \"%s\"\n", cv_lookaxis[0].name, cv_lookaxis[0].defaultvalue));
+			COM_BufInsertText(va("%s \"%s\"\n", cv_fireaxis[0].name, cv_fireaxis[0].defaultvalue));
+			COM_BufInsertText(va("%s \"%s\"\n", cv_firenaxis[0].name, cv_firenaxis[0].defaultvalue));
 			joyaxis_count++;
 			return false;
 		}
@@ -1890,12 +1890,12 @@ static boolean CV_FilterJoyAxisVars(consvar_t *v, const char *valstr)
 		// reset all axis settings to defaults
 		if (joyaxis2_count == 6)
 		{
-			COM_BufInsertText(va("%s \"%s\"\n", cv_turnaxis2.name, cv_turnaxis2.defaultvalue));
-			COM_BufInsertText(va("%s \"%s\"\n", cv_moveaxis2.name, cv_moveaxis2.defaultvalue));
-			COM_BufInsertText(va("%s \"%s\"\n", cv_sideaxis2.name, cv_sideaxis2.defaultvalue));
-			COM_BufInsertText(va("%s \"%s\"\n", cv_lookaxis2.name, cv_lookaxis2.defaultvalue));
-			COM_BufInsertText(va("%s \"%s\"\n", cv_fireaxis2.name, cv_fireaxis2.defaultvalue));
-			COM_BufInsertText(va("%s \"%s\"\n", cv_firenaxis2.name, cv_firenaxis2.defaultvalue));
+			COM_BufInsertText(va("%s \"%s\"\n", cv_turnaxis[1].name, cv_turnaxis[1].defaultvalue));
+			COM_BufInsertText(va("%s \"%s\"\n", cv_moveaxis[1].name, cv_moveaxis[1].defaultvalue));
+			COM_BufInsertText(va("%s \"%s\"\n", cv_sideaxis[1].name, cv_sideaxis[1].defaultvalue));
+			COM_BufInsertText(va("%s \"%s\"\n", cv_lookaxis[1].name, cv_lookaxis[1].defaultvalue));
+			COM_BufInsertText(va("%s \"%s\"\n", cv_fireaxis[1].name, cv_fireaxis[1].defaultvalue));
+			COM_BufInsertText(va("%s \"%s\"\n", cv_firenaxis[1].name, cv_firenaxis[1].defaultvalue));
 			joyaxis2_count++;
 			return false;
 		}
@@ -1903,6 +1903,58 @@ static boolean CV_FilterJoyAxisVars(consvar_t *v, const char *valstr)
 
 	// we haven't reached our counts yet, or we're not default
 	return true;
+}
+
+// Axis settings used to be raw joystick axes, and now they're always gamepad axes
+// EXECVERSION < 35.1
+static boolean CV_ConvertOldJoyAxisVars(consvar_t *v, const char *valstr)
+{
+	static const struct {
+		const char *old;
+		const char *new;
+	} axis_names[] = {
+		{"X-Axis",    "Left Stick X"},
+		{"Y-Axis",    "Left Stick Y"},
+		{"X-Axis-",   "Left Stick X-"},
+		{"Y-Axis-",   "Left Stick Y-"},
+		{"Z-Axis",    "Right Stick X"},
+		{"X-Rudder",  "Right Stick Y"},
+		{"Z-Axis-",   "Right Stick X-"},
+		{"X-Rudder-", "Right Stick Y-"},
+		{"Y-Rudder",  "Left Trigger"},
+		{"Z-Rudder",  "Right Trigger"},
+		{"Y-Rudder-", "Left Trigger"},
+		{"Z-Rudder-", "Right Trigger"},
+		{NULL, NULL}
+	};
+	UINT8 i;
+
+	if (v->PossibleValue != joyaxis_cons_t)
+		return true;
+
+	// Defaults that were queued by CV_FilterJoyAxisVars already use the new names
+	for (i = 0; joyaxis_cons_t[i].strvalue; i++)
+		if (!stricmp(valstr, joyaxis_cons_t[i].strvalue))
+			return true;
+
+	// Fire Normal used to share its default axis with the camera
+	if (!stricmp(valstr, "Z-Axis") && (v == &cv_firenaxis[0] || v == &cv_firenaxis[1]))
+	{
+		CV_Set(v, "Left Trigger");
+		return false;
+	}
+
+	for (i = 0; axis_names[i].old; i++)
+	{
+		if (!stricmp(valstr, axis_names[i].old))
+		{
+			CV_Set(v, axis_names[i].new);
+			return false;
+		}
+	}
+
+	CV_Set(v, "None");
+	return false;
 }
 
 static boolean CV_FilterVarByVersion(consvar_t *v, const char *valstr)
@@ -1947,6 +1999,13 @@ static boolean CV_FilterVarByVersion(consvar_t *v, const char *valstr)
 		if (!CV_FilterJoyAxisVars(v, valstr))
 			return false;
 	}
+
+	if (GETMAJOREXECVERSION(cv_execversion.value) <= 35 && GETMINOREXECVERSION(cv_execversion.value) < 1)
+	{
+		if (!CV_ConvertOldJoyAxisVars(v, valstr))
+			return false;
+	}
+
 	return true;
 }
 

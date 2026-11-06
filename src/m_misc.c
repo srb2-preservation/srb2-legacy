@@ -1586,11 +1586,11 @@ failure:
 
 boolean M_ScreenshotResponder(event_t *ev)
 {
-	INT32 ch = -1;
-	if (dedicated || ev->type != ev_keydown)
-		return false;
+	INT32 type = ev->type;
+	INT32 ch = G_RemapGamepadEvent(ev, &type);
 
-	ch = ev->data1;
+	if (dedicated || type != ev_keydown)
+		return false;
 
 	if (ch >= KEY_MOUSE1 && menuactive) // If it's not a keyboard key, then don't allow it in the menus!
 		return false;
