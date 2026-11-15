@@ -3808,7 +3808,7 @@ char *G_BuildMapTitle(INT32 mapnum)
 // DEMO RECORDING
 //
 
-#define DEMOVERSION 0x000B // Changed because of color names
+#define DEMOVERSION 0x000C
 #define DEMOHEADER  "\xF0" "SRB2Replay" "\x0F"
 
 #define DF_GHOST        0x01 // This demo contains ghost data too!
@@ -4122,32 +4122,28 @@ void G_WriteGhostTic(mobj_t *ghost)
 	else
 	{
 		// For moving normally:
-		// Store one full byte of movement, plus one byte of fractional movement.
-		INT16 momx = (INT16)((ghost->x-oldghost.x)>>8);
-		INT16 momy = (INT16)((ghost->y-oldghost.y)>>8);
+		fixed_t momx = ghost->x-oldghost.x;
+		fixed_t momy = ghost->y-oldghost.y;
 		if (momx != oldghost.momx
 		|| momy != oldghost.momy)
 		{
 			oldghost.momx = momx;
 			oldghost.momy = momy;
 			ziptic |= GZT_MOMXY;
-			WRITEINT16(demo_p,momx);
-			WRITEINT16(demo_p,momy);
+			WRITEFIXED(demo_p,momx);
+			WRITEFIXED(demo_p,momy);
 		}
-		momx = (INT16)((ghost->z-oldghost.z)>>8);
+		momx = ghost->z-oldghost.z;
 		if (momx != oldghost.momz)
 		{
 			oldghost.momz = momx;
 			ziptic |= GZT_MOMZ;
-			WRITEINT16(demo_p,momx);
+			WRITEFIXED(demo_p,momx);
 		}
 
-		// This SHOULD set oldghost.x/y/z to match ghost->x/y/z
-		// but it keeps the fractional loss of one byte,
-		// so it will hopefully be made up for in future tics.
-		oldghost.x += oldghost.momx<<8;
-		oldghost.y += oldghost.momy<<8;
-		oldghost.z += oldghost.momz<<8;
+		oldghost.x += oldghost.momx;
+		oldghost.y += oldghost.momy;
+		oldghost.z += oldghost.momz;
 	}
 
 	#undef MAXMOM
@@ -4261,11 +4257,11 @@ void G_ConsGhostTic(void)
 	{
 		if (ziptic & GZT_MOMXY)
 		{
-			oldghost.momx = READINT16(demo_p)<<8;
-			oldghost.momy = READINT16(demo_p)<<8;
+			oldghost.momx = (demoversion < 0x000C) ? READINT16(demo_p)<<8 : READFIXED(demo_p);
+			oldghost.momy = (demoversion < 0x000C) ? READINT16(demo_p)<<8 : READFIXED(demo_p);
 		}
 		if (ziptic & GZT_MOMZ)
-			oldghost.momz = READINT16(demo_p)<<8;
+			oldghost.momz = (demoversion < 0x000C) ? READINT16(demo_p)<<8 : READFIXED(demo_p);
 		oldghost.x += oldghost.momx;
 		oldghost.y += oldghost.momy;
 		oldghost.z += oldghost.momz;
@@ -4285,7 +4281,7 @@ void G_ConsGhostTic(void)
 	{ // But wait, there's more!
 		ziptic = READUINT8(demo_p);
 		if (ziptic & EZT_COLOR)
-			demo_p += (demoversion<DEMOVERSION) ? 1 : sizeof(UINT16);
+			demo_p += (demoversion < 0x000B) ? 1 : sizeof(UINT16);
 		if (ziptic & EZT_SCALE)
 			demo_p += sizeof(fixed_t);
 		if (ziptic & EZT_HIT)
@@ -4392,11 +4388,11 @@ void G_GhostTicker(void)
 		{
 			if (ziptic & GZT_MOMXY)
 			{
-				g->oldmo.momx = READINT16(g->p)<<8;
-				g->oldmo.momy = READINT16(g->p)<<8;
+				g->oldmo.momx = (g->version < 0x000C) ? READINT16(g->p)<<8 : READFIXED(g->p);
+				g->oldmo.momy = (g->version < 0x000C) ? READINT16(g->p)<<8 : READFIXED(g->p);
 			}
 			if (ziptic & GZT_MOMZ)
-				g->oldmo.momz = READINT16(g->p)<<8;
+				g->oldmo.momz = (g->version < 0x000C) ? READINT16(g->p)<<8 : READFIXED(g->p);
 			g->oldmo.x += g->oldmo.momx;
 			g->oldmo.y += g->oldmo.momy;
 			g->oldmo.z += g->oldmo.momz;
@@ -4420,7 +4416,7 @@ void G_GhostTicker(void)
 			ziptic = READUINT8(g->p);
 			if (ziptic & EZT_COLOR)
 			{
-				g->color = (demoversion<DEMOVERSION) ? READUINT8(g->p) : READUINT8(g->p);
+				g->color = (g->version < 0x000B) ? READUINT8(g->p) : READUINT16(g->p);
 				switch(g->color)
 				{
 				default:
@@ -4580,11 +4576,11 @@ void G_ReadMetalTic(mobj_t *metal)
 	{
 		if (ziptic & GZT_MOMXY)
 		{
-			oldmetal.momx = READINT16(metal_p)<<8;
-			oldmetal.momy = READINT16(metal_p)<<8;
+			oldmetal.momx = (metalversion < 0x000C) ? READINT16(metal_p)<<8 : READFIXED(metal_p);
+			oldmetal.momy = (metalversion < 0x000C) ? READINT16(metal_p)<<8 : READFIXED(metal_p);
 		}
 		if (ziptic & GZT_MOMZ)
-			oldmetal.momz = READINT16(metal_p)<<8;
+			oldmetal.momz = (metalversion < 0x000C) ? READINT16(metal_p)<<8 : READFIXED(metal_p);
 		oldmetal.x += oldmetal.momx;
 		oldmetal.y += oldmetal.momy;
 		oldmetal.z += oldmetal.momz;
@@ -4686,32 +4682,28 @@ void G_WriteMetalTic(mobj_t *metal)
 	else
 	{
 		// For moving normally:
-		// Store one full byte of movement, plus one byte of fractional movement.
-		INT16 momx = (INT16)((metal->x-oldmetal.x)>>8);
-		INT16 momy = (INT16)((metal->y-oldmetal.y)>>8);
+		fixed_t momx = metal->x-oldmetal.x;
+		fixed_t momy = metal->y-oldmetal.y;
 		if (momx != oldmetal.momx
 		|| momy != oldmetal.momy)
 		{
 			oldmetal.momx = momx;
 			oldmetal.momy = momy;
-			WRITEINT16(demo_p,momx);
-			WRITEINT16(demo_p,momy);
+			WRITEFIXED(demo_p,momx);
+			WRITEFIXED(demo_p,momy);
 			ziptic |= GZT_MOMXY;
 		}
-		momx = (INT16)((metal->z-oldmetal.z)>>8);
+		momx = metal->z-oldmetal.z;
 		if (momx != oldmetal.momz)
 		{
 			oldmetal.momz = momx;
-			WRITEINT16(demo_p,momx);
+			WRITEFIXED(demo_p,momx);
 			ziptic |= GZT_MOMZ;
 		}
 
-		// This SHOULD set oldmetal.x/y/z to match metal->x/y/z
-		// but it keeps the fractional loss of one byte,
-		// so it will hopefully be made up for in future tics.
-		oldmetal.x += oldmetal.momx<<8;
-		oldmetal.y += oldmetal.momy<<8;
-		oldmetal.z += oldmetal.momz<<8;
+		oldmetal.x += oldmetal.momx;
+		oldmetal.y += oldmetal.momy;
+		oldmetal.z += oldmetal.momz;
 	}
 
 	#undef MAXMOM
@@ -5042,6 +5034,7 @@ UINT8 G_CmpDemoTime(char *oldname, char *newname)
 	case 0x0008:
 	case 0x0009:
 	case 0x000A:
+	case 0x000B:
 		break;
 	// too old, cannot support.
 	default:
@@ -5184,6 +5177,7 @@ void G_DoPlayDemo(char *defdemoname)
 	case 0x0008:
 	case 0x0009:
 	case 0x000A:
+	case 0x000B:
 		break;
 	// too old, cannot support.
 	default:
@@ -5404,6 +5398,7 @@ void G_AddGhost(char *defdemoname)
 	case 0x0008:
 	case 0x0009:
 	case 0x000A:
+	case 0x000B:
 		break;
 	// too old, cannot support.
 	default:
@@ -5631,6 +5626,7 @@ void G_DoPlayMetal(void)
 	case 0x0008:
 	case 0x0009:
 	case 0x000A:
+	case 0x000B:
 		break;
 	// too old, cannot support.
 	default:
