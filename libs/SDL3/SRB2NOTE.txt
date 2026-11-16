@@ -1,0 +1,9 @@
+# SDL3 development libraries for MinGW
+
+i686-w64-mingw32 and x86_64-w64-mingw32 are from SDL's official
+SDL3-devel-3.4.20-mingw.tar.gz release package:
+
+https://github.com/libsdl-org/SDL/releases/tag/release-3.4.20
+
+src/Makefile.d/win32.mk and src/sdl/CMakeLists.txt use include/ and lib/
+from these folders, and bin/SDL3.dll ships with the game.

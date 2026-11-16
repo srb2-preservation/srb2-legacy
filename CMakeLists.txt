@@ -65,7 +65,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 function(target_sourcefile type)
 	file(STRINGS Sourcefile list
 		REGEX "[-0-9A-Za-z_]+\.${type}")
-	target_sources(SRB2SDL2 PRIVATE ${list})
+	target_sources(SRB2 PRIVATE ${list})
 endfunction()
 
 # Macro to add OSX framework

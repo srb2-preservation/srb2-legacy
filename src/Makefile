@@ -120,9 +120,10 @@
 #
 # ZLIB_PKGCONFIG=, ZLIB_CFLAGS=, ZLIB_LDFLAGS=
 #
-# SDL_PKGCONFIG=
-# SDL_CONFIG= - sdl-config command.
+# SDL_PKGCONFIG= - SDL pkg-config package, default 'sdl3'.
 # SDL_CFLAGS=, SDL_LDFLAGS=
+# SDL_MIXER_PKGCONFIG= - default 'sdl3-mixer'.
+# SDL_MIXER_CFLAGS=, SDL_MIXER_LDFLAGS=
 
 clean_targets=cleandep clean distclean info
 

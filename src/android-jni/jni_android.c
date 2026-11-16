@@ -11,7 +11,7 @@
 /// \brief Android JNI functions
 
 #include "jni_android.h"
-#include "SDL.h"
+#include <SDL3/SDL.h>
 #include "../i_threads.h"
 
 static JavaVM *jvm = NULL;
@@ -48,10 +48,10 @@ void JNI_SetupActivity(void)
 {
 	jobject activityObject;
 
-	jniEnv = (JNIEnv *)SDL_AndroidGetJNIEnv();
+	jniEnv = (JNIEnv *)SDL_GetAndroidJNIEnv();
 	(*jniEnv)->GetJavaVM(jniEnv, &jvm);
 
-	activityObject = (jobject)SDL_AndroidGetActivity();
+	activityObject = (jobject)SDL_GetAndroidActivity();
 	activityClass = (*jniEnv)->GetObjectClass(jniEnv, activityObject);
 }
 
@@ -107,7 +107,7 @@ static JNIEnv *JNI_GetEnv(void)
 #define JNI_CONTEXT \
 { \
 	method = (*env)->GetStaticMethodID(env, activityClass, \
-			"getContext", "()Landroid/content/Context;"); \
+			"getContext", "()Landroid/app/Activity;"); \
 	context = (*env)->CallStaticObjectMethod(env, activityClass, method); \
 }
 
@@ -393,7 +393,7 @@ const char *JNI_GetWriteExternalStoragePermission(void)
 
 void JNI_DisplayToast(const char *text)
 {
-	SDL_AndroidShowToast(text, 1, -1, 0, 0);
+	SDL_ShowAndroidToast(text, 1, -1, 0, 0);
 }
 
 boolean JNI_IsInMultiWindowMode(void)

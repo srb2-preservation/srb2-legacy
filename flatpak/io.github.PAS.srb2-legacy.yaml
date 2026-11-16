@@ -51,28 +51,26 @@ modules:
           stable-only: true
           url-template: https://lib.openmpt.org/files/libopenmpt/src/libopenmpt-$version+release.autotools.tar.gz
 
-  - name: sdl2-mixer
+  # SDL3 itself comes with the runtime
+  - name: sdl3-mixer
     config-opts:
-      - -DSDL2MIXER_MOD=OFF
-      - -DSDL2MIXER_MIDI=OFF
+      - -DSDLMIXER_MOD=OFF
+      - -DSDLMIXER_MIDI=OFF
+      - -DSDLMIXER_TESTS=OFF
+      - -DSDLMIXER_EXAMPLES=OFF
     buildsystem: cmake-ninja
     builddir: true
     sources:
       - type: archive
-        url: https://github.com/libsdl-org/SDL_mixer/releases/download/release-2.8.2/SDL2_mixer-2.8.2.tar.gz
-        sha256: 938dff531d00ace2296557a6599abe6f34599e2f34f0a4a08a397e2ccac8b8f7
-        x-checker-data:
-          type: anitya
-          project-id: 389478
-          stable-only: true
-          url-template: https://github.com/libsdl-org/SDL_mixer/releases/download/release-$version/SDL2_mixer-$version.tar.gz
+        url: https://github.com/libsdl-org/SDL_mixer/releases/download/release-3.2.4/SDL3_mixer-3.2.4.tar.gz
+        sha256: 182a07c745375e113dc740d43964ff21b0be29f29f59876c4dbc4db3d32f6901
 
   - name: srb2legacy
     buildsystem: simple
     build-commands:
       - make distclean
-      - export CFLAGS="$CFLAGS -I/app/include/SDL2" && make LINUX64=1 -j $FLATPAK_BUILDER_N_JOBS
-      - install -D -m 755 -t $FLATPAK_DEST/bin bin/lsdl2srb2legacy
+      - make LINUX64=1 -j $FLATPAK_BUILDER_N_JOBS
+      - install -D -m 755 -t $FLATPAK_DEST/bin bin/lsdl3srb2legacy
       - install -D -m 644 srb2.png $FLATPAK_DEST/share/icons/hicolor/256x256/apps/$FLATPAK_ID.png
       - install -D -m 755 srb2legacy.sh $FLATPAK_DEST/bin/srb2legacy
       - install -D -m 644 srb2legacy.desktop $FLATPAK_DEST/share/applications/$FLATPAK_ID.desktop
@@ -84,7 +82,7 @@ modules:
       - type: script
         commands:
           - export SRB2LEGACYWADDIR=/app/assets
-          - lsdl2srb2legacy "$@"
+          - lsdl3srb2legacy "$@"
         dest-filename: srb2legacy.sh
 
   - name: srb2assets

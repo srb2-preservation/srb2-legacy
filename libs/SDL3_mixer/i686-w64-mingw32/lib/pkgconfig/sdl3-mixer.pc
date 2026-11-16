@@ -1,0 +1,13 @@
+prefix=${pcfiledir}/../..
+exec_prefix=${prefix}
+libdir=${prefix}/lib
+includedir=${prefix}/include
+
+Name: SDL3_mixer
+Description: mixer library for Simple DirectMedia Layer
+Version: 3.2.4
+Requires: sdl3 >= 3.4.0
+Libs: -L${libdir} -lSDL3_mixer
+Requires.private: 
+Libs.private: -l$<TARGET_FILE_BASE_NAME:vorbisfile>
+Cflags: -I${includedir}

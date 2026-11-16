@@ -52,3 +52,18 @@ cd [libopenmpt-make-src]
 
 `libopenmpt.dll` and `libopenmpt.dll.a` will be built in the
 `bin/` folder.
+# libopenmpt Emscripten static library
+
+`emscripten/libopenmpt.a` is libopenmpt 0.8.10+release, built from the
+Makefile source package with Emscripten 7.0.0. It uses libopenmpt's
+built-in miniz, minimp3 and stb_vorbis, so it has no external dependencies.
+
+libopenmpt's `config-emscripten.mk` always adds `-flto`, which produces LLVM
+bitcode that only links with the same LLVM version. Delete the three
+`-flto` lines (not the commented-out `-flto=thin` ones) from
+`build/make/config-emscripten.mk` first, so the archive holds plain wasm:
+
+```
+sed -i -E '/^(CXXFLAGS|CFLAGS|LDFLAGS) +\+= -flto$/d' build/make/config-emscripten.mk
+make CONFIG=emscripten STATIC_LIB=1 SHARED_LIB=0 EXAMPLES=0 OPENMPT123=0 TEST=0 bin/libopenmpt.a
+```

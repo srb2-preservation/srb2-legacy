@@ -8,6 +8,8 @@ on:
 
 env:
   CC: gcc
+  # Ubuntu 26.04 packages SDL3 (libsdl3-dev) but not SDL3_mixer, so SDL3_mixer is built from source
+  SDL3_MIXER_VERSION: 3.2.4
 
 jobs:
   build:
@@ -17,7 +19,7 @@ jobs:
         arch:
           - runner: ubuntu-latest
             name: x86_64
-          - runner: ubuntu-24.04-arm
+          - runner: ubuntu-26.04-arm
             name: aarch64
 
     name: ${{ matrix.arch.name }}
@@ -29,7 +31,48 @@ jobs:
     - name: Install dependencies
       run: |
        sudo apt-get update
-       sudo apt install -y libsdl2-mixer-dev libpng-dev libcurl4-openssl-dev libgme-dev libminiupnpc-dev libopenmpt-dev
+       sudo apt install -y libpng-dev libcurl4-openssl-dev libgme-dev libminiupnpc-dev libopenmpt-dev libsdl3-dev
+       # SDL3_mixer build dependencies; libvorbis is its only external decoder (see Build SDL3_mixer)
+       sudo apt install -y cmake ninja-build pkg-config libvorbis-dev
+
+    # SDL3_mixer is installed to ~/sdl3_mixer and cached per version, runner and workflow file,
+    # so changing its version or build options here rebuilds it.
+    - name: Restore SDL3_mixer from cache
+      id: sdl3-mixer-cache
+      uses: actions/cache/restore@v6.1.0
+      with:
+        path: ~/sdl3_mixer
+        key: sdl3-mixer-${{ env.SDL3_MIXER_VERSION }}-${{ matrix.arch.runner }}-${{ hashFiles('.github/workflows/ubuntu.yml') }}
+
+    # Same decoders as the Android and Emscripten SDL3_mixer builds: Ogg Vorbis through libvorbis
+    # (not stb_vorbis), dr_flac, dr_mp3, timidity, and WAV/AIFF/VOC/AU. No GME or MOD support;
+    # the game plays those through libgme and libopenmpt. libvorbisfile is linked directly rather
+    # than loaded at runtime, so linuxdeploy bundles it in the AppImage.
+    - name: Build SDL3_mixer
+      if: steps.sdl3-mixer-cache.outputs.cache-hit != 'true'
+      run: |
+       curl -sSfL https://github.com/libsdl-org/SDL_mixer/releases/download/release-$SDL3_MIXER_VERSION/SDL3_mixer-$SDL3_MIXER_VERSION.tar.gz | tar -xz
+       cmake -S SDL3_mixer-$SDL3_MIXER_VERSION -B SDL3_mixer-build -G Ninja -DCMAKE_BUILD_TYPE=Release -DSDLMIXER_TESTS=OFF -DSDLMIXER_EXAMPLES=OFF \
+         -DCMAKE_INSTALL_PREFIX=$HOME/sdl3_mixer -DCMAKE_INSTALL_LIBDIR=lib \
+         -DSDLMIXER_VENDORED=OFF -DSDLMIXER_DEPS_SHARED=OFF -DSDLMIXER_STRICT=ON \
+         -DSDLMIXER_VORBIS_STB=OFF -DSDLMIXER_VORBIS_VORBISFILE=ON -DSDLMIXER_VORBIS_TREMOR=OFF \
+         -DSDLMIXER_FLAC_LIBFLAC=OFF -DSDLMIXER_FLAC_DRFLAC=ON -DSDLMIXER_MP3_MPG123=OFF -DSDLMIXER_MP3_DRMP3=ON \
+         -DSDLMIXER_MIDI_FLUIDSYNTH=OFF -DSDLMIXER_MIDI_TIMIDITY=ON \
+         -DSDLMIXER_GME=OFF -DSDLMIXER_MOD=OFF -DSDLMIXER_OPUS=OFF -DSDLMIXER_WAVPACK=OFF
+       cmake --build SDL3_mixer-build --target install
+
+    - name: Save SDL3_mixer to cache
+      if: steps.sdl3-mixer-cache.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v6.1.0
+      with:
+        path: ~/sdl3_mixer
+        key: ${{ steps.sdl3-mixer-cache.outputs.cache-primary-key }}
+
+    # pkg-config finds it for the Makefile; LD_LIBRARY_PATH lets linuxdeploy bundle it in the AppImage
+    - name: Use SDL3_mixer
+      run: |
+       echo "PKG_CONFIG_PATH=$HOME/sdl3_mixer/lib/pkgconfig" >> "$GITHUB_ENV"
+       echo "LD_LIBRARY_PATH=$HOME/sdl3_mixer/lib" >> "$GITHUB_ENV"
 
     - name: Build SRB2 Legacy
       run: make -C src/ --keep-going -j$(nproc) LINUX64=1

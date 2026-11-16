@@ -1,14 +1,14 @@
 # SRB2 Core
 
 if(${CMAKE_SYSTEM} MATCHES "Android")
-	add_library(SRB2SDL2 SHARED)
+	add_library(SRB2 SHARED)
 else()
-	add_executable(SRB2SDL2 MACOSX_BUNDLE WIN32)
+	add_executable(SRB2 MACOSX_BUNDLE WIN32)
 endif()
 
 # Core sources
 target_sourcefile(c)
-target_sources(SRB2SDL2 PRIVATE comptime.c md5.c config.h.in)
+target_sources(SRB2 PRIVATE comptime.c md5.c config.h.in)
 
 ### Configuration
 set(SRB2_CONFIG_EXTERNAL_ASSETS OFF CACHE BOOL
@@ -52,7 +52,7 @@ endif()
 ### use internal libraries?
 if(${CMAKE_SYSTEM} MATCHES "Windows" OR ${CMAKE_SYSTEM} MATCHES "Android" OR ${CMAKE_SYSTEM} MATCHES "iOS") ### set on Windows, Android, and iOS only
 	set(SRB2_CONFIG_USE_INTERNAL_LIBRARIES OFF CACHE BOOL
-		"Use SRB2's internal copies of required dependencies (SDL2, PNG, zlib, GME, OpenMPT).")
+		"Use SRB2's internal copies of required dependencies (SDL3, PNG, zlib, GME, OpenMPT).")
 endif()
 
 if(${CMAKE_SYSTEM} MATCHES "Android")
@@ -96,7 +96,7 @@ if(${SRB2_CONFIG_HAVE_GME})
 	endif()
 	if(${GME_FOUND})
 		set(SRB2_HAVE_GME ON)
-		target_compile_definitions(SRB2SDL2 PRIVATE -DHAVE_GME)
+		target_compile_definitions(SRB2 PRIVATE -DHAVE_GME)
 	else()
 		message(WARNING "You have specified that GME is available but it was not found.")
 	endif()
@@ -128,7 +128,7 @@ if(${SRB2_CONFIG_HAVE_OPENMPT})
 	endif()
 	if(${OPENMPT_FOUND})
 		set(SRB2_HAVE_OPENMPT ON)
-		target_compile_definitions(SRB2SDL2 PRIVATE -DHAVE_OPENMPT)
+		target_compile_definitions(SRB2 PRIVATE -DHAVE_OPENMPT)
 	else()
 		message(WARNING "You have specified that OpenMPT is available but it was not found.")
 	endif()
@@ -136,8 +136,8 @@ endif()
 
 if(${SRB2_CONFIG_HAVE_THREADS})
 	set(SRB2_HAVE_THREADS ON)
-	target_sources(SRB2SDL2 PRIVATE i_threads.c)
-	target_compile_definitions(SRB2SDL2 PRIVATE -DHAVE_THREADS)
+	target_sources(SRB2 PRIVATE i_threads.c)
+	target_compile_definitions(SRB2 PRIVATE -DHAVE_THREADS)
 endif()
 
 if(${SRB2_CONFIG_HAVE_ZLIB})
@@ -163,7 +163,7 @@ if(${SRB2_CONFIG_HAVE_ZLIB})
 	endif()
 	if(${ZLIB_FOUND})
 		set(SRB2_HAVE_ZLIB ON)
-		target_compile_definitions(SRB2SDL2 PRIVATE -DHAVE_ZLIB)
+		target_compile_definitions(SRB2 PRIVATE -DHAVE_ZLIB)
 	else()
 		message(WARNING "You have specified that ZLIB is available but it was not found. SRB2 may not compile correctly.")
 	endif()
@@ -193,9 +193,9 @@ if(${SRB2_CONFIG_HAVE_PNG} AND ${SRB2_CONFIG_HAVE_ZLIB})
 		endif()
 		if(${PNG_FOUND})
 			set(SRB2_HAVE_PNG ON)
-			target_compile_definitions(SRB2SDL2 PRIVATE -DHAVE_PNG)
-			target_compile_definitions(SRB2SDL2 PRIVATE -D_LARGEFILE64_SOURCE)
-			target_sources(SRB2SDL2 PRIVATE apng.c)
+			target_compile_definitions(SRB2 PRIVATE -DHAVE_PNG)
+			target_compile_definitions(SRB2 PRIVATE -D_LARGEFILE64_SOURCE)
+			target_sources(SRB2 PRIVATE apng.c)
 		else()
 			message(WARNING "You have specified that PNG is available but it was not found. SRB2 may not compile correctly.")
 		endif()
@@ -218,22 +218,22 @@ if(${SRB2_CONFIG_HAVE_CURL})
 	endif()
 	if(${CURL_FOUND})
 		set(SRB2_HAVE_CURL ON)
-		target_compile_definitions(SRB2SDL2 PRIVATE -DHAVE_CURL)
+		target_compile_definitions(SRB2 PRIVATE -DHAVE_CURL)
 	else()
 		message(WARNING "You have specified that CURL is available but it was not found. SRB2 may not compile correctly.")
 	endif()
 endif()
 
 if(${SRB2_CONFIG_HWRENDER})
-	target_compile_definitions(SRB2SDL2 PRIVATE -DHWRENDER)
+	target_compile_definitions(SRB2 PRIVATE -DHWRENDER)
 	add_subdirectory(hardware)
 endif()
 
 if(${SRB2_CONFIG_HWRENDER} AND ${SRB2_CONFIG_STATIC_OPENGL})
 	find_package(OpenGL)
 	if(${OPENGL_FOUND})
-		target_compile_definitions(SRB2SDL2 PRIVATE -DHWRENDER)
-		target_compile_definitions(SRB2SDL2 PRIVATE -DSTATIC_OPENGL)
+		target_compile_definitions(SRB2 PRIVATE -DHWRENDER)
+		target_compile_definitions(SRB2 PRIVATE -DSTATIC_OPENGL)
 	else()
 		message(WARNING "You have specified static opengl but opengl was not found. Not setting HWRENDER.")
 	endif()
@@ -241,21 +241,21 @@ endif()
 
 if(${SRB2_CONFIG_EXECINFO})
 else()
-	target_compile_definitions(SRB2SDL2 PRIVATE -DNOEXECINFO)
+	target_compile_definitions(SRB2 PRIVATE -DNOEXECINFO)
 	message(STATUS "You have disabled stack trace dump support")
 endif()
 
 if(SRB2_CONFIG_LTO AND NOT SRB2_CONFIG_DEBUGMODE)
-	set_property(TARGET SRB2SDL2 PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+	set_property(TARGET SRB2 PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
 endif()
 
 if(${SRB2_CONFIG_NATIVESCREENRES})
-	target_compile_definitions(SRB2SDL2 PRIVATE -DNATIVESCREENRES)
+	target_compile_definitions(SRB2 PRIVATE -DNATIVESCREENRES)
 endif()
 
 if(${CMAKE_SYSTEM} MATCHES "iOS")
 	# since C++ libraries are statically linked
-	set_property(TARGET SRB2SDL2 PROPERTY LINKER_LANGUAGE CXX)
+	set_property(TARGET SRB2 PROPERTY LINKER_LANGUAGE CXX)
 endif()
 
 # Targets
@@ -270,21 +270,21 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND NOT ${CMAKE_SYSTEM} MATCHES "Emscr
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-absolute-value")
 endif()
 
-target_compile_definitions(SRB2SDL2 PRIVATE -DCMAKECONFIG)
+target_compile_definitions(SRB2 PRIVATE -DCMAKECONFIG)
 
 if(${SRB2_CONFIG_DEBUGMODE})
-	target_compile_definitions(SRB2SDL2 PRIVATE -D_DEBUG -DPARANOIA -DRANGECHECK)
+	target_compile_definitions(SRB2 PRIVATE -D_DEBUG -DPARANOIA -DRANGECHECK)
 else()
-	target_compile_definitions(SRB2SDL2 PRIVATE -DNDEBUG)
+	target_compile_definitions(SRB2 PRIVATE -DNDEBUG)
 endif()
 
 if(${CMAKE_SYSTEM} MATCHES "Android")
 	# Support 16 KB page sizes on Android
-	target_link_options(SRB2SDL2 PRIVATE
+	target_link_options(SRB2 PRIVATE
 		"-Wl,-z,max-page-size=16384"
 		"-Wl,-z,common-page-size=16384"
 	)
-	target_compile_definitions(SRB2SDL2 PRIVATE -DNOMUMBLE -DSTDC_HEADERS)
+	target_compile_definitions(SRB2 PRIVATE -DNOMUMBLE -DSTDC_HEADERS)
 endif()
 
 #add_library(SRB2Core STATIC
@@ -312,7 +312,7 @@ if(${CMAKE_SYSTEM} MATCHES Darwin AND NOT ${SRB2_CONFIG_DEDICATED})
 	endif()
 	# srb2.icon needs actool from Xcode 26+, older versions skip it without failing;
 	# otherwise, bundle the classic Srb2mac.icns instead
-	set_target_properties(SRB2SDL2 PROPERTIES MACOSX_BUNDLE_ICON_FILE Srb2mac.icns)
+	set_target_properties(SRB2 PROPERTIES MACOSX_BUNDLE_ICON_FILE Srb2mac.icns)
 	execute_process(COMMAND xcrun --find actool
 		RESULT_VARIABLE SRB2_ACTOOL_RESULT
 		OUTPUT_QUIET ERROR_QUIET
@@ -323,9 +323,9 @@ if(${CMAKE_SYSTEM} MATCHES Darwin AND NOT ${SRB2_CONFIG_DEDICATED})
 	)
 	string(REGEX REPLACE "^Xcode ([0-9.]+).*" "\\1" SRB2_XCODE_VERSION "${SRB2_XCODE_VERSION}")
 	if(SRB2_ACTOOL_RESULT EQUAL 0 AND SRB2_XCODE_VERSION VERSION_GREATER_EQUAL 26)
-		add_custom_command(TARGET SRB2SDL2 POST_BUILD
-			COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_BUNDLE_CONTENT_DIR:SRB2SDL2>/Resources"
-			COMMAND xcrun actool --compile "$<TARGET_BUNDLE_CONTENT_DIR:SRB2SDL2>/Resources"
+		add_custom_command(TARGET SRB2 POST_BUILD
+			COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_BUNDLE_CONTENT_DIR:SRB2>/Resources"
+			COMMAND xcrun actool --compile "$<TARGET_BUNDLE_CONTENT_DIR:SRB2>/Resources"
 				--platform macosx
 				--minimum-deployment-target "${SRB2_MACOS_ICON_DEPLOYMENT_TARGET}"
 				--app-icon srb2
@@ -337,7 +337,7 @@ if(${CMAKE_SYSTEM} MATCHES Darwin AND NOT ${SRB2_CONFIG_DEDICATED})
 	else()
 		message(STATUS "actool from Xcode 26+ not found, using sdl/macosx/Srb2mac.icns")
 		set_source_files_properties(sdl/macosx/Srb2mac.icns PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
-		target_sources(SRB2SDL2 PRIVATE sdl/macosx/Srb2mac.icns)
+		target_sources(SRB2 PRIVATE sdl/macosx/Srb2mac.icns)
 	endif()
 endif()
 
@@ -353,7 +353,7 @@ if(${CMAKE_SYSTEM} MATCHES "Android")
 	add_subdirectory(android-jni)
 endif()
 
-if(NOT ${SRB2_SDL2_AVAILABLE} AND NOT ${SRB2_WIN32_AVAILABLE})
+if(NOT ${SRB2_SDL_AVAILABLE} AND NOT ${SRB2_WIN32_AVAILABLE})
 	message(FATAL_ERROR "There are no targets available to build an SRB2 executable. :(")
 endif()
 
@@ -365,10 +365,10 @@ if((CMAKE_COMPILER_IS_GNUCC) AND NOT ("${CMAKE_SYSTEM_NAME}" MATCHES Darwin))
 			set(OBJCOPY_ONLY_KEEP_DEBUG "--only-keep-debug")
 		endif()
 		message(STATUS "Will make separate debug symbols in *.debug")
-		add_custom_command(TARGET SRB2SDL2 POST_BUILD
-			COMMAND ${OBJCOPY} ${OBJCOPY_ONLY_KEEP_DEBUG} $<TARGET_FILE:SRB2SDL2> $<TARGET_FILE:SRB2SDL2>.debug
-			COMMAND ${OBJCOPY} --strip-debug $<TARGET_FILE:SRB2SDL2>
-			COMMAND ${OBJCOPY} --add-gnu-debuglink=$<TARGET_FILE:SRB2SDL2>.debug $<TARGET_FILE:SRB2SDL2>
+		add_custom_command(TARGET SRB2 POST_BUILD
+			COMMAND ${OBJCOPY} ${OBJCOPY_ONLY_KEEP_DEBUG} $<TARGET_FILE:SRB2> $<TARGET_FILE:SRB2>.debug
+			COMMAND ${OBJCOPY} --strip-debug $<TARGET_FILE:SRB2>
+			COMMAND ${OBJCOPY} --add-gnu-debuglink=$<TARGET_FILE:SRB2>.debug $<TARGET_FILE:SRB2>
 		)
 	endif()
 endif()

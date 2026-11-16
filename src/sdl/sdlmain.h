@@ -19,14 +19,14 @@
 #ifndef __sdlmain__
 #define __sdlmain__
 
-extern SDL_bool consolevent;
-extern SDL_bool framebuffer;
+extern bool consolevent;
+extern bool framebuffer;
 
 #include "../m_fixed.h"
 #include "../i_gamepad.h"
 
-// SDL2 stub macro
-#define SDL2STUB() CONS_Printf("SDL2: stubbed: %s:%d\n", __func__, __LINE__)
+// SDL stub macro
+#define SDLSTUB() CONS_Printf("SDL: stubbed: %s:%d\n", __func__, __LINE__)
 
 // SDL info about all controllers
 typedef struct
@@ -34,7 +34,7 @@ typedef struct
 	boolean started; // started
 	int lastindex; // last gamepad ID
 
-	SDL_GameController *dev;
+	SDL_Gamepad *dev;
 	SDL_Joystick *joydev;
 
 	gamepad_t *info; // pointer to gamepad info
@@ -42,21 +42,21 @@ typedef struct
 	struct {
 		Uint16 large_magnitude;
 		Uint16 small_magnitude;
-		Uint32 expiration, time_left;
+		Uint64 expiration, time_left;
 	} rumble;
 } ControllerInfo;
 
-#define GAMEPAD_INIT_FLAGS (SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER)
+#define GAMEPAD_INIT_FLAGS (SDL_INIT_JOYSTICK | SDL_INIT_GAMEPAD)
 
 void I_UpdateControllers(void);
 
-void I_ControllerDeviceAdded(INT32 which);
+void I_ControllerDeviceAdded(SDL_JoystickID which);
 void I_ControllerDeviceRemoved(void);
 
-void I_HandleControllerButtonEvent(SDL_ControllerButtonEvent evt, Uint32 type);
-void I_HandleControllerAxisEvent(SDL_ControllerAxisEvent evt);
+void I_HandleControllerButtonEvent(SDL_GamepadButtonEvent evt, Uint32 type);
+void I_HandleControllerAxisEvent(SDL_GamepadAxisEvent evt);
 
-INT32 I_GetControllerIndex(SDL_GameController *dev);
+INT32 I_GetControllerIndex(SDL_Gamepad *dev);
 
 void I_ToggleControllerRumble(boolean unpause);
 

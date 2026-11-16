@@ -9,9 +9,8 @@
 /// \file  SDL_android_main.c
 /// \brief Android entry point
 
-#include "SDL.h"
-#include "SDL_main.h"
-#include "SDL_config.h"
+#include <SDL3/SDL.h>
+#include <SDL3/SDL_main.h>
 
 #include "../sdlmain.h"
 
@@ -36,7 +35,7 @@ char logfilename[1024];
 #endif
 
 #ifdef SPLASH_SCREEN
-static SDL_bool displayingSplash = SDL_FALSE;
+static bool displayingSplash = false;
 
 static void BlitSplashScreen(void)
 {
@@ -48,10 +47,10 @@ static void ShowSplashScreen(void)
 {
 	displayingSplash = Impl_LoadSplashScreen();
 
-	if (displayingSplash == SDL_TRUE)
+	if (displayingSplash == true)
 	{
 		// Present it for two seconds.
-		UINT32 delay = SDL_GetTicks() + 2000;
+		UINT64 delay = SDL_GetTicks() + 2000;
 
 		while (SDL_GetTicks() < delay)
 			BlitSplashScreen();
@@ -226,7 +225,7 @@ int main(int argc, char* argv[])
 #endif
 
 #ifdef SPLASH_SCREEN
-	if (displayingSplash == SDL_TRUE)
+	if (displayingSplash == true)
 		BlitSplashScreen();
 #endif
 

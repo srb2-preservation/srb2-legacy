@@ -4,8 +4,8 @@ SRB2 Legacy is an updated fork of [Sonic Robo Blast 2](https://srb2.org) 2.1.25.
 The goal of SRB2 Legacy is to include essential fixes and QOL improvements seen in 2.2.
 
 ## Dependencies
-- SDL2 (Linux/macOS only)
-- SDL2-Mixer (Linux/macOS only)
+- SDL3 (Linux/macOS only)
+- SDL3_mixer (Linux/macOS only)
 - libupnp (Linux/macOS only)
 - libgme (Linux/macOS only)
 - libopenmpt (Linux/macOS only)

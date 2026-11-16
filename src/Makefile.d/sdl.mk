@@ -1,5 +1,5 @@
 #
-# Makefile options for SDL2 backend.
+# Makefile options for SDL3 backend.
 #
 
 #
@@ -49,7 +49,10 @@ else
 opts+=-DHAVE_MIXER
 sources+=sdl/mixer_sound.c
 
-  libs+=-lSDL2_mixer
+SDL_MIXER_PKGCONFIG?=sdl3-mixer
+SDL_MIXER_CFLAGS?=$(shell $(PKG_CONFIG) $(SDL_MIXER_PKGCONFIG) --cflags)
+SDL_MIXER_LDFLAGS?=$(shell $(PKG_CONFIG) $(SDL_MIXER_PKGCONFIG) --libs)
+$(eval $(call Propogate_flags,SDL_MIXER))
 endif
 
 ifndef NOTHREADS
@@ -57,15 +60,12 @@ opts+=-DHAVE_THREADS
 sources+=i_threads.c
 endif
 
-ifdef SDL_PKGCONFIG
-$(eval $(call Use_pkg_config,SDL))
-else
-SDL_CONFIG?=$(call Prefix,sdl2-config)
-SDL_CFLAGS?=$(shell $(SDL_CONFIG) --cflags)
-SDL_LDFLAGS?=$(shell $(SDL_CONFIG) \
-		$(if $(STATIC),--static-libs,--libs))
+# SDL3 has no sdl-config script, pkg-config is the way to find it.
+SDL_PKGCONFIG?=sdl3
+SDL_CFLAGS?=$(shell $(PKG_CONFIG) $(SDL_PKGCONFIG) --cflags)
+SDL_LDFLAGS?=$(shell $(PKG_CONFIG) $(SDL_PKGCONFIG) \
+		$(if $(STATIC),--static) --libs)
 $(eval $(call Propogate_flags,SDL))
-endif
 
 ifdef MINGW
 ifndef NOSDLMAIN

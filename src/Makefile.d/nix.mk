@@ -7,7 +7,7 @@ EXENAME?=lsrb2dlegacy
 else ifdef DUMMY
 EXENAME?=lsrb2legacy
 else
-EXENAME?=lsdl2srb2legacy
+EXENAME?=lsdl3srb2legacy
 endif
 
 opts+=-DUNIXCOMMON -DLUA_USE_POSIX

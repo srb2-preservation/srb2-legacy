@@ -2,10 +2,10 @@
 
 target_sourcefile(c)
 
-target_sources(SRB2SDL2 PRIVATE)
+target_sources(SRB2 PRIVATE)
 
 if(${CMAKE_SYSTEM} MATCHES Windows)
-	target_sources(SRB2SDL2 PRIVATE
+	target_sources(SRB2 PRIVATE
 		../win32/win_dbg.c
 		../win32/Srb2win.rc)
 endif()
@@ -13,7 +13,7 @@ endif()
 if(${CMAKE_SYSTEM} MATCHES Darwin)
 	set(MACOSX_BUNDLE_ICON_FILE Srb2mac.icns)
 	set_source_files_properties(../sdl/macosx/Srb2mac.icns PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
-	target_sources(SRB2SDL2 PRIVATE
+	target_sources(SRB2 PRIVATE
 		../sdl/macosx/mac_resources.c
 		../sdl/macosx/mac_resources.h
 		../sdl/macosx/Srb2mac.icns
@@ -21,70 +21,70 @@ if(${CMAKE_SYSTEM} MATCHES Darwin)
 endif()
 
 if(${CMAKE_SYSTEM} MATCHES Windows)
-	set_target_properties(SRB2SDL2 PROPERTIES OUTPUT_NAME srb2legacy)
+	set_target_properties(SRB2 PROPERTIES OUTPUT_NAME srb2legacy)
 elseif(${CMAKE_SYSTEM} MATCHES Linux)
-	set_target_properties(SRB2SDL2 PROPERTIES OUTPUT_NAME lsrb2dlegacy)
+	set_target_properties(SRB2 PROPERTIES OUTPUT_NAME lsrb2dlegacy)
 else()
-	set_target_properties(SRB2SDL2 PROPERTIES OUTPUT_NAME srb2legacy)
+	set_target_properties(SRB2 PROPERTIES OUTPUT_NAME srb2legacy)
 endif()
 
 if(${CMAKE_SYSTEM} MATCHES Darwin)
 	find_library(CORE_LIB CoreFoundation)
-	target_link_libraries(SRB2SDL2 PRIVATE
+	target_link_libraries(SRB2 PRIVATE
 		${CORE_LIB}
 		${PNG_LIBRARIES}
 		${ZLIB_LIBRARIES}
 	)
-	set_target_properties(SRB2SDL2 PROPERTIES OUTPUT_NAME "${CPACK_PACKAGE_DESCRIPTION_SUMMARY}")
+	set_target_properties(SRB2 PROPERTIES OUTPUT_NAME "${CPACK_PACKAGE_DESCRIPTION_SUMMARY}")
 else()
-	target_link_libraries(SRB2SDL2 PRIVATE
+	target_link_libraries(SRB2 PRIVATE
 		${PNG_LIBRARIES}
 		${ZLIB_LIBRARIES}
 	)
 
 	if(${CMAKE_SYSTEM} MATCHES Linux)
-		target_link_libraries(SRB2SDL2 PRIVATE
+		target_link_libraries(SRB2 PRIVATE
 			m
 			rt
 		)
 	endif()
 endif()
 
-#target_link_libraries(SRB2SDL2 PRIVATE SRB2Core)
+#target_link_libraries(SRB2 PRIVATE SRB2Core)
 
-set_target_properties(SRB2SDL2 PROPERTIES VERSION ${SRB2_VERSION})
+set_target_properties(SRB2 PROPERTIES VERSION ${SRB2_VERSION})
 
 if(${CMAKE_SYSTEM} MATCHES Windows)
-	target_link_libraries(SRB2SDL2 PRIVATE
+	target_link_libraries(SRB2 PRIVATE
 		ws2_32
 	)
-	target_compile_options(SRB2SDL2 PRIVATE
+	target_compile_options(SRB2 PRIVATE
 		-U_WINDOWS
 	)
 endif()
 
-target_include_directories(SRB2SDL2 PRIVATE
+target_include_directories(SRB2 PRIVATE
 	${PNG_INCLUDE_DIRS}
 	${ZLIB_INCLUDE_DIRS}
 )
 
-target_compile_definitions(SRB2SDL2 PRIVATE
+target_compile_definitions(SRB2 PRIVATE
 	-DDEDICATED
 )
 
 #### Installation ####
 if(${CMAKE_SYSTEM} MATCHES Darwin)
-	install(TARGETS SRB2SDL2
+	install(TARGETS SRB2
 		BUNDLE DESTINATION .
 	)
 else()
-	install(TARGETS SRB2SDL2 SRB2SDL2
+	install(TARGETS SRB2 SRB2
 		RUNTIME DESTINATION .
 	)
 	if ((${CMAKE_BUILD_TYPE} MATCHES Debug) OR (${CMAKE_BUILD_TYPE} MATCHES RelWithDebInfo))
 		set(SRB2_DEBUG_INSTALL OFF CACHE BOOL "Insert *.debug file into the install directory or package.")
 		if (${SRB2_DEBUG_INSTALL})
-			install(FILES $<TARGET_FILE:SRB2SDL2>.debug
+			install(FILES $<TARGET_FILE:SRB2>.debug
 				DESTINATION .
 				OPTIONAL
 			)
@@ -112,4 +112,4 @@ if(${CMAKE_SYSTEM} MATCHES Darwin)
 	)
 endif()
 
-set(SRB2_SDL2_AVAILABLE YES PARENT_SCOPE)
+set(SRB2_SDL_AVAILABLE YES PARENT_SCOPE)

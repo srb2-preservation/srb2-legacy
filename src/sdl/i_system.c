@@ -73,13 +73,12 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 
 #ifdef HAVE_SDL
 #define _MATH_DEFINES_DEFINED
-#include "SDL.h"
+#include <SDL3/SDL.h>
 
 #ifdef HAVE_TTF
 #include "i_ttf.h"
 #endif
 
-#include "SDL_cpuinfo.h"
 #define HAVE_SDLCPUINFO
 
 #if defined (__unix__) || defined(__APPLE__) || (defined (UNIXCOMMON) && !defined (__HAIKU__))
@@ -212,8 +211,8 @@ static INT32 fdmouse2 = -1;
 static INT32 mouse2_started = 0;
 #endif
 
-SDL_bool consolevent = SDL_FALSE;
-SDL_bool framebuffer = SDL_FALSE;
+bool consolevent = false;
+bool framebuffer = false;
 
 UINT8 keyboard_started = false;
 
@@ -303,11 +302,7 @@ static void write_backtrace(INT32 signal)
 
 int I_OpenURL(const char *url)
 {
-#if SDL_VERSION_ATLEAST(2,0,14)
-	return SDL_OpenURL(va("%s", url));
-#else
-	return -1;
-#endif
+	return SDL_OpenURL(va("%s", url)) ? 0 : -1;
 }
 
 static void I_ReportSignal(int num, int coredumped)
@@ -393,7 +388,7 @@ static void I_ReportSignal(int num, int coredumped)
 		NULL /* .colorScheme */
 	};
 
-	int buttonid;
+	int buttonid = 0;
 
 	SDL_ShowMessageBox(&messageboxdata, &buttonid);
 
@@ -425,7 +420,7 @@ FUNCNORETURN static ATTRNORETURN void quit_handler(int num)
 
 #ifdef HAVE_TERMIOS
 // TERMIOS console code from Quake3: thank you!
-SDL_bool stdin_active = SDL_TRUE;
+bool stdin_active = true;
 
 typedef struct
 {
@@ -531,7 +526,7 @@ static void I_ShutdownConsole(void)
 	if (consolevent)
 	{
 		I_OutputMsg("Shutdown tty console\n");
-		consolevent = SDL_FALSE;
+		consolevent = false;
 		tcsetattr (STDIN_FILENO, TCSADRAIN, &tty_tc);
 	}
 }
@@ -550,14 +545,14 @@ static void I_StartupConsole(void)
 	framebuffer = M_CheckParm("-framebuffer");
 
 	if (framebuffer)
-		consolevent = SDL_FALSE;
+		consolevent = false;
 
 	if (!consolevent) return;
 
 	if (isatty(STDIN_FILENO)!=1)
 	{
 		I_OutputMsg("stdin is not a tty, tty console mode failed\n");
-		consolevent = SDL_FALSE;
+		consolevent = false;
 		return;
 	}
 	memset(&tty_con, 0x00, sizeof(tty_con));
@@ -760,7 +755,7 @@ static void I_StartupConsole(void)
 	if (gotConsole)
 	{
 		SetConsoleTitleA("SRB2 Console");
-		consolevent = SDL_TRUE;
+		consolevent = true;
 	}
 
 	//Let get the real console HANDLE, because Mingw's Bash is bad!
@@ -793,7 +788,7 @@ static inline void I_StartupConsole(void)
 	framebuffer = M_CheckParm("-framebuffer");
 
 	if (framebuffer)
-		consolevent = SDL_FALSE;
+		consolevent = false;
 }
 static inline void I_ShutdownConsole(void){}
 #endif
@@ -1010,7 +1005,7 @@ static void I_ShutdownInput(void)
 	{
 		CONS_Printf("Shutting down gamepad system\n");
 		SDL_QuitSubSystem(GAMEPAD_INIT_FLAGS);
-		I_OutputMsg("I_Joystick: SDL's Game Controller system has been shutdown\n");
+		I_OutputMsg("I_Joystick: SDL's Gamepad system has been shutdown\n");
 	}
 }
 
@@ -1473,20 +1468,6 @@ void I_StartupMouse2(void)
 #endif
 }
 
-void I_SetTextInputMode(boolean active)
-{
-	if (active)
-		SDL_StartTextInput();
-	else
-		SDL_StopTextInput();
-}
-
-boolean I_GetTextInputMode(void)
-{
-	boolean inputtextactive = (SDL_IsTextInputActive()) ? true : false;
-
-	return inputtextactive;
-}
 
 /**	\brief empty ticcmd for player 1
 */
@@ -1728,10 +1709,7 @@ static void I_Fork(void)
 
 INT32 I_StartupSystem(void)
 {
-	SDL_version SDLcompiled;
-	SDL_version SDLlinked;
-	SDL_VERSION(&SDLcompiled)
-	SDL_GetVersion(&SDLlinked);
+	const int SDLlinked = SDL_GetVersion();
 	I_StartupConsole();
 #ifdef NEWSIGNALHANDLER
 	// This is useful when debugging. It lets GDB attach to
@@ -1741,13 +1719,11 @@ INT32 I_StartupSystem(void)
 #endif
 	I_RegisterSignals();
 	I_OutputMsg("Compiled for SDL version: %d.%d.%d\n",
-	 SDLcompiled.major, SDLcompiled.minor, SDLcompiled.patch);
+	 SDL_MAJOR_VERSION, SDL_MINOR_VERSION, SDL_MICRO_VERSION);
 	I_OutputMsg("Linked with SDL version: %d.%d.%d\n",
-	 SDLlinked.major, SDLlinked.minor, SDLlinked.patch);
-#if SDL_VERSION_ATLEAST(2,0,18)
-	SDL_SetHint(SDL_HINT_APP_NAME, "SRB2 Legacy");
-#endif
-	if (SDL_Init(0) < 0)
+	 SDL_VERSIONNUM_MAJOR(SDLlinked), SDL_VERSIONNUM_MINOR(SDLlinked), SDL_VERSIONNUM_MICRO(SDLlinked));
+	SDL_SetAppMetadata("SRB2 Legacy", VERSIONSTRING, NULL);
+	if (!SDL_Init(0))
 		I_Error("SRB2: SDL System Error: %s", SDL_GetError()); //Alam: Oh no....
 #ifndef NOMUMBLE
 	I_SetupMumble();
@@ -1760,12 +1736,12 @@ INT32 I_StartupSystem(void)
 //
 void I_Quit(void)
 {
-	static SDL_bool quiting = SDL_FALSE;
+	static bool quiting = false;
 
 	/* prevent recursive I_Quit() */
 	if (quiting) goto death;
 	SDLforceUngrabMouse();
-	quiting = SDL_FALSE;
+	quiting = false;
 	M_SaveConfig(NULL); //save game config, cvars..
 #ifndef NONET
 	D_SaveBan(); // save the ban list
@@ -2109,7 +2085,7 @@ INT32 I_mkdir(const char *dirname, INT32 unixright)
 char *I_GetEnv(const char *name)
 {
 #ifdef NEED_SDL_GETENV
-	return SDL_getenv(name);
+	return (char *)(size_t)SDL_getenv(name);
 #else
 	return getenv(name);
 #endif
@@ -2118,7 +2094,15 @@ char *I_GetEnv(const char *name)
 INT32 I_PutEnv(char *variable)
 {
 #ifdef NEED_SDL_GETENV
-	return SDL_putenv(variable);
+	// SDL3 has no SDL_putenv; split "NAME=value" for SDL_setenv_unsafe
+	char *eq = strchr(variable, '=');
+	INT32 rc;
+	if (!eq)
+		return -1;
+	*eq = '\0';
+	rc = SDL_setenv_unsafe(variable, eq + 1, 1);
+	*eq = '=';
+	return rc;
 #else
 	return putenv(variable);
 #endif
@@ -2528,7 +2512,7 @@ const char *I_LocateWad(void)
 #if defined(__ANDROID__)
 const char *I_AppStorageLocation(void)
 {
-	return SDL_AndroidGetExternalStoragePath();
+	return SDL_GetAndroidExternalStoragePath();
 }
 
 #define SHAREDSTORAGEFOLDER "SRB2 Legacy"
@@ -2697,7 +2681,9 @@ INT32 I_CheckSystemPermission(const char *permission)
 
 INT32 I_RequestSystemPermission(const char *permission)
 {
-	if (SDL_AndroidRequestPermission(permission))
+	// SDL3 requests permissions asynchronously; the result is picked up
+	// later through I_CheckSystemPermission.
+	if (SDL_RequestAndroidPermission(permission, NULL, NULL))
 		return 1;
 
 	return 0;

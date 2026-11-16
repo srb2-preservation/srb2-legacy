@@ -1615,17 +1615,6 @@ July 15, 2018
         - Vorbis
           Copyright (c) 2002-2008 Xiph.org Foundation
           https://xiph.org/vorbis/
-
-        - Opus
-          Copyright 2001-2011 Xiph.Org, Skype Limited, Octasic,
-                    Jean-Marc Valin, Timothy B. Terriberry,
-                    CSIRO, Gregory Maxwell, Mark Borgerding,
-                    Erik de Castro Lopo
-          https://opus-codec.org
-
-        - Opus File
-          Copyright (c) 1994-2013 Xiph.Org Foundation and contributors
-          https://opus-codec.org
 --------------------------------------------------------------------------------
 
 Redistribution and use in source and binary forms, with or without
@@ -1639,17 +1628,10 @@ notice, this list of conditions and the following disclaimer.
 notice, this list of conditions and the following disclaimer in the
 documentation and/or other materials provided with the distribution.
 
-[ For FLAC, Vorbis, and Opus File
+[ For FLAC and Vorbis
 - Neither the name of the Xiph.org Foundation nor the names of its
 contributors may be used to endorse or promote products derived from
 this software without specific prior written permission.
-]
-
-[ For Opus
-- Neither the name of Internet Society, IETF or IETF Trust, nor the
-names of specific contributors, may be used to endorse or promote
-products derived from this software without specific prior written
-permission.
 ]
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS

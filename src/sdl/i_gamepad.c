@@ -22,8 +22,7 @@
 #include "../m_menu.h"
 #include "../z_zone.h"
 
-#include "SDL.h"
-#include "SDL_joystick.h"
+#include <SDL3/SDL.h>
 #include "sdlmain.h"
 
 static void Controller_ChangeDevice(UINT8 num);
@@ -35,36 +34,49 @@ static ControllerInfo controllers[NUM_GAMEPADS];
 static boolean rumble_supported = false;
 static boolean rumble_paused = false;
 
-// Some devices are joysticks to SDL without being gamepads, such as motherboard LED
-// controllers. cv_usejoystick and the gamepad menu skip those, so that they can't take
-// a gamepad's place, while SDL counts them. These functions convert between both indexes.
-static INT32 GetSDLDeviceIndex(INT32 index)
+// SDL3 identifies devices by instance ID, while cv_usegamepad and the gamepad menu
+// use a position in the list of connected gamepads. SDL_GetGamepads only lists devices
+// that are gamepads, so joysticks that aren't (such as motherboard LED controllers)
+// can't take a gamepad's place. These functions convert between both.
+static INT32 CountGamepadDevices(void)
 {
-	INT32 count = SDL_NumJoysticks();
-
-	for (INT32 i = 0, seen = 0; index >= 0 && i < count; i++)
-	{
-		if (!SDL_IsGameController(i))
-			continue;
-		if (seen == index)
-			return i;
-		seen++;
-	}
-
-	return -1;
+	int count = 0;
+	SDL_free(SDL_GetGamepads(&count));
+	return count;
 }
 
-static INT32 GetGamepadDeviceIndex(INT32 sdlindex)
+// Returns 0 if there is no gamepad at this index
+static SDL_JoystickID GetGamepadDeviceID(INT32 index)
 {
-	INT32 seen = 0;
+	int count = 0;
+	SDL_JoystickID *ids = SDL_GetGamepads(&count);
+	SDL_JoystickID id = 0;
 
-	for (INT32 i = 0; i < sdlindex; i++)
+	if (ids && index >= 0 && index < count)
+		id = ids[index];
+
+	SDL_free(ids);
+	return id;
+}
+
+// Returns -1 if this ID isn't a connected gamepad
+static INT32 GetGamepadDeviceIndex(SDL_JoystickID id)
+{
+	int count = 0;
+	SDL_JoystickID *ids = SDL_GetGamepads(&count);
+	INT32 index = -1;
+
+	for (int i = 0; ids && i < count; i++)
 	{
-		if (SDL_IsGameController(i))
-			seen++;
+		if (ids[i] == id)
+		{
+			index = i;
+			break;
+		}
 	}
 
-	return seen;
+	SDL_free(ids);
+	return index;
 }
 
 // This attempts to initialize the gamepad subsystems
@@ -75,12 +87,9 @@ static boolean InitGamepadSubsystems(void)
 	if (M_CheckParm("-nohidapi"))
 		SDL_SetHintWithPriority(SDL_HINT_JOYSTICK_HIDAPI, "0", SDL_HINT_OVERRIDE);
 
-	// Don't let mobile accelerometers take up a device index
-	SDL_SetHintWithPriority(SDL_HINT_ACCELEROMETER_AS_JOYSTICK, "0", SDL_HINT_OVERRIDE);
-
 	if (SDL_WasInit(GAMEPAD_INIT_FLAGS) == 0)
 	{
-		if (SDL_InitSubSystem(GAMEPAD_INIT_FLAGS) == -1)
+		if (!SDL_InitSubSystem(GAMEPAD_INIT_FLAGS))
 		{
 			CONS_Printf(M_GetText("Couldn't initialize game controller subsystems: %s\n"), SDL_GetError());
 			return false;
@@ -91,10 +100,10 @@ static boolean InitGamepadSubsystems(void)
 		char dbpath[1024];
 
 		snprintf(dbpath, sizeof dbpath, "%s" PATHSEP "gamecontrollerdb.txt", srb2path);
-		SDL_GameControllerAddMappingsFromFile(dbpath);
+		SDL_AddGamepadMappingsFromFile(dbpath);
 
 		snprintf(dbpath, sizeof dbpath, "%s" PATHSEP "gamecontrollerdb_user.txt", srb2home);
-		SDL_GameControllerAddMappingsFromFile(dbpath);
+		SDL_AddGamepadMappingsFromFile(dbpath);
 	}
 
 	return true;
@@ -122,7 +131,7 @@ void I_InitGamepads(void)
 INT32 I_NumGamepads(void)
 {
 	if (SDL_WasInit(GAMEPAD_INIT_FLAGS) == GAMEPAD_INIT_FLAGS)
-		return GetGamepadDeviceIndex(SDL_NumJoysticks());
+		return CountGamepadDevices();
 	else
 		return 0;
 }
@@ -194,25 +203,25 @@ static boolean Controller_OpenDevice(UINT8 which, INT32 devindex)
 	if (devindex <= 0)
 		return false;
 
-	if (SDL_NumJoysticks() == 0)
+	if (CountGamepadDevices() == 0)
 	{
 		CONS_Debug(DBG_GAMELOGIC, M_GetText("Found no controllers on this system\n"));
 		return false;
 	}
 
-	devindex = GetSDLDeviceIndex(devindex - 1);
+	SDL_JoystickID devid = GetGamepadDeviceID(devindex - 1);
 
-	if (devindex < 0)
+	if (!devid)
 	{
 		CONS_Debug(DBG_GAMELOGIC, M_GetText("Device index isn't a game controller\n"));
 		return false;
 	}
 
 	ControllerInfo *controller = &controllers[which];
-	SDL_GameController *newdev = SDL_GameControllerOpen(devindex);
+	SDL_Gamepad *newdev = SDL_OpenGamepad(devid);
 
 	// Handle the edge case where the device <-> controller index assignment can change due to hotplugging
-	// This indexing is SDL's responsibility and there's not much we can do about it.
+	// The index is a position in SDL's list of gamepads, so it shifts as devices come and go.
 	//
 	// Example:
 	// 1. Plug Controller A   -> Index 0 opened
@@ -224,8 +233,13 @@ static boolean Controller_OpenDevice(UINT8 which, INT32 devindex)
 	if (controller->dev)
 	{
 		if (controller->dev == newdev // same device, nothing to do
-			|| (newdev == NULL && SDL_GameControllerGetAttached(controller->dev))) // we failed, but already have a working device
+			|| (newdev == NULL && SDL_GamepadConnected(controller->dev))) // we failed, but already have a working device
+		{
+			// SDL reference counts open devices; drop the reference that was just added
+			if (newdev)
+				SDL_CloseGamepad(newdev);
 			return true;
+		}
 
 		// Else, we're changing devices, so close the controller
 		CONS_Debug(DBG_GAMELOGIC, M_GetText("Controller %d device is changing; closing controller...\n"), which);
@@ -240,36 +254,36 @@ static boolean Controller_OpenDevice(UINT8 which, INT32 devindex)
 	else
 	{
 		controller->dev = newdev;
-		controller->joydev = SDL_GameControllerGetJoystick(controller->dev);
+		controller->joydev = SDL_GetGamepadJoystick(controller->dev);
 		controller->started = true;
 
-		CONS_Debug(DBG_GAMELOGIC, M_GetText("Controller %d: %s\n"), which, SDL_GameControllerName(controller->dev));
+		CONS_Debug(DBG_GAMELOGIC, M_GetText("Controller %d: %s\n"), which, SDL_GetGamepadName(controller->dev));
 
 	#define GAMEPAD_TYPE_CASE(ctrl) \
-		case SDL_CONTROLLER_TYPE_##ctrl: \
+		case SDL_GAMEPAD_TYPE_##ctrl: \
 			controller->info->type = GAMEPAD_TYPE_##ctrl; \
 			break
 
-		switch (SDL_GameControllerGetType(newdev))
+		// SDL3 no longer tells Stadia, Luna and virtual controllers apart;
+		// those, like any other type not listed here, are reported as unknown.
+		controller->info->type = GAMEPAD_TYPE_UNKNOWN;
+
+		switch (SDL_GetGamepadType(newdev))
 		{
-			GAMEPAD_TYPE_CASE(UNKNOWN);
 			GAMEPAD_TYPE_CASE(XBOX360);
 			GAMEPAD_TYPE_CASE(XBOXONE);
 			GAMEPAD_TYPE_CASE(PS3);
 			GAMEPAD_TYPE_CASE(PS4);
 			GAMEPAD_TYPE_CASE(PS5);
 			GAMEPAD_TYPE_CASE(NINTENDO_SWITCH_PRO);
-			GAMEPAD_TYPE_CASE(GOOGLE_STADIA);
-			GAMEPAD_TYPE_CASE(AMAZON_LUNA);
-			GAMEPAD_TYPE_CASE(VIRTUAL);
 			default: break;
 		}
 
 	#undef GAMEPAD_TYPE_CASE
 
 		// Check the device vendor and product to find out what controller this actually is
-		Uint16 vendor = SDL_JoystickGetDeviceVendor(devindex);
-		Uint16 product = SDL_JoystickGetDeviceProduct(devindex);
+		Uint16 vendor = SDL_GetGamepadVendor(newdev);
+		Uint16 product = SDL_GetGamepadProduct(newdev);
 
 		if (IsJoystickXboxSeriesXS(vendor, product))
 			controller->info->type = GAMEPAD_TYPE_XBOX_SERIES_XS;
@@ -280,10 +294,10 @@ static boolean Controller_OpenDevice(UINT8 which, INT32 devindex)
 
 		// Change the ring LEDs on Xbox 360 controllers
 		// TODO: Doesn't seem to work?
-		SDL_GameControllerSetPlayerIndex(controller->dev, which);
+		SDL_SetGamepadPlayerIndex(controller->dev, which);
 
 		// Check if rumble is supported
-		if (SDL_GameControllerHasRumble(controller->dev) == SDL_TRUE)
+		if (SDL_GetBooleanProperty(SDL_GetGamepadProperties(controller->dev), SDL_PROP_GAMEPAD_CAP_RUMBLE_BOOLEAN, false))
 		{
 			controller->info->rumble.supported = true;
 			CONS_Debug(DBG_GAMELOGIC, M_GetText("    Rumble supported: Yes\n"));
@@ -301,17 +315,17 @@ static boolean Controller_OpenDevice(UINT8 which, INT32 devindex)
 }
 
 // Initializes a controller
-static INT32 Controller_Init(SDL_GameController **newcontroller, UINT8 which, INT32 *index)
+static INT32 Controller_Init(SDL_Gamepad **newcontroller, UINT8 which, INT32 *index)
 {
 	ControllerInfo *info = &controllers[which];
-	SDL_GameController *controller = NULL;
+	SDL_Gamepad *controller = NULL;
 	INT32 device = (*index);
 
 	if (device)
 	{
-		INT32 sdlindex = GetSDLDeviceIndex(device - 1);
-		if (sdlindex >= 0)
-			controller = SDL_GameControllerOpen(sdlindex);
+		SDL_JoystickID devid = GetGamepadDeviceID(device - 1);
+		if (devid)
+			controller = SDL_OpenGamepad(devid);
 	}
 	if (newcontroller)
 		(*newcontroller) = controller;
@@ -320,7 +334,7 @@ static INT32 Controller_Init(SDL_GameController **newcontroller, UINT8 which, IN
 		(*index) = I_GetControllerIndex(info->dev) + 1;
 	else if (controller && Controller_OpenDevice(which, device))
 	{
-		// SDL's device indexes are unstable, so cv_usegamepad may not match
+		// Device indexes are unstable, so cv_usegamepad may not match
 		// the actual device index. So let's cheat a bit and find the device's current index.
 		info->lastindex = I_GetControllerIndex(info->dev) + 1;
 		return 1;
@@ -337,17 +351,17 @@ static INT32 Controller_Init(SDL_GameController **newcontroller, UINT8 which, IN
 // Changes a controller's device
 static void Controller_ChangeDevice(UINT8 num)
 {
-	SDL_GameController *newjoy = NULL;
+	SDL_Gamepad *newjoy = NULL;
 
 	if (!Controller_Init(&newjoy, num, &cv_usegamepad[num].value) && controllers[num].lastindex)
 		Controller_Close(num);
 
 	// The controller holds its own reference, so this one is no longer needed
 	if (newjoy)
-		SDL_GameControllerClose(newjoy);
+		SDL_CloseGamepad(newjoy);
 }
 
-static boolean Controller_IsAnyOtherUsingDevice(SDL_GameController *dev, UINT8 thisjoy)
+static boolean Controller_IsAnyOtherUsingDevice(SDL_Gamepad *dev, UINT8 thisjoy)
 {
 	for (UINT8 i = 0; i < NUM_GAMEPADS; i++)
 	{
@@ -360,19 +374,24 @@ static boolean Controller_IsAnyOtherUsingDevice(SDL_GameController *dev, UINT8 t
 	return false;
 }
 
-void I_ControllerDeviceAdded(INT32 which)
+void I_ControllerDeviceAdded(SDL_JoystickID which)
 {
 	if (dedicated)
 		return;
 
-	if (!SDL_IsGameController(which))
+	// The cvars and device indexes aren't meaningful before I_InitGamepads
+	if (SDL_WasInit(GAMEPAD_INIT_FLAGS) != GAMEPAD_INIT_FLAGS)
 		return;
 
-	SDL_GameController *newjoy = SDL_GameControllerOpen(which);
+	INT32 devindex = GetGamepadDeviceIndex(which);
+	if (devindex < 0)
+		return;
 
-	CONS_Debug(DBG_GAMELOGIC, "Gamepad device index %d added\n", which + 1);
+	SDL_Gamepad *newjoy = SDL_OpenGamepad(which);
 
-	// Because SDL's device index is unstable, we're going to cheat here a bit:
+	CONS_Debug(DBG_GAMELOGIC, "Gamepad device index %d added\n", devindex + 1);
+
+	// Because the device index is unstable, we're going to cheat here a bit:
 	// For the first controller setting that is NOT active:
 	// 1. Set cv_usegamepadX.value to the new device index (this does not change what is written to config.cfg)
 	// 2. Set OTHERS' cv_usegamepadX.value to THEIR new device index, because it likely changed
@@ -380,10 +399,10 @@ void I_ControllerDeviceAdded(INT32 which)
 	//      * BUT: If that default index is being occupied, use ANOTHER cv_usegamepad's default value!
 	for (UINT8 this = 0; this < NUM_GAMEPADS && newjoy; this++)
 	{
-		if ((!controllers[this].dev || !SDL_GameControllerGetAttached(controllers[this].dev))
+		if ((!controllers[this].dev || !SDL_GamepadConnected(controllers[this].dev))
 			&& !Controller_IsAnyOtherUsingDevice(newjoy, this)) // don't override a currently active device
 		{
-			cv_usegamepad[this].value = GetGamepadDeviceIndex(which) + 1;
+			cv_usegamepad[this].value = devindex + 1;
 
 			// Go through every other device
 			for (UINT8 other = 0; other < NUM_GAMEPADS; other++)
@@ -452,7 +471,7 @@ void I_ControllerDeviceAdded(INT32 which)
 		M_UpdateGamepadMenu();
 
 	if (newjoy)
-		SDL_GameControllerClose(newjoy);
+		SDL_CloseGamepad(newjoy);
 }
 
 void I_ControllerDeviceRemoved(void)
@@ -462,7 +481,7 @@ void I_ControllerDeviceRemoved(void)
 
 	for (UINT8 this = 0; this < NUM_GAMEPADS; this++)
 	{
-		if (controllers[this].dev && !SDL_GameControllerGetAttached(controllers[this].dev))
+		if (controllers[this].dev && !SDL_GamepadConnected(controllers[this].dev))
 		{
 			CONS_Debug(DBG_GAMELOGIC, "Controller %d removed, device index: %d\n", this, controllers[this].lastindex);
 			G_OnGamepadDisconnect(this);
@@ -519,26 +538,13 @@ void I_ControllerDeviceRemoved(void)
 		M_UpdateGamepadMenu();
 }
 
-// Cheat to get the device index for a game controller handle
-INT32 I_GetControllerIndex(SDL_GameController *dev)
+// Gets the device index for a gamepad handle
+INT32 I_GetControllerIndex(SDL_Gamepad *dev)
 {
-	INT32 i, count = SDL_NumJoysticks();
+	if (!dev)
+		return -1;
 
-	for (i = 0; dev && i < count; i++)
-	{
-		SDL_GameController *test = SDL_GameControllerOpen(i);
-
-		if (test)
-		{
-			// SDL reference counts open devices, so this only undoes the open above
-			SDL_GameControllerClose(test);
-
-			if (test == dev)
-				return GetGamepadDeviceIndex(i);
-		}
-	}
-
-	return -1;
+	return GetGamepadDeviceIndex(SDL_GetGamepadID(dev));
 }
 
 // Changes a gamepad's device
@@ -565,8 +571,8 @@ const char *I_GetGamepadName(INT32 joyindex)
 
 	if (SDL_WasInit(GAMEPAD_INIT_FLAGS) == GAMEPAD_INIT_FLAGS)
 	{
-		INT32 sdlindex = GetSDLDeviceIndex(joyindex - 1);
-		const char *tempname = sdlindex >= 0 ? SDL_GameControllerNameForIndex(sdlindex) : NULL;
+		SDL_JoystickID devid = GetGamepadDeviceID(joyindex - 1);
+		const char *tempname = devid ? SDL_GetGamepadNameForID(devid) : NULL;
 		if (tempname)
 			strlcpy(joyname, tempname, sizeof joyname);
 	}
@@ -588,7 +594,7 @@ static gamepad_t *Controller_GetFromID(SDL_JoystickID which, UINT8 *found)
 	// Determine the joystick IDs for each current open controller
 	for (UINT8 i = 0; i < NUM_GAMEPADS; i++)
 	{
-		if (which == SDL_JoystickInstanceID(controllers[i].joydev))
+		if (controllers[i].joydev && which == SDL_GetJoystickID(controllers[i].joydev))
 		{
 			(*found) = i;
 			return &gamepads[i];
@@ -600,7 +606,7 @@ static gamepad_t *Controller_GetFromID(SDL_JoystickID which, UINT8 *found)
 	return NULL;
 }
 
-void I_HandleControllerButtonEvent(SDL_ControllerButtonEvent evt, Uint32 type)
+void I_HandleControllerButtonEvent(SDL_GamepadButtonEvent evt, Uint32 type)
 {
 	event_t event;
 
@@ -608,41 +614,43 @@ void I_HandleControllerButtonEvent(SDL_ControllerButtonEvent evt, Uint32 type)
 	if (gamepad == NULL)
 		return;
 
-	if (type == SDL_CONTROLLERBUTTONUP)
+	if (type == SDL_EVENT_GAMEPAD_BUTTON_UP)
 		event.type = ev_gamepad_up;
-	else if (type == SDL_CONTROLLERBUTTONDOWN)
+	else if (type == SDL_EVENT_GAMEPAD_BUTTON_DOWN)
 		event.type = ev_gamepad_down;
 	else
 		return;
 
-#define GAMEPAD_BUTTON_CASE(btn) \
-	case SDL_CONTROLLER_BUTTON_##btn: \
+// SDL3 names the face buttons by position and the paddles by side;
+// the second argument is the SDL2-era name that the game still uses.
+#define GAMEPAD_BUTTON_CASE(sdlbtn, btn) \
+	case SDL_GAMEPAD_BUTTON_##sdlbtn: \
 		event.data1 = GAMEPAD_BUTTON_##btn; \
 		break
 
 	switch (evt.button)
 	{
-		GAMEPAD_BUTTON_CASE(A);
-		GAMEPAD_BUTTON_CASE(B);
-		GAMEPAD_BUTTON_CASE(X);
-		GAMEPAD_BUTTON_CASE(Y);
-		GAMEPAD_BUTTON_CASE(BACK);
-		GAMEPAD_BUTTON_CASE(GUIDE);
-		GAMEPAD_BUTTON_CASE(START);
-		GAMEPAD_BUTTON_CASE(LEFTSTICK);
-		GAMEPAD_BUTTON_CASE(RIGHTSTICK);
-		GAMEPAD_BUTTON_CASE(LEFTSHOULDER);
-		GAMEPAD_BUTTON_CASE(RIGHTSHOULDER);
-		GAMEPAD_BUTTON_CASE(DPAD_UP);
-		GAMEPAD_BUTTON_CASE(DPAD_DOWN);
-		GAMEPAD_BUTTON_CASE(DPAD_LEFT);
-		GAMEPAD_BUTTON_CASE(DPAD_RIGHT);
-		GAMEPAD_BUTTON_CASE(MISC1);
-		GAMEPAD_BUTTON_CASE(PADDLE1);
-		GAMEPAD_BUTTON_CASE(PADDLE2);
-		GAMEPAD_BUTTON_CASE(PADDLE3);
-		GAMEPAD_BUTTON_CASE(PADDLE4);
-		GAMEPAD_BUTTON_CASE(TOUCHPAD);
+		GAMEPAD_BUTTON_CASE(SOUTH, A);
+		GAMEPAD_BUTTON_CASE(EAST, B);
+		GAMEPAD_BUTTON_CASE(WEST, X);
+		GAMEPAD_BUTTON_CASE(NORTH, Y);
+		GAMEPAD_BUTTON_CASE(BACK, BACK);
+		GAMEPAD_BUTTON_CASE(GUIDE, GUIDE);
+		GAMEPAD_BUTTON_CASE(START, START);
+		GAMEPAD_BUTTON_CASE(LEFT_STICK, LEFTSTICK);
+		GAMEPAD_BUTTON_CASE(RIGHT_STICK, RIGHTSTICK);
+		GAMEPAD_BUTTON_CASE(LEFT_SHOULDER, LEFTSHOULDER);
+		GAMEPAD_BUTTON_CASE(RIGHT_SHOULDER, RIGHTSHOULDER);
+		GAMEPAD_BUTTON_CASE(DPAD_UP, DPAD_UP);
+		GAMEPAD_BUTTON_CASE(DPAD_DOWN, DPAD_DOWN);
+		GAMEPAD_BUTTON_CASE(DPAD_LEFT, DPAD_LEFT);
+		GAMEPAD_BUTTON_CASE(DPAD_RIGHT, DPAD_RIGHT);
+		GAMEPAD_BUTTON_CASE(MISC1, MISC1);
+		GAMEPAD_BUTTON_CASE(RIGHT_PADDLE1, PADDLE1);
+		GAMEPAD_BUTTON_CASE(LEFT_PADDLE1, PADDLE2);
+		GAMEPAD_BUTTON_CASE(RIGHT_PADDLE2, PADDLE3);
+		GAMEPAD_BUTTON_CASE(LEFT_PADDLE2, PADDLE4);
+		GAMEPAD_BUTTON_CASE(TOUCHPAD, TOUCHPAD);
 		default: return;
 	}
 
@@ -651,7 +659,7 @@ void I_HandleControllerButtonEvent(SDL_ControllerButtonEvent evt, Uint32 type)
 	D_PostEvent(&event);
 }
 
-void I_HandleControllerAxisEvent(SDL_ControllerAxisEvent evt)
+void I_HandleControllerAxisEvent(SDL_GamepadAxisEvent evt)
 {
 	event_t event;
 
@@ -659,19 +667,19 @@ void I_HandleControllerAxisEvent(SDL_ControllerAxisEvent evt)
 	if (gamepad == NULL)
 		return;
 
-#define GAMEPAD_AXIS_CASE(btn) \
-	case SDL_CONTROLLER_AXIS_##btn: \
-		event.data1 = GAMEPAD_AXIS_##btn; \
+#define GAMEPAD_AXIS_CASE(sdlaxis, axis) \
+	case SDL_GAMEPAD_AXIS_##sdlaxis: \
+		event.data1 = GAMEPAD_AXIS_##axis; \
 		break
 
 	switch (evt.axis)
 	{
-		GAMEPAD_AXIS_CASE(LEFTX);
-		GAMEPAD_AXIS_CASE(LEFTY);
-		GAMEPAD_AXIS_CASE(RIGHTX);
-		GAMEPAD_AXIS_CASE(RIGHTY);
-		GAMEPAD_AXIS_CASE(TRIGGERLEFT);
-		GAMEPAD_AXIS_CASE(TRIGGERRIGHT);
+		GAMEPAD_AXIS_CASE(LEFTX, LEFTX);
+		GAMEPAD_AXIS_CASE(LEFTY, LEFTY);
+		GAMEPAD_AXIS_CASE(RIGHTX, RIGHTX);
+		GAMEPAD_AXIS_CASE(RIGHTY, RIGHTY);
+		GAMEPAD_AXIS_CASE(LEFT_TRIGGER, TRIGGERLEFT);
+		GAMEPAD_AXIS_CASE(RIGHT_TRIGGER, TRIGGERRIGHT);
 		default: return;
 	}
 
@@ -701,7 +709,7 @@ static void Controller_StopRumble(UINT8 num)
 	gamepad->rumble.data.duration = 0;
 
 	if (gamepad->rumble.supported)
-		SDL_GameControllerRumble(controller->dev, 0, 0, 0);
+		SDL_RumbleGamepad(controller->dev, 0, 0, 0);
 }
 
 static void Controller_Close(UINT8 num)
@@ -712,7 +720,7 @@ static void Controller_Close(UINT8 num)
 	if (controller->dev)
 	{
 		Controller_StopRumble(num);
-		SDL_GameControllerClose(controller->dev);
+		SDL_CloseGamepad(controller->dev);
 	}
 
 	controller->dev = NULL;
@@ -750,10 +758,7 @@ boolean I_RumbleSupported(void)
 
 static boolean Controller_Rumble(ControllerInfo *c)
 {
-	if (SDL_GameControllerRumble(c->dev, c->rumble.large_magnitude, c->rumble.small_magnitude, 0) == -1)
-		return false;
-
-	return true;
+	return SDL_RumbleGamepad(c->dev, c->rumble.large_magnitude, c->rumble.small_magnitude, 0);
 }
 
 void I_ToggleControllerRumble(boolean unpause)
@@ -770,7 +775,7 @@ void I_ToggleControllerRumble(boolean unpause)
 			continue;
 
 		if (rumble_paused)
-			SDL_GameControllerRumble(controller->dev, 0, 0, 0);
+			SDL_RumbleGamepad(controller->dev, 0, 0, 0);
 		else if (!controller->info->rumble.paused)
 		{
 			if (!Controller_Rumble(controller))
@@ -791,14 +796,14 @@ void I_UpdateControllers(void)
 			continue;
 
 		if (controller->rumble.expiration &&
-			SDL_TICKS_PASSED(SDL_GetTicks(), controller->rumble.expiration))
+			SDL_GetTicks() >= controller->rumble.expiration)
 		{
 			// Enough time has passed, so stop the effect
 			Controller_StopRumble(i);
 		}
 	}
 
-	SDL_JoystickUpdate();
+	SDL_UpdateJoysticks();
 }
 
 // Converts duration in tics to milliseconds
@@ -906,7 +911,7 @@ void I_SetGamepadRumblePaused(UINT8 which, boolean pause)
 	else if (pause)
 	{
 		if (!rumble_paused)
-			SDL_GameControllerRumble(controller->dev, 0, 0, 0);
+			SDL_RumbleGamepad(controller->dev, 0, 0, 0);
 
 		if (controller->rumble.expiration)
 		{
@@ -917,7 +922,7 @@ void I_SetGamepadRumblePaused(UINT8 which, boolean pause)
 	else
 	{
 		if (!rumble_paused)
-			SDL_GameControllerRumble(controller->dev, controller->rumble.large_magnitude, controller->rumble.small_magnitude, 0);
+			SDL_RumbleGamepad(controller->dev, controller->rumble.large_magnitude, controller->rumble.small_magnitude, 0);
 
 		if (controller->rumble.time_left)
 			controller->rumble.expiration = SDL_GetTicks() + controller->rumble.time_left;

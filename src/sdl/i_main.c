@@ -35,8 +35,9 @@
 
 #ifdef HAVE_SDL
 
+#include <SDL3/SDL.h>
+
 #ifdef HAVE_TTF
-#include "SDL.h"
 #include "i_ttf.h"
 #endif
 
@@ -45,7 +46,7 @@
 #endif
 
 #ifdef SDLMAIN
-#include "SDL_main.h"
+#include <SDL3/SDL_main.h>
 #elif defined(FORCESDLMAIN)
 extern int SDL_main(int argc, char *argv[]);
 #endif

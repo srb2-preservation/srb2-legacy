@@ -64,16 +64,17 @@ LIBOPENMPT_opts:=-I$(lib)/inc
 LIBOPENMPT_libs:=-L$(lib)/lib/$(x86)/mingw -lopenmpt
 $(eval $(call _set,LIBOPENMPT))
 
-lib:=../libs/SDL2_mixer/$(mingw)
+# SDL3 and SDL3_mixer development libraries for MinGW go in
+# libs/SDL3 and libs/SDL3_mixer, like the SDL2 ones did.
+lib:=../libs/SDL3_mixer/$(mingw)
+SDL_MIXER_opts:=-I$(lib)/include
+SDL_MIXER_libs:=-L$(lib)/lib -lSDL3_mixer
+$(eval $(call _set,SDL_MIXER))
 
-mixer_opts:=-I$(lib)/include/SDL2
-mixer_libs:=-L$(lib)/lib
-
-lib:=../libs/SDL2/$(mingw)
-SDL_opts:=-I$(lib)/include/SDL2\
-	$(mixer_opts) -Dmain=SDL_main
-SDL_libs:=-L$(lib)/lib $(mixer_libs)\
-	-lmingw32 -lSDL2main -lSDL2 -mwindows
+# SDL3 has no SDL2main library; SDL_main.h takes care of the entry point.
+lib:=../libs/SDL3/$(mingw)
+SDL_opts:=-I$(lib)/include
+SDL_libs:=-L$(lib)/lib -lmingw32 -lSDL3 -mwindows
 $(eval $(call _set,SDL))
 
 lib:=../libs/zlib

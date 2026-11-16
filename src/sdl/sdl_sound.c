@@ -22,25 +22,13 @@
 
 #include <math.h>
 
-#include "SDL.h"
+#include <SDL3/SDL.h>
 
-#ifdef HAVE_MIXER
-#include "SDL_mixer.h"
-/* This is the version number macro for the current SDL_mixer version: */
-#ifndef SDL_MIXER_COMPILEDVERSION
-#define SDL_MIXER_COMPILEDVERSION \
-	SDL_VERSIONNUM(MIX_MAJOR_VERSION, MIX_MINOR_VERSION, MIX_PATCHLEVEL)
-#endif
-
-/* This macro will evaluate to true if compiled with SDL_mixer at least X.Y.Z */
-#ifndef SDL_MIXER_VERSION_ATLEAST
-#define SDL_MIXER_VERSION_ATLEAST(X, Y, Z) \
-	(SDL_MIXER_COMPILEDVERSION >= SDL_VERSIONNUM(X, Y, Z))
-#endif
-
-#else
+// The music code in this file was written for the SDL 1.2 and SDL2 versions of SDL_mixer,
+// and hasn't been ported to SDL3_mixer; mixer_sound.c is the SDL_mixer interface.
+// This interface only plays sound effects.
+#undef HAVE_MIXER
 #define MIX_CHANNELS 8
-#endif
 
 #ifdef _WIN32
 #include <direct.h>
@@ -125,14 +113,24 @@ static INT32 steptable[256];
 static Sint16 vol_lookup[128 * 256];
 
 UINT8 sound_started = false;
-static SDL_mutex *Snd_Mutex = NULL;
+static SDL_Mutex *Snd_Mutex = NULL;
 
 //SDL's Audio
-static SDL_AudioSpec audio;
+static struct
+{
+	SDL_AudioFormat format;
+	int channels;
+	int freq;
+	Uint16 samples;
+	void *userdata;
+} audio;
 
-static SDL_bool musicStarted = SDL_FALSE;
+// Open audio device, bound to the stream that I_AudioStreamCallback fills
+static SDL_AudioStream *audiostream = NULL;
+
+static bool musicStarted = false;
 #ifdef HAVE_MIXER
-static SDL_mutex *Msc_Mutex = NULL;
+static SDL_Mutex *Msc_Mutex = NULL;
 /* FIXME: Make this file instance-specific */
 #define MIDI_PATH     srb2home
 #if defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON)
@@ -146,8 +144,8 @@ static INT32 musicvol = 62;
 #define MIXER_POS //Mix_FadeInMusicPos in 1.2.2+
 static void SDLCALL I_FinishMusic(void);
 static double loopstartDig = 0.0l;
-static SDL_bool loopingDig = SDL_FALSE;
-static SDL_bool canlooping = SDL_TRUE;
+static bool loopingDig = false;
+static bool canlooping = true;
 #endif
 
 #if SDL_MIXER_VERSION_ATLEAST(1,2,7)
@@ -163,7 +161,7 @@ static SDL_bool canlooping = SDL_TRUE;
 
 #ifdef USE_RWOPS
 static void * Smidi[2] = { NULL, NULL };
-static SDL_bool canuseRW = SDL_TRUE;
+static bool canuseRW = true;
 #endif
 static const char *fmidi[2] = { MIDI_TMPFILE, MIDI_TMPFILE2};
 
@@ -192,7 +190,7 @@ static void Snd_LockAudio(void) //Alam: Lock audio data and uninstall audio call
 #ifdef HW3SOUND
 	         && hws_mode == HWS_DEFAULT_MODE
 #endif
-	        ) SDL_LockAudio();
+	        ) { if (audiostream) SDL_LockAudioStream(audiostream); }
 #ifdef HAVE_MIXER
 	else if (musicStarted) Mix_SetPostMix(NULL, NULL);
 #endif
@@ -206,7 +204,7 @@ static void Snd_UnlockAudio(void) //Alam: Unlock audio data and reinstall audio 
 #ifdef HW3SOUND
 	         && hws_mode == HWS_DEFAULT_MODE
 #endif
-	        ) SDL_UnlockAudio();
+	        ) { if (audiostream) SDL_UnlockAudioStream(audiostream); }
 #ifdef HAVE_MIXER
 	else if (musicStarted) Mix_SetPostMix(audio.callback, audio.userdata);
 #endif
@@ -245,7 +243,8 @@ static void *getsfx(lumpnum_t sfxlump, size_t *len)
 	dssfx_t *sfx, *paddedsfx;
 	Uint16 sr , csr;
 	size_t size = *len;
-	SDL_AudioCVT sfxcvt;
+	Uint8 *cvtbuf = NULL;
+	int cvtlen = 0;
 
 	sfx = (dssfx_t *)malloc(size);
 	if (sfx) W_ReadLump(sfxlump, (void *)sfx);
@@ -253,30 +252,28 @@ static void *getsfx(lumpnum_t sfxlump, size_t *len)
 	sr = SHORT(sfx->samplerate);
 	csr = Snd_LowerRate(sr);
 
-	if (sr > csr && SDL_BuildAudioCVT(&sfxcvt, AUDIO_U8, 1, sr, AUDIO_U8, 1, csr))
-	{//Alam: Setup the AudioCVT for the SFX
+	if (sr > csr)
+	{//Alam: Setup the conversion for the SFX
+		const SDL_AudioSpec srcspec = {SDL_AUDIO_U8, 1, sr};
+		const SDL_AudioSpec dstspec = {SDL_AUDIO_U8, 1, csr};
 
-		sfxcvt.len = (INT32)size-8; //Alam: Chop off the header
-		sfxcvt.buf = malloc(sfxcvt.len * sfxcvt.len_mult); //Alam: make room
-		if (sfxcvt.buf) M_Memcpy(sfxcvt.buf, &(sfx->data), sfxcvt.len); //Alam: copy the sfx sample
-
-		if (sfxcvt.buf && SDL_ConvertAudio(&sfxcvt) == 0) //Alam: let convert it!
+		//Alam: Chop off the header, and let convert it!
+		if (SDL_ConvertAudioSamples(&srcspec, sfx->data, (int)size-8, &dstspec, &cvtbuf, &cvtlen))
 		{
-				size = sfxcvt.len_cvt + 8;
-				*len = sfxcvt.len_cvt;
+				size = cvtlen + 8;
+				*len = cvtlen;
 
 				// Allocate from zone memory.
 				paddedsfx = (dssfx_t *) Z_Malloc(size, PU_SOUND, NULL);
 
 				// Now copy and pad.
-				M_Memcpy(paddedsfx->data, sfxcvt.buf, sfxcvt.len_cvt);
-				free(sfxcvt.buf);
+				M_Memcpy(paddedsfx->data, cvtbuf, cvtlen);
+				SDL_free(cvtbuf);
 				M_Memcpy(paddedsfx,sfx,8);
 				paddedsfx->samplerate = SHORT(csr); // new freq
 		}
-		else //Alam: the convert failed, not needed or I couldn't malloc the buf
+		else //Alam: the convert failed
 		{
-			if (sfxcvt.buf) free(sfxcvt.buf);
 			*len = size - 8;
 
 			// Allocate from zone memory then copy and pad
@@ -1019,18 +1016,18 @@ static void SDLCALL I_UpdateStream(void *userdata, Uint8 *stream, int len)
 	if (!sound_started || !userdata)
 		return;
 
-	memset(stream, 0x00, len); // only work in !AUDIO_U8, that needs 0x80
+	memset(stream, 0x00, len); // only work in !SDL_AUDIO_U8, that needs 0x80
 
 	if ((audio.channels != 1 && audio.channels != 2) ||
-	    (audio.format != AUDIO_S8 && audio.format != AUDIO_S16SYS))
+	    (audio.format != SDL_AUDIO_S8 && audio.format != SDL_AUDIO_S16))
 		; // no function to encode this type of stream
-	else if (audio.channels == 1 && audio.format == AUDIO_S8)
+	else if (audio.channels == 1 && audio.format == SDL_AUDIO_S8)
 		I_UpdateStream8M(stream, len);
-	else if (audio.channels == 2 && audio.format == AUDIO_S8)
+	else if (audio.channels == 2 && audio.format == SDL_AUDIO_S8)
 		I_UpdateStream8S(stream, len);
-	else if (audio.channels == 1 && audio.format == AUDIO_S16SYS)
+	else if (audio.channels == 1 && audio.format == SDL_AUDIO_S16)
 		I_UpdateStream16M(stream, len);
-	else if (audio.channels == 2 && audio.format == AUDIO_S16SYS)
+	else if (audio.channels == 2 && audio.format == SDL_AUDIO_S16)
 	{
 		I_UpdateStream16S(stream, len);
 
@@ -1044,6 +1041,31 @@ static void SDLCALL I_UpdateStream(void *userdata, Uint8 *stream, int len)
 // 		}
 // #endif
 
+	}
+}
+
+// SDL asks for more audio through this; I_UpdateStream mixes it.
+static void SDLCALL I_AudioStreamCallback(void *userdata, SDL_AudioStream *stream, int additional_amount, int total_amount)
+{
+	static Uint8 buffer[8192]; // only the audio thread gets here
+	const int framesize = (int)SDL_AUDIO_BYTESIZE(audio.format) * audio.channels;
+
+	(void)total_amount;
+
+	while (additional_amount > 0)
+	{
+		// whole sample frames only
+		int len = additional_amount + framesize - 1;
+		len -= len % framesize;
+		if (len > (int)sizeof(buffer))
+			len = (int)sizeof(buffer) - ((int)sizeof(buffer) % framesize);
+
+		memset(buffer, 0x00, len);
+		I_UpdateStream(userdata, buffer, len);
+
+		if (!SDL_PutAudioStreamData(stream, buffer, len))
+			break;
+		additional_amount -= len;
 	}
 }
 
@@ -1136,8 +1158,9 @@ void I_ShutdownSound(void)
 	}
 #endif
 
-	if (midi_disabled && digital_disabled)
-		SDL_CloseAudio();
+	if (audiostream)
+		SDL_DestroyAudioStream(audiostream); // closes the device as well
+	audiostream = NULL;
 	CONS_Printf("%s", M_GetText("shut down\n"));
 	sound_started = false;
 	SDL_QuitSubSystem(SDL_INIT_AUDIO);
@@ -1161,25 +1184,17 @@ void I_StartupSound(void)
 
 	memset(channels, 0, sizeof (channels)); //Alam: Clean it
 
-	audio.format = AUDIO_S16SYS;
+	audio.format = SDL_AUDIO_S16;
 	audio.channels = 2;
-	audio.callback = I_UpdateStream;
 	audio.userdata = &localdata;
 
 	// Configure sound device
 	CONS_Printf("I_StartupSound:\n");
 
-#if defined(_WIN32) && !SDL_VERSION_ATLEAST(2,26,5)
-	// Force DirectSound instead of WASAPI
-	// SDL 2.0.6+ defaults to the latter and it screws up our sound effects
-	// SDL 2.26.5 brought imrovements to resampling so this just screws up other stuff now
-	SDL_setenv("SDL_AUDIODRIVER", "directsound", 1);
-#endif
-
 	// EE inits audio first so we're following along.
 	if (SDL_WasInit(SDL_INIT_AUDIO) == SDL_INIT_AUDIO)
 		CONS_Printf("SDL Audio already started\n");
-	else if (SDL_InitSubSystem(SDL_INIT_AUDIO) < 0)
+	else if (!SDL_InitSubSystem(SDL_INIT_AUDIO))
 	{
 		CONS_Alert(CONS_ERROR, "Error initializing SDL Audio: %s\n", SDL_GetError());
 		// call to start audio failed -- we do not have it
@@ -1278,23 +1293,29 @@ void I_StartupSound(void)
 		hws_mode = HWS_DEFAULT_MODE;
 	}
 #endif
-	if (!musicStarted && SDL_OpenAudio(&audio, &audio) < 0)
 	{
-		CONS_Printf("%s", M_GetText(" couldn't open audio with desired format\n"));
-		sound_disabled = true;
-		return;
-	}
-	else
-	{
-		//char ad[100];
-		//CONS_Printf(M_GetText(" Starting up with audio driver : %s\n"), SDL_AudioDriverName(ad, (int)sizeof ad));
+		const SDL_AudioSpec spec = {audio.format, audio.channels, audio.freq};
+		char frames[16];
+
+		// SDL3 has no buffer size in the spec; this hint asks for one
+		snprintf(frames, sizeof frames, "%d", audio.samples);
+		SDL_SetHint(SDL_HINT_AUDIO_DEVICE_SAMPLE_FRAMES, frames);
+
+		// SDL converts from our format to whatever the device ends up with
+		audiostream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, I_AudioStreamCallback, audio.userdata);
+		if (!audiostream)
+		{
+			CONS_Printf("%s", M_GetText(" couldn't open audio with desired format\n"));
+			sound_disabled = true;
+			return;
+		}
 	}
 	samplecount = audio.samples;
 	CONS_Printf(M_GetText(" configured audio device with %d samples/slice at %ikhz(%dms buffer)\n"), samplecount, audio.freq/1000, (INT32) (((float)audio.samples * 1000.0f) / audio.freq));
 	// Finished initialization.
 	CONS_Printf("%s", M_GetText(" Sound module ready\n"));
 	//[segabor]
-	if (!musicStarted) SDL_PauseAudio(0);
+	SDL_ResumeAudioStreamDevice(audiostream);
 	//Mix_Pause(0);
 	I_SetChannels();
 	sound_started = true;

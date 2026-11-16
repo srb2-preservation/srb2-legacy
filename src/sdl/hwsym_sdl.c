@@ -27,11 +27,7 @@
 
 #ifdef HAVE_SDL
 
-#include "SDL.h"
-
-#ifndef NOLOADSO
-#include "SDL_loadso.h"
-#endif
+#include <SDL3/SDL.h>
 
 #define  _CREATE_DLL_  // necessary for Unix AND Windows
 
@@ -132,7 +128,7 @@ void *hwSym(const char *funcName,void *handle)
 		funcPointer = handle;
 #else
 	else if (handle)
-		funcPointer = SDL_LoadFunction(handle,funcName);
+		funcPointer = (void *)(size_t)SDL_LoadFunction(handle,funcName);
 #endif
 	if (!funcPointer)
 		I_OutputMsg("hwSym for %s: %s\n", funcName, SDL_GetError());

@@ -23,7 +23,7 @@
 #ifdef HAVE_SDL
 #define _MATH_DEFINES_DEFINED
 
-#include "SDL_opengl.h" //Alam_GBC: Simple, yes?
+#include <SDL3/SDL_opengl.h> //Alam_GBC: Simple, yes?
 
 #else
 #include <GL/gl.h>

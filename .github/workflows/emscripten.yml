@@ -41,7 +41,7 @@ jobs:
         uses: emscripten-core/setup-emsdk@v16
         with:
           # Make sure to set a version number!
-          version: 6.0.9
+          version: 7.0.0
           # This is the name of the cache folder.
           # The cache folder will be placed in the build directory,
           # so make sure it doesn't conflict with anything!
