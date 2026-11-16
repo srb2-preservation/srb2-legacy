@@ -25,7 +25,7 @@ set(SRB2_CONFIG_HAVE_THREADS ON CACHE BOOL
 	"Enable multithreading support.")
 set(SRB2_CONFIG_HWRENDER ON CACHE BOOL
 	"Enable hardware rendering through OpenGL.")
-set(SRB2_CONFIG_SDLGPU OFF CACHE BOOL
+set(SRB2_CONFIG_SDLGPU ON CACHE BOOL
 	"Enable the SDL GPU renderer (Vulkan, Direct3D 12, Metal). Needs hardware rendering.")
 set(SRB2_CONFIG_HAVE_SHADERC ON CACHE BOOL
 	"Use shaderc if found, so that the SDL GPU renderer can use the GLSL shaders of addons. The game's own shaders don't need it.")

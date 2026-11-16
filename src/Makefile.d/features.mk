@@ -17,7 +17,7 @@ endif
 ifndef NOHW
 opts+=-DHWRENDER
 sources+=$(call List,hardware/Sourcefile)
-ifdef SDLGPU
+ifndef NOSDLGPU
 opts+=-DHWRENDER_SDLGPU
 sources+=hardware/r_sdlgpu/r_sdlgpu.c
 sources+=hardware/r_sdlgpu/gpu_glsl.c
