@@ -17,6 +17,10 @@ endif
 ifndef NOHW
 opts+=-DHWRENDER
 sources+=$(call List,hardware/Sourcefile)
+ifdef SDLGPU
+opts+=-DHWRENDER_SDLGPU
+sources+=hardware/r_sdlgpu/r_sdlgpu.c
+endif
 endif
 
 ifndef NOMD5

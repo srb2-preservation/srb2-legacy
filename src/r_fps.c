@@ -150,7 +150,7 @@ static void R_SetupFreelook(player_t *player, boolean skybox)
 	// (lmps, network and use F12...)
 	if (rendermode == render_soft
 #ifdef HWRENDER
-		|| (rendermode == render_opengl
+		|| (HWRENDERING
 			&& (cv_glshearing.value == 1
 			|| (cv_glshearing.value == 2 && R_IsViewpointThirdPerson(player, skybox))))
 #endif

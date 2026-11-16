@@ -13,6 +13,7 @@
 #ifndef __HWR_MAIN_H__
 #define __HWR_MAIN_H__
 
+#include "../i_video.h" // rendermode_t
 #include "hw_data.h"
 #include "hw_defs.h"
 
@@ -23,6 +24,7 @@
 
 // Startup & Shutdown the hardware mode renderer
 void HWR_Startup(void);
+void HWR_DriverDeactivate(rendermode_t mode);
 void HWR_Switch(void);
 void HWR_Shutdown(void);
 

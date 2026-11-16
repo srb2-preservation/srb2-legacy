@@ -20,6 +20,12 @@
 
 boolean OglSdlSurface(INT32 w, INT32 h);
 
+// OpenGL's hooks for the SDL hardware backend table, see hwbackend_sdl.h
+void OglSdlWindowFlags(SDL_WindowFlags *flags);
+boolean OglSdlCreateContext(SDL_Window *win);
+void OglSdlDestroyContext(void);
+void OglSdlSetMode(INT32 w, INT32 h);
+
 void OglSdlFinishUpdate(boolean vidwait);
 
 extern SDL_Renderer *renderer;

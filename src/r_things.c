@@ -435,7 +435,7 @@ void R_AddSpriteDefs(UINT16 wadnum)
 		if (R_AddSingleSpriteDef(spritename, &sprites[i], wadnum, start, end))
 		{
 #ifdef HWRENDER
-			if (rendermode == render_opengl)
+			if (HWRENDERING)
 				HWR_AddSpriteMD2(i);
 #endif
 			// if a new sprite was added (not just replaced)
@@ -2712,7 +2712,7 @@ void R_InitSkins(void)
 
 	//MD2 for sonic doesn't want to load in Linux.
 #ifdef HWRENDER
-	if (rendermode == render_opengl)
+	if (HWRENDERING)
 		HWR_AddPlayerMD2(0);
 #endif
 }
@@ -3127,7 +3127,7 @@ next_token:
 		ST_LoadFaceGraphics(skin->face, skin->superface, numskins);
 
 #ifdef HWRENDER
-		if (rendermode == render_opengl)
+		if (HWRENDERING)
 			HWR_AddPlayerMD2(numskins);
 #endif
 

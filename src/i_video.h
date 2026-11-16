@@ -29,8 +29,21 @@ typedef enum
 	render_opengl = 2,
 
 	/// Dedicated
-	render_none = 3  // for dedicated server
+	render_none = 3,  // for dedicated server
+
+	/// SDL GPU
+	render_sdlgpu = 4
 } rendermode_t;
+
+/**	\brief true if the render mode is drawn through the hardware driver (HWD),
+	whatever the graphics API behind it. Use this instead of comparing against
+	render_opengl when the code only cares about "software vs. hardware".
+*/
+#define RENDERMODE_IS_HARDWARE(m) ((m) == render_opengl || (m) == render_sdlgpu)
+
+/**	\brief true if the current render mode is a hardware one
+*/
+#define HWRENDERING (RENDERMODE_IS_HARDWARE(rendermode))
 
 /**	\brief current render mode
 */
@@ -86,13 +99,24 @@ INT32 VID_GetModeForSize(INT32 w, INT32 h);
 INT32 VID_SetMode(INT32 modenum);
 void VID_CheckRenderer(void);
 
-/**	\brief Load OpenGL mode
+/**	\brief Load the hardware backend for a render mode (OpenGL, SDL GPU...)
+	and bind it to the hardware driver. Does nothing if it was already tried.
 */
-void VID_StartupOpenGL(void);
+void VID_StartupHardware(rendermode_t mode);
 
-/**	\brief Checks if OpenGL loaded
+/**	\brief Gets the load state (VID_GL_LIBRARY_*) of the backend for a render mode.
+	Returns VID_GL_LIBRARY_ERROR for render modes with no hardware backend,
+	or whose backend was not compiled in.
 */
-void VID_CheckGLLoaded(rendermode_t oldrender);
+INT32 VID_HardwareState(rendermode_t mode);
+
+/**	\brief Gets the user-facing name of a render mode's backend
+*/
+const char *VID_HardwareName(rendermode_t mode);
+
+/**	\brief Checks if the requested hardware backend loaded, falls back otherwise
+*/
+void VID_CheckHardwareLoaded(rendermode_t oldrender);
 
 /**	\brief	The VID_GetModeName function
 

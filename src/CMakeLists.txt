@@ -25,6 +25,8 @@ set(SRB2_CONFIG_HAVE_THREADS ON CACHE BOOL
 	"Enable multithreading support.")
 set(SRB2_CONFIG_HWRENDER ON CACHE BOOL
 	"Enable hardware rendering through OpenGL.")
+set(SRB2_CONFIG_SDLGPU OFF CACHE BOOL
+	"Enable the SDL GPU renderer. Work in progress: selecting it falls back to the previous renderer. Needs hardware rendering.")
 set(SRB2_CONFIG_STATIC_OPENGL OFF CACHE BOOL
 	"Use statically linked OpenGL. NOT RECOMMENDED.")
 set(SRB2_CONFIG_DEDICATED OFF CACHE BOOL
@@ -227,6 +229,10 @@ endif()
 if(${SRB2_CONFIG_HWRENDER})
 	target_compile_definitions(SRB2 PRIVATE -DHWRENDER)
 	add_subdirectory(hardware)
+	if(${SRB2_CONFIG_SDLGPU})
+		target_compile_definitions(SRB2 PRIVATE -DHWRENDER_SDLGPU)
+		target_sources(SRB2 PRIVATE hardware/r_sdlgpu/r_sdlgpu.c)
+	endif()
 endif()
 
 if(${SRB2_CONFIG_HWRENDER} AND ${SRB2_CONFIG_STATIC_OPENGL})

@@ -6172,12 +6172,24 @@ static inline void HWR_AddEngineCommands(void)
 // --------------------------------------------------------------------------
 // Setup the hardware renderer
 // --------------------------------------------------------------------------
+// State of the hardware driver that HWR_Startup sets up, remembered per render mode,
+// so switching between hardware backends (OpenGL, SDL GPU...) restores it.
+typedef struct
+{
+	boolean started;
+	boolean shadersavailable;
+	boolean palette_rendering_state;
+} hwr_driverstate_t;
+static hwr_driverstate_t hwr_driverstate[8];
+
+#define HWR_DRIVERSTATE(mode) (hwr_driverstate[(mode) & 7])
+
 void HWR_Startup(void)
 {
 	static boolean startupdone = false;
+	hwr_driverstate_t *driver = &HWR_DRIVERSTATE(rendermode);
 
-
-	// do this once
+	// do this once, whatever the driver
 	if (!startupdone)
 	{
 		CONS_Printf("HWR_Startup()...\n");
@@ -6190,14 +6202,48 @@ void HWR_Startup(void)
 		HWR_InitTextureCache();
 
 		HWR_InitMD2();
-
-	gl_shadersavailable = HWR_InitShaders();
-	HWR_SetShaderState();
-	HWR_LoadAllCustomShaders();
-	HWR_TogglePaletteRendering();
 	}
-
 	startupdone = true;
+
+	// do this once for each driver, since it talks to it
+	if (!driver->started)
+	{
+		driver->started = true;
+		gl_palette_rendering_state = false; // a new driver doesn't know about this
+		gl_shadersavailable = HWR_InitShaders();
+		HWR_SetShaderState();
+		HWR_LoadAllCustomShaders();
+		HWR_TogglePaletteRendering();
+	}
+	else
+	{
+		gl_shadersavailable = driver->shadersavailable;
+		gl_palette_rendering_state = driver->palette_rendering_state;
+	}
+}
+
+// --------------------------------------------------------------------------
+// Called when leaving a hardware driver for another render mode, before the
+// driver gets replaced. Whatever was uploaded to it can't be used again.
+// --------------------------------------------------------------------------
+void HWR_DriverDeactivate(rendermode_t mode)
+{
+	hwr_driverstate_t *driver = &HWR_DRIVERSTATE(mode);
+
+	driver->shadersavailable = gl_shadersavailable;
+	driver->palette_rendering_state = gl_palette_rendering_state;
+
+	HWR_ClearLightTables();
+	// The ids the colormaps kept belonged to the driver that's going away.
+	{
+		extracolormap_t *exc;
+		for (exc = extra_colormaps; exc; exc = exc->next)
+		{
+			exc->gl_lighttable.id = 0;
+			exc->gl_lighttable.needs_update = false;
+		}
+	}
+	HWR_FreeTextureCache();
 }
 
 // --------------------------------------------------------------------------

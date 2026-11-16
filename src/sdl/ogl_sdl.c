@@ -181,6 +181,50 @@ boolean OglSdlSurface(INT32 w, INT32 h)
 	return true;
 }
 
+void OglSdlWindowFlags(SDL_WindowFlags *flags)
+{
+	if (VID_HardwareState(render_opengl) == VID_GL_LIBRARY_LOADED)
+		*flags |= SDL_WINDOW_OPENGL;
+
+	// Without a 24-bit depth buffer many visuals are ruined by z-fighting.
+	// Some GPU drivers may give us a 16-bit depth buffer since the
+	// default value for SDL_GL_DEPTH_SIZE is 16.
+	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+
+	// SDL3 asks for an 8-bit alpha channel by default (SDL2 asked for none).
+	// The renderer never uses destination alpha, and some platforms have no
+	// window pixel format with one (Wine on X11 fails with "No matching GL
+	// pixel format available"), so ask for none like SDL2 did.
+	SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 0);
+}
+
+boolean OglSdlCreateContext(SDL_Window *win)
+{
+	if (!sdlglcontext)
+		sdlglcontext = SDL_GL_CreateContext(win);
+	if (sdlglcontext == NULL)
+	{
+		SDL_DestroyWindow(win);
+		I_Error("Failed to create a GL context: %s\n", SDL_GetError());
+	}
+	SDL_GL_MakeCurrent(win, sdlglcontext);
+	return true;
+}
+
+void OglSdlDestroyContext(void)
+{
+	if (sdlglcontext)
+	{
+		SDL_GL_DestroyContext(sdlglcontext);
+		sdlglcontext = NULL;
+	}
+}
+
+void OglSdlSetMode(INT32 w, INT32 h)
+{
+	OglSdlSurface(w, h);
+}
+
 /**	\brief	The OglSdlFinishUpdate function
 
 	\param	vidwait	wait for video sync

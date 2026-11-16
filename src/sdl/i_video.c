@@ -68,6 +68,7 @@
 // For dynamic referencing of HW rendering functions
 #include "hwsym_sdl.h"
 #include "ogl_sdl.h"
+#include "hwbackend_sdl.h"
 #endif
 
 // maximum number of windowed modes (see windowedModes[][])
@@ -221,9 +222,11 @@ static void SDLSetMode(INT32 width, INT32 height, bool fullscreen, bool repositi
 		SDL_SyncWindow(window);
 
 #ifdef HWRENDER
-	if (rendermode == render_opengl)
+	if (HWRENDERING)
 	{
-		OglSdlSurface(vid.width, vid.height);
+		sdlhwbackend_t *backend = SDLHW_Current();
+		if (backend)
+			backend->SetMode(vid.width, vid.height);
 	}
 #endif
 
@@ -879,9 +882,11 @@ void I_UpdateNoBlit(void)
 	if (exposevideo)
 	{
 #ifdef HWRENDER
-		if (rendermode == render_opengl)
+		if (HWRENDERING)
 		{
-			OglSdlFinishUpdate(cv_vidwait.value);
+			sdlhwbackend_t *backend = SDLHW_Current();
+			if (backend)
+				backend->FinishUpdate(cv_vidwait.value);
 		}
 		else
 #endif
@@ -973,8 +978,9 @@ void I_FinishUpdate(void)
 		SDL_RenderPresent(renderer);
 	}
 #ifdef HWRENDER
-	else if (rendermode == render_opengl)
+	else if (HWRENDERING)
 	{
+		sdlhwbackend_t *backend = SDLHW_Current();
 		// Final postprocess step of palette rendering, after everything else has been drawn.
 	if (HWR_ShouldUsePaletteRendering())
 	{
@@ -983,7 +989,8 @@ void I_FinishUpdate(void)
 		HWD.pfnDrawScreenTexture(HWD_SCREENTEXTURE_GENERIC2, NULL, 0);
 		HWD.pfnUnSetShader();
 	}
-		OglSdlFinishUpdate(cv_vidwait.value);
+		if (backend)
+			backend->FinishUpdate(cv_vidwait.value);
 	}
 #endif
 	exposevideo = false;
@@ -1209,17 +1216,14 @@ static bool Impl_CreateContext(void)
 {
 	// Renderer-specific stuff
 #ifdef HWRENDER
-	if ((rendermode == render_opengl)
-	&& (vid.glstate != VID_GL_LIBRARY_ERROR))
+	if (HWRENDERING && (VID_HardwareState(rendermode) != VID_GL_LIBRARY_ERROR))
 	{
-		if (!sdlglcontext)
-			sdlglcontext = SDL_GL_CreateContext(window);
-		if (sdlglcontext == NULL)
+		sdlhwbackend_t *backend = SDLHW_Current();
+		if (backend && !backend->CreateContext(window))
 		{
-			SDL_DestroyWindow(window);
-			I_Error("Failed to create a GL context: %s\n", SDL_GetError());
+			CONS_Printf(M_GetText("Couldn't create the %s context: %s\n"), backend->name, SDL_GetError());
+			return false;
 		}
-		SDL_GL_MakeCurrent(window, sdlglcontext);
 	}
 	else
 #endif
@@ -1241,13 +1245,13 @@ static bool Impl_CreateContext(void)
 	return true;
 }
 
-void VID_CheckGLLoaded(rendermode_t oldrender)
+void VID_CheckHardwareLoaded(rendermode_t oldrender)
 {
 #ifdef HWRENDER
-	if (vid.glstate == VID_GL_LIBRARY_ERROR) // Well, it didn't work the first time anyway.
+	if (VID_HardwareState(rendermode) == VID_GL_LIBRARY_ERROR) // Well, it didn't work the first time anyway.
 	{
 		rendermode = oldrender;
-		if (chosenrendermode == render_opengl) // fallback to software
+		if (RENDERMODE_IS_HARDWARE(chosenrendermode)) // fallback to software
 			rendermode = render_soft;
 		if (setrenderneeded)
 		{
@@ -1264,6 +1268,7 @@ static void Impl_DestroyWindow(void)
 	// Destroy the current window, if it exists.
 	if (window)
 	{
+		SDLHW_ReleaseWindow(window);
 		SDL_DestroyWindow(window);
 		window = NULL;
 	}
@@ -1291,37 +1296,72 @@ void VID_CheckRenderer(void)
 		rendermode = setrenderneeded;
 		rendererchanged = true;
 
-#if (defined(__APPLE__) || defined(_WIN32)) && defined(HWRENDER)
-		// macOS and Windows need the window and rendering context to be remade on every renderer switch, or else the video will freeze.
-		Impl_DestroyWindow();
+#ifdef HWRENDER
+		if (HWRENDERING)
+		{
+			// The mode the player asked for. VID_CheckHardwareLoaded
+			// and VID_StartupHardware can change rendermode.
+			const rendermode_t hwmode = rendermode;
+			sdlhwbackend_t *oldbackend = SDLHW_GetBackend(oldrenderer);
+			sdlhwbackend_t *newbackend = SDLHW_GetBackend(hwmode);
+			INT32 hwstate;
+
+			VID_CheckHardwareLoaded(oldrenderer);
+
+			// Going from a hardware backend to another one: whatever was
+			// uploaded to the old one can't be used with the new one.
+			if (rendermode == hwmode && hwmode != oldrenderer
+			&& oldbackend && oldbackend->state == VID_GL_LIBRARY_LOADED)
+				HWR_DriverDeactivate(oldrenderer);
+
+#if (defined(__APPLE__) || defined(_WIN32))
+			// macOS and Windows need the window and rendering context to be remade on every renderer switch, or else the video will freeze.
+			Impl_DestroyWindow();
+#else
+			// Some backends can't be moved between windows.
+			if (rendermode == hwmode && hwmode != oldrenderer
+			&& ((oldbackend && oldbackend->needsnewwindow) || (newbackend && newbackend->needsnewwindow)))
+				Impl_DestroyWindow();
 #endif
 
-#ifdef HWRENDER
-		if (rendermode == render_opengl)
-		{
-			VID_CheckGLLoaded(oldrenderer);
+			// Initialise the backend before calling SDLSetMode!!!
+			// This is because SDLSetMode calls the backend's SetMode, which needs it.
+			hwstate = VID_HardwareState(hwmode);
+			VID_StartupHardware(hwmode);
 
-			// Initialise OpenGL before calling SDLSetMode!!!
-			// This is because SDLSetMode calls OglSdlSurface.
-			if (vid.glstate == VID_GL_LIBRARY_NOTLOADED)
+			if (hwstate == VID_GL_LIBRARY_NOTLOADED)
 			{
-				VID_StartupOpenGL();
 				// Loaded successfully!
-				if (vid.glstate == VID_GL_LIBRARY_LOADED)
+				if (VID_HardwareState(hwmode) == VID_GL_LIBRARY_LOADED)
 				{
 #if !defined(__APPLE__) && !defined(_WIN32)
-					Impl_DestroyWindow();
+					if (!newbackend->needsnewwindow) // already done otherwise
+					{
+						Impl_DestroyWindow();
 
-					// Create a new window.
-					Impl_CreateWindow(USE_FULLSCREEN);
+						// Create a new window.
+						Impl_CreateWindow(USE_FULLSCREEN);
 
-					// From there, the OpenGL context was already created.
-					contextcreated = true;
+						// From there, the graphics context was already created.
+						contextcreated = true;
+					}
 #endif // __APPLE__
 				}
 			}
-			else if (vid.glstate == VID_GL_LIBRARY_ERROR)
+			else if (hwstate == VID_GL_LIBRARY_ERROR)
 				rendererchanged = false;
+		}
+		else
+		{
+#if (defined(__APPLE__) || defined(_WIN32)) && defined(HWRENDER)
+			// macOS and Windows need the window and rendering context to be remade on every renderer switch, or else the video will freeze.
+			Impl_DestroyWindow();
+#else
+			// Leaving a backend that can't share its window
+			sdlhwbackend_t *oldbackend = SDLHW_GetBackend(oldrenderer);
+			if (oldbackend && oldbackend->needsnewwindow)
+				Impl_DestroyWindow();
+#endif
 		}
 #endif // HWRENDER
 
@@ -1344,14 +1384,14 @@ void VID_CheckRenderer(void)
 		if (rendererchanged)
 		{
 #ifdef HWRENDER
-			if (vid.glstate == VID_GL_LIBRARY_LOADED)  // Only if OpenGL ever loaded!
+			if (vid.glstate == VID_GL_LIBRARY_LOADED)  // Only if a hardware backend ever loaded!
 				HWR_FreeTextureCache();
 #endif
 			SCR_SetDrawFuncs();
 		}
 	}
 #ifdef HWRENDER
-	else if (rendermode == render_opengl)
+	else if (HWRENDERING)
 	{
 		if (rendererchanged)
 		{
@@ -1455,21 +1495,11 @@ static bool Impl_CreateWindow(bool fullscreen)
 		flags |= SDL_WINDOW_BORDERLESS;
 
 #ifdef HWRENDER
-	if (rendermode == render_opengl)
+	if (HWRENDERING)
 	{
-		if (vid.glstate == VID_GL_LIBRARY_LOADED)
-			flags |= SDL_WINDOW_OPENGL;
-
-		// Without a 24-bit depth buffer many visuals are ruined by z-fighting.
-		// Some GPU drivers may give us a 16-bit depth buffer since the
-		// default value for SDL_GL_DEPTH_SIZE is 16.
-		SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
-
-		// SDL3 asks for an 8-bit alpha channel by default (SDL2 asked for none).
-		// The renderer never uses destination alpha, and some platforms have no
-		// window pixel format with one (Wine on X11 fails with "No matching GL
-		// pixel format available"), so ask for none like SDL2 did.
-		SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 0);
+		sdlhwbackend_t *backend = SDLHW_Current();
+		if (backend)
+			backend->WindowFlags(&flags);
 	}
 #endif
 
@@ -1582,6 +1612,10 @@ void I_StartupGraphics(void)
 #ifdef HWRENDER
 	if (M_CheckParm("-opengl"))
 		chosenrendermode = rendermode = render_opengl;
+#ifdef HWRENDER_SDLGPU
+	else if (M_CheckParm("-sdlgpu"))
+		chosenrendermode = rendermode = render_sdlgpu;
+#endif
 	else if (M_CheckParm("-software"))
 #endif
 		chosenrendermode = rendermode = render_soft;
@@ -1593,9 +1627,17 @@ void I_StartupGraphics(void)
 	//VID_Command_ModeList_f();
 #ifdef HWRENDER
 	if (M_CheckParm("-nogl"))
-		vid.glstate = VID_GL_LIBRARY_ERROR; // Don't startup OpenGL
-	else if (chosenrendermode == render_opengl)
-		VID_StartupOpenGL();
+	{
+		// Don't startup OpenGL
+		sdlhwbackend_t *glbackend = SDLHW_GetBackend(render_opengl);
+		if (glbackend)
+			glbackend->state = VID_GL_LIBRARY_ERROR;
+		if (chosenrendermode == render_opengl)
+			chosenrendermode = rendermode = render_soft;
+		vid.glstate = VID_GL_LIBRARY_ERROR;
+	}
+	if (RENDERMODE_IS_HARDWARE(chosenrendermode))
+		VID_StartupHardware(chosenrendermode);
 #endif
 	// Fury: we do window initialization after GL setup to allow
 	// SDL_GL_LoadLibrary to work well on Windows
@@ -1653,59 +1695,67 @@ void I_StartupGraphics(void)
 	graphics_started = true;
 }
 
-void VID_StartupOpenGL(void)
+INT32 VID_HardwareState(rendermode_t mode)
 {
 #ifdef HWRENDER
-	static boolean glstartup = false;
-	if (!glstartup)
+	const sdlhwbackend_t *backend = SDLHW_GetBackend(mode);
+	if (backend)
+		return backend->state;
+#else
+	(void)mode;
+#endif
+	return -1; // VID_GL_LIBRARY_ERROR
+}
+
+const char *VID_HardwareName(rendermode_t mode)
+{
+#ifdef HWRENDER
+	const sdlhwbackend_t *backend = SDLHW_GetBackend(mode);
+	if (backend)
+		return backend->name;
+#else
+	(void)mode;
+#endif
+	return "Hardware";
+}
+
+void VID_StartupHardware(rendermode_t mode)
+{
+#ifdef HWRENDER
+	sdlhwbackend_t *backend = SDLHW_GetBackend(mode);
+
+	if (!backend || backend->state == VID_GL_LIBRARY_ERROR)
+		return;
+
+	if (backend->state == VID_GL_LIBRARY_NOTLOADED)
 	{
-		CONS_Printf("VID_StartupOpenGL()...\n");
-		HWD.pfnInit             = hwSym("Init",NULL);
-		HWD.pfnFinishUpdate     = NULL;
-		HWD.pfnDraw2DLine       = hwSym("Draw2DLine",NULL);
-		HWD.pfnDrawPolygon      = hwSym("DrawPolygon",NULL);
-		HWD.pfnDrawIndexedTriangles = hwSym("DrawIndexedTriangles",NULL);
-		HWD.pfnRenderSkyDome    = hwSym("RenderSkyDome",NULL);
-		HWD.pfnSetBlend         = hwSym("SetBlend",NULL);
-		HWD.pfnClearBuffer      = hwSym("ClearBuffer",NULL);
-		HWD.pfnSetTexture       = hwSym("SetTexture",NULL);
-		HWD.pfnUpdateTexture    = hwSym("UpdateTexture",NULL);
-		HWD.pfnReadScreenTexture= hwSym("ReadScreenTexture",NULL);
-		HWD.pfnGClipRect        = hwSym("GClipRect",NULL);
-		HWD.pfnClearMipMapCache = hwSym("ClearMipMapCache",NULL);
-		HWD.pfnSetSpecialState  = hwSym("SetSpecialState",NULL);
-		HWD.pfnSetTexturePalette= hwSym("SetTexturePalette",NULL);
-		HWD.pfnGetTextureUsed   = hwSym("GetTextureUsed",NULL);
-		HWD.pfnDrawModel        = hwSym("DrawModel",NULL);
-		HWD.pfnCreateModelVBOs  = hwSym("CreateModelVBOs",NULL);
-		HWD.pfnSetTransform     = hwSym("SetTransform",NULL);
-		HWD.pfnPostImgRedraw    = hwSym("PostImgRedraw",NULL);
-		HWD.pfnFlushScreenTextures=hwSym("FlushScreenTextures",NULL);
-		HWD.pfnDoScreenWipe     = hwSym("DoScreenWipe",NULL);
-		HWD.pfnDrawScreenTexture= hwSym("DrawScreenTexture",NULL);
-		HWD.pfnMakeScreenTexture= hwSym("MakeScreenTexture",NULL);
-		HWD.pfnDrawScreenFinalTexture=hwSym("DrawScreenFinalTexture",NULL);
-		HWD.pfnInitShaders      = hwSym("InitShaders",NULL);
-		HWD.pfnLoadShader       = hwSym("LoadShader",NULL);
-		HWD.pfnCompileShader    = hwSym("CompileShader",NULL);
-		HWD.pfnSetShader = hwSym("SetShader",NULL);
-		HWD.pfnUnSetShader = hwSym("UnSetShader",NULL);
-		HWD.pfnSetShaderInfo    = hwSym("SetShaderInfo",NULL);
-		HWD.pfnSetPaletteLookup = hwSym("SetPaletteLookup",NULL);
-		HWD.pfnCreateLightTable = hwSym("CreateLightTable",NULL);
-		HWD.pfnUpdateLightTable = hwSym("UpdateLightTable",NULL);
-		HWD.pfnClearLightTables = hwSym("ClearLightTables",NULL);
-		HWD.pfnSetScreenPalette = hwSym("SetScreenPalette",NULL);
+		struct hwdriver_s driver;
 
-		vid.glstate = HWD.pfnInit() ? VID_GL_LIBRARY_LOADED : VID_GL_LIBRARY_ERROR; // let load the OpenGL library
+		CONS_Printf("VID_StartupHardware(%s)...\n", backend->name);
 
-		if (vid.glstate == VID_GL_LIBRARY_ERROR)
+		memset(&driver, 0, sizeof (driver));
+		backend->FillDriver(&driver);
+
+		// let load the library
+		backend->state = (driver.pfnInit && driver.pfnInit()) ? VID_GL_LIBRARY_LOADED : VID_GL_LIBRARY_ERROR;
+
+		if (backend->state == VID_GL_LIBRARY_ERROR)
 		{
+			// Whatever the driver was bound to is still good.
+			if (vid.glstate == VID_GL_LIBRARY_NOTLOADED)
+				vid.glstate = VID_GL_LIBRARY_ERROR;
 			rendermode = render_soft;
 			setrenderneeded = 0;
+			return;
 		}
-		glstartup = true;
 	}
+
+	// Bind the hardware driver to this backend.
+	// Only the table is replaced, so this is cheap, and it's what makes switching between backends possible.
+	backend->FillDriver(&HWD);
+	vid.glstate = VID_GL_LIBRARY_LOADED;
+#else
+	(void)mode;
 #endif
 }
 
@@ -1736,11 +1786,7 @@ void I_ShutdownGraphics(void)
 	I_OutputMsg("shut down\n");
 
 #ifdef HWRENDER
-	if (sdlglcontext)
-	{
-		SDL_GL_DestroyContext(sdlglcontext);
-		sdlglcontext = NULL;
-	}
+	SDLHW_DestroyContexts();
 #endif
 	SDL_QuitSubSystem(SDL_INIT_VIDEO);
 	framebuffer = false;

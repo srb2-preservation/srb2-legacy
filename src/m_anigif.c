@@ -522,7 +522,7 @@ static void GIF_framewrite(void)
 		if (rendermode == render_soft)
 			I_ReadScreen(movie_screen);
 #ifdef HWRENDER
-		else if (rendermode == render_opengl)
+		else if (HWRENDERING)
 		{
 			UINT8 *linear = HWR_GetScreenshot();
 			GIF_rgbconvert(linear, movie_screen);
@@ -538,7 +538,7 @@ static void GIF_framewrite(void)
 
 #ifdef HWRENDER
 		// Copy the current OpenGL frame into the base screen
-		if (rendermode == render_opengl)
+		if (HWRENDERING)
 		{
 			UINT8 *linear = HWR_GetScreenshot();
 			GIF_rgbconvert(linear, screens[0]);

@@ -65,6 +65,9 @@ if(${CMAKE_SYSTEM} MATCHES "Android")
 endif()
 
 target_sources(SRB2 PRIVATE ogl_sdl.c)
+if(${SRB2_CONFIG_HWRENDER} AND ${SRB2_CONFIG_SDLGPU})
+	target_sources(SRB2 PRIVATE gpu_sdl.c)
+endif()
 
 # Dependency
 if(${SRB2_CONFIG_USE_INTERNAL_LIBRARIES})

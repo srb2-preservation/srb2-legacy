@@ -1378,7 +1378,8 @@ static void M_VideoOptions(INT32 choice)
 	OP_VideoOptionsMenu[op_video_renderer].text = "Software";
 
 #ifdef HWRENDER
-	if (vid.glstate != VID_GL_LIBRARY_ERROR)
+	if (VID_HardwareState(render_opengl) != VID_GL_LIBRARY_ERROR
+	|| VID_HardwareState(render_sdlgpu) != VID_GL_LIBRARY_ERROR)
 	{
 		OP_VideoOptionsMenu[op_video_renderer].status = (IT_STRING | IT_CVAR);
 		OP_VideoOptionsMenu[op_video_renderer].patch = NULL;

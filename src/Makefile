@@ -45,6 +45,7 @@
 # ------------------
 # NO_IPV6=1 - Disable IPv6 address support.
 # NOHW=1 - Disable OpenGL renderer.
+# SDLGPU=1 - Enable the SDL GPU renderer (work in progress).
 # ZDEBUG=1 - Enable more detailed memory debugging
 # HAVE_MINIUPNPC=1 - Enable automated port forwarding.
 #                    Already enabled by default for 32-bit

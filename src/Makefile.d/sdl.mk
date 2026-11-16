@@ -19,6 +19,9 @@ endif
 
 ifndef NOHW
 sources+=sdl/ogl_sdl.c
+ifdef SDLGPU
+sources+=sdl/gpu_sdl.c
+endif
 endif
 
 ifndef NOHS
