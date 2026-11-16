@@ -2557,8 +2557,6 @@ void G_DoReborn(INT32 playernum)
 		}
 		if (!countdowntimeup && (mapheaderinfo[gamemap-1]->levelflags & LF_NORELOAD) && !(marathonmode & MA_INIT))
 		{
-			INT32 i;
-
 			player->playerstate = PST_REBORN;
 
 			P_LoadThingsOnly();
