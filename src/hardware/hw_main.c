@@ -5724,9 +5724,9 @@ void HWR_SetShaderState(void)
 	HWD.pfnSetSpecialState(HWD_SET_SHADERS, (HWR_UseShader()) ? 1 : 0);
 }
 
-static void HWR_ClearClipper(player_t *player)
+static void HWR_ClearClipper(FTransform *transform)
 {
-	angle_t a1 = gld_FrustumAngle(gl_aimingangle, player);
+	angle_t a1 = gld_FrustumAngle(gl_aimingangle, transform->fovxangle, transform->splitscreen);
 	gld_clipper_Clear();
 	gld_clipper_SafeAddClipRange(viewangle + a1, viewangle - a1);
 #ifdef HAVE_SPHEREFRUSTUM
@@ -5837,7 +5837,7 @@ void HWR_RenderSkyboxView(INT32 viewnumber, player_t *player)
 	//                     Actually it only works on Walls and Planes
 	HWD.pfnSetTransform(&atransform);
 
-	HWR_ClearClipper(player);
+	HWR_ClearClipper(&atransform);
 
 	if (HWR_IsWireframeMode())
 		HWD.pfnSetSpecialState(HWD_SET_WIREFRAME, 1);
@@ -6009,7 +6009,7 @@ void HWR_RenderPlayerView(INT32 viewnumber, player_t *player)
 	//                     Actually it only works on Walls and Planes
 	HWD.pfnSetTransform(&atransform);
 
-	HWR_ClearClipper(player);
+	HWR_ClearClipper(&atransform);
 
 	if (HWR_IsWireframeMode())
 		HWD.pfnSetSpecialState(HWD_SET_WIREFRAME, 1);
