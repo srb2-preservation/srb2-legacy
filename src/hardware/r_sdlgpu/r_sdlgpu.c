@@ -917,26 +917,109 @@ static boolean Program_Create(gpuprogram_t *program, gpu_shaderformat_t format,
 	return true;
 }
 
+// The tables of the game's shaders, compiled ahead of time
+static const struct
+{
+	const gpu_precompiled_t *list;
+	const size_t *count;
+} precompiled_tables[] =
+{
+	{gpu_precompiled, &gpu_precompiled_count},             // Vulkan, Metal
+	{gpu_precompiled_d3d12, &gpu_precompiled_d3d12_count}, // Direct3D 12
+};
+
+// Finds a shader program of the game, in a format the GPU device takes
+static const gpu_precompiled_t *FindPrecompiled(unsigned long long hash)
+{
+	size_t t, i;
+
+	for (t = 0; t < SDL_arraysize(precompiled_tables); t++)
+		for (i = 0; i < *precompiled_tables[t].count; i++)
+		{
+			const gpu_precompiled_t *precompiled = &precompiled_tables[t].list[i];
+			if (precompiled->hash == hash && (device_formats & shaderformats[precompiled->format].sdl))
+				return precompiled;
+		}
+
+	return NULL;
+}
+
+// The shader formats there are precompiled shaders in
+static SDL_GPUShaderFormat PrecompiledFormats(boolean d3d12)
+{
+	SDL_GPUShaderFormat formats = 0;
+	size_t i;
+
+	if (d3d12)
+	{
+		for (i = 0; i < gpu_precompiled_d3d12_count; i++)
+			formats |= shaderformats[gpu_precompiled_d3d12[i].format].sdl;
+	}
+	else
+	{
+		for (i = 0; i < gpu_precompiled_count; i++)
+			formats |= shaderformats[gpu_precompiled[i].format].sdl;
+	}
+
+	return formats;
+}
+
+// Makes a SPIR-V shader pair usable by a GPU device that doesn't take SPIR-V
+static boolean Program_CreateFromSPIRV(gpuprogram_t *program, const void *vertex, size_t vertex_size,
+	const void *fragment, size_t fragment_size, const char *name)
+{
+	char *translated[2] = {NULL, NULL};
+	char error[512];
+	boolean success = false;
+	int stage;
+
+	if (device_formats & SDL_GPU_SHADERFORMAT_SPIRV)
+		return Program_Create(program, GPU_SHADERFORMAT_SPIRV, vertex, vertex_size, fragment, fragment_size, name);
+
+	if (!(device_formats & SDL_GPU_SHADERFORMAT_MSL))
+	{
+		CONS_Alert(CONS_ERROR, "SDL GPU: can't use the %s shader with %s: it can only be translated for Vulkan and Metal\n",
+			name, SDL_GetGPUDeviceDriver(device));
+		return false;
+	}
+
+	if (!GPU_CanTranslateSPIRV())
+	{
+		CONS_Alert(CONS_ERROR, "SDL GPU: can't use the %s shader with Metal: this build of the game has no SPIRV-Cross\n", name);
+		return false;
+	}
+
+	for (stage = 0; stage < 2; stage++)
+	{
+		translated[stage] = GPU_TranslateSPIRV(stage ? fragment : vertex, stage ? fragment_size : vertex_size,
+			GPU_SHADERFORMAT_MSL, error, sizeof (error));
+		if (!translated[stage])
+		{
+			CONS_Alert(CONS_ERROR, "SDL GPU: can't translate the %s shader for Metal: %s\n", name, error);
+			break;
+		}
+	}
+
+	if (translated[0] && translated[1])
+		success = Program_Create(program, GPU_SHADERFORMAT_MSL, translated[0], strlen(translated[0]),
+			translated[1], strlen(translated[1]), name);
+
+	free(translated[0]);
+	free(translated[1]);
+	return success;
+}
+
 // Makes a shader program usable, from whatever it was given in.
 static boolean Program_Compile(gpuprogram_t *program, const char *name)
 {
 	const gpu_precompiled_t *precompiled = NULL;
 	int format;
-	size_t i;
 
 	Program_Unload(program);
 
 	// The game's own shaders are compiled ahead of time. They are found by their GLSL.
 	if (program->vertex_source && program->fragment_source)
-	{
-		const unsigned long long hash = GPU_HashShaderSources(program->vertex_source, program->fragment_source);
-		for (i = 0; i < gpu_num_precompiled; i++)
-			if (gpu_precompiled[i].hash == hash && (device_formats & shaderformats[gpu_precompiled[i].format].sdl))
-			{
-				precompiled = &gpu_precompiled[i];
-				break;
-			}
-	}
+		precompiled = FindPrecompiled(GPU_HashShaderSources(program->vertex_source, program->fragment_source));
 
 	// 1. a format SDL GPU takes as is, if it's one this GPU device takes.
 	// If only one stage was given that way, the other one is the game's.
@@ -968,6 +1051,13 @@ static boolean Program_Compile(gpuprogram_t *program, const char *name)
 			return Program_Create(program, format, vertex, vertex_size, fragment, fragment_size, name);
 	}
 
+	// SPIR-V given for both stages can be translated for Metal
+	if (program->binary[GPU_SHADERFORMAT_SPIRV][GPU_STAGE_VERTEX] && program->binary[GPU_SHADERFORMAT_SPIRV][GPU_STAGE_FRAGMENT]
+		&& !(device_formats & SDL_GPU_SHADERFORMAT_SPIRV))
+		return Program_CreateFromSPIRV(program,
+			program->binary[GPU_SHADERFORMAT_SPIRV][GPU_STAGE_VERTEX], program->binary_size[GPU_SHADERFORMAT_SPIRV][GPU_STAGE_VERTEX],
+			program->binary[GPU_SHADERFORMAT_SPIRV][GPU_STAGE_FRAGMENT], program->binary_size[GPU_SHADERFORMAT_SPIRV][GPU_STAGE_FRAGMENT], name);
+
 	if (!program->vertex_source || !program->fragment_source)
 	{
 		CONS_Alert(CONS_ERROR, "SDL GPU: the %s shader is not available in a format this GPU device takes\n", name);
@@ -983,11 +1073,6 @@ static boolean Program_Compile(gpuprogram_t *program, const char *name)
 	if (!GPU_CanCompileGLSL())
 	{
 		CONS_Alert(CONS_ERROR, "SDL GPU: can't compile the %s shader: this build of the game has no GLSL compiler\n", name);
-		return false;
-	}
-	else if (!(device_formats & SDL_GPU_SHADERFORMAT_SPIRV))
-	{
-		CONS_Alert(CONS_ERROR, "SDL GPU: can't compile the %s shader: GLSL shaders are only supported with Vulkan for now\n", name);
 		return false;
 	}
 	else
@@ -1018,8 +1103,9 @@ static boolean Program_Compile(gpuprogram_t *program, const char *name)
 			free(log);
 		}
 
+		// SPIR-V is what Vulkan takes; for Metal it is translated further
 		if (vertex_spirv && fragment_spirv)
-			success = Program_Create(program, GPU_SHADERFORMAT_SPIRV, vertex_spirv, vertex_size, fragment_spirv, fragment_size, name);
+			success = Program_CreateFromSPIRV(program, vertex_spirv, vertex_size, fragment_spirv, fragment_size, name);
 
 		free(vertex_spirv);
 		free(fragment_spirv);
@@ -2737,14 +2823,23 @@ static boolean SDLGPU_Init(void)
 
 	// SDL chooses between Vulkan, Direct3D 12 and Metal from the shader formats it can be given.
 	// The game's own shaders have to be available.
-	for (i = 0; i < gpu_num_precompiled; i++)
-		formats |= shaderformats[gpu_precompiled[i].format].sdl;
-
+	// Vulkan and Metal are tried first: the shaders of addons can only be made for them.
+	// (SDL_GPU_DRIVER=direct3d12 in the environment still picks Direct3D 12.)
 	// -gpudebug makes SDL and the graphics API check what the renderer does, and say what it does wrong
+	formats = PrecompiledFormats(false);
 	device = SDL_CreateGPUDevice(formats, M_CheckParm("-gpudebug") != 0, NULL);
+	if (!device && PrecompiledFormats(true))
+	{
+		formats |= PrecompiledFormats(true);
+		device = SDL_CreateGPUDevice(formats, M_CheckParm("-gpudebug") != 0, NULL);
+	}
 	if (!device)
 	{
-		CONS_Alert(CONS_ERROR, "Could not create a GPU device: %s\n", SDL_GetError());
+		CONS_Alert(CONS_ERROR, "Could not create a GPU device: %s\n"
+			"This build has shaders for:%s%s%s\n", SDL_GetError(),
+			(formats & SDL_GPU_SHADERFORMAT_SPIRV) ? " Vulkan" : "",
+			(formats & SDL_GPU_SHADERFORMAT_MSL) ? " Metal" : "",
+			(formats & SDL_GPU_SHADERFORMAT_DXIL) ? " Direct3D 12" : "");
 		return false;
 	}
 

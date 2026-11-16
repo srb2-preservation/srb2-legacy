@@ -28,6 +28,10 @@
 #include <shaderc/shaderc.h>
 #endif
 
+#ifdef HAVE_SPIRV_CROSS
+#include <spirv_cross_c.h>
+#endif
+
 // ==========================================================================
 //                                                             STRING BUILDER
 // ==========================================================================
@@ -181,10 +185,17 @@ static int IsIdentChar(char c)
 #define FIRST_VARYING_LOCATION 2
 #define MAX_VARYINGS 32
 
+// Both stages end up with all varyings, in the same order, even those only one of
+// them declares or uses: Direct3D 12 wants the outputs of the vertex shader to
+// match the inputs of the pixel shader.
 typedef struct
 {
 	char name[64];
 	int location;
+	char type[32];
+	char quals[128];
+	int arraysize; // 0 if it's not an array
+	int declared[2]; // by stage
 } varying_t;
 
 typedef struct
@@ -194,8 +205,10 @@ typedef struct
 	int nextlocation;
 } varyings_t;
 
-static int Varying_Location(varyings_t *varyings, const char *name, size_t len, int slots)
+static int Varying_Location(varyings_t *varyings, gpu_stage_t stage, const char *name, size_t len, int slots,
+	const char *type, size_t typelen, const char *quals, int arraysize)
 {
+	varying_t *varying;
 	int i;
 
 	if (len >= sizeof (varyings->list[0].name))
@@ -203,17 +216,82 @@ static int Varying_Location(varyings_t *varyings, const char *name, size_t len, 
 
 	for (i = 0; i < varyings->count; i++)
 		if (strlen(varyings->list[i].name) == len && !strncmp(varyings->list[i].name, name, len))
+		{
+			varyings->list[i].declared[stage] = 1;
 			return varyings->list[i].location;
+		}
 
-	if (varyings->count == MAX_VARYINGS)
+	if (varyings->count == MAX_VARYINGS || typelen >= sizeof (varyings->list[0].type))
 		return -1;
 
-	memcpy(varyings->list[i].name, name, len);
-	varyings->list[i].name[len] = '\0';
-	varyings->list[i].location = varyings->nextlocation;
+	varying = &varyings->list[varyings->count++];
+	memcpy(varying->name, name, len);
+	varying->name[len] = '\0';
+	memcpy(varying->type, type, typelen);
+	varying->type[typelen] = '\0';
+	snprintf(varying->quals, sizeof (varying->quals), "%s", quals);
+	varying->arraysize = arraysize;
+	varying->declared[stage] = 1;
+	varying->location = varyings->nextlocation;
 	varyings->nextlocation += slots;
-	varyings->count++;
-	return varyings->list[i].location;
+	return varying->location;
+}
+
+// The name a varying has in a stage that doesn't declare it
+static void Varying_Name(const varying_t *varying, gpu_stage_t stage, char *name, size_t size)
+{
+	if (varying->declared[stage])
+		snprintf(name, size, "%s", varying->name);
+	else
+		snprintf(name, size, "srb2_link_%d", varying->location);
+}
+
+// Declares, in a stage that doesn't declare them, the varyings the other one does
+static void Varyings_DeclareMissing(sb_t *out, const varyings_t *varyings, gpu_stage_t stage)
+{
+	int i;
+	char line[300], name[80], array[24];
+
+	for (i = 0; i < varyings->count; i++)
+	{
+		const varying_t *varying = &varyings->list[i];
+		if (varying->declared[stage])
+			continue;
+		Varying_Name(varying, stage, name, sizeof (name));
+		if (varying->arraysize)
+			snprintf(array, sizeof (array), "[%d]", varying->arraysize);
+		else
+			array[0] = '\0';
+		snprintf(line, sizeof (line), "layout(location = %d) %s%s %s %s%s;\n", varying->location, varying->quals,
+			(stage == GPU_STAGE_VERTEX) ? "out" : "in", varying->type, name, array);
+		SB_Puts(out, line);
+	}
+}
+
+// An expression that reads a varying, as a float. Empty if it can't.
+static void Varying_Read(const varying_t *varying, gpu_stage_t stage, char *expression, size_t size)
+{
+	static const char *const vectors[] = {"vec", "ivec", "uvec", "bvec", "dvec", NULL};
+	static const char *const scalars[] = {"float", "int", "uint", "bool", "double", NULL};
+	const char *const *prefix;
+	char name[80];
+	const char *component = NULL;
+
+	Varying_Name(varying, stage, name, sizeof (name));
+
+	for (prefix = scalars; *prefix && !component; prefix++)
+		if (!strcmp(varying->type, *prefix))
+			component = "";
+	for (prefix = vectors; *prefix && !component; prefix++)
+		if (!strncmp(varying->type, *prefix, strlen(*prefix)))
+			component = ".x";
+	if (!component && !strncmp(varying->type, "mat", 3))
+		component = "[0][0]";
+
+	if (component)
+		snprintf(expression, size, "float(%s%s%s)", name, varying->arraysize ? "[0]" : "", component);
+	else
+		expression[0] = '\0';
 }
 
 // how many locations a type takes
@@ -453,7 +531,13 @@ static const char *Translate_Interface(translator_t *t, const char *p)
 			}
 			else if (is_varying)
 			{
-				int location = Varying_Location(t->varyings, name, namelen, slots);
+				int arraysize = 0;
+				const char *bracket = memchr(rest, '[', declend - rest);
+				int location;
+				if (bracket)
+					arraysize = atoi(bracket + 1);
+				location = Varying_Location(t->varyings, t->stage, name, namelen, slots,
+					type, typelen, quals, arraysize);
 				char layout[200];
 
 				if (location < 0)
@@ -697,7 +781,7 @@ static const char vertex_header[] =
 	"vec4 srb2_ftransform() { return srb2_ProjectionMatrix * srb2_ModelViewMatrix * srb2_Vertex; }\n"
 	"#line 1\n";
 
-static const char vertex_footer[] =
+static const char vertex_footer_start[] =
 	"void main()\n"
 	"{\n"
 	"\tsrb2_Vertex = vec4(mix(srb2_in_Position, srb2_in_NextPosition, srb2_Lerp), 1.0);\n"
@@ -705,7 +789,10 @@ static const char vertex_footer[] =
 	"\tsrb2_Color = srb2_in_Color * srb2_CurrentColor;\n"
 	"\tsrb2_MultiTexCoord0 = vec4(srb2_in_TexCoord, 0.0, 1.0);\n"
 	"\tsrb2_FrontColor = srb2_Color;\n"
-	"\tsrb2_TexCoord[0] = srb2_MultiTexCoord0;\n"
+	"\tsrb2_TexCoord[0] = srb2_MultiTexCoord0;\n";
+	// then every varying is set to zero, so that none is left out
+
+static const char vertex_footer_end[] =
 	"\tsrb2_main();\n"
 	// OpenGL's clip space has depth from -w to w, SDL GPU's from 0 to w
 	"\tgl_Position.z = (gl_Position.z + gl_Position.w) * 0.5;\n"
@@ -741,6 +828,10 @@ static const char fragment_footer_start[] =
 
 static const char fragment_footer_end[] =
 	";\n"
+	// then every input is read, so that none is left out (see fragment_footer_keep)
+	"";
+
+static const char fragment_footer_test[] =
 	// OpenGL's alpha test
 	"\tif (srb2_Output.a <= srb2_AlphaThreshold)\n"
 	"\t\tdiscard;\n"
@@ -768,12 +859,34 @@ int GPU_TranslateGLSL(const char *vertex, const char *fragment,
 	t.out = &vs;
 	SB_Puts(&vs, vertex_header);
 	Translate_Body(&t, vertex);
-	SB_Puts(&vs, vertex_footer);
 
 	t.stage = GPU_STAGE_FRAGMENT;
 	t.out = &fs;
 	SB_Puts(&fs, fragment_header);
 	Translate_Body(&t, fragment);
+
+	// Now that both stages were seen, give them the same varyings.
+	Varyings_DeclareMissing(&vs, &varyings, GPU_STAGE_VERTEX);
+	Varyings_DeclareMissing(&fs, &varyings, GPU_STAGE_FRAGMENT);
+
+	SB_Puts(&vs, vertex_footer_start);
+	{
+		int i;
+		char line[300], name[80];
+		for (i = 0; i < varyings.count; i++)
+		{
+			const varying_t *varying = &varyings.list[i];
+			Varying_Name(varying, GPU_STAGE_VERTEX, name, sizeof (name));
+			if (varying->arraysize)
+				snprintf(line, sizeof (line), "\tfor (int srb2_i = 0; srb2_i < %d; srb2_i++) %s[srb2_i] = %s(0);\n",
+					varying->arraysize, name, varying->type);
+			else
+				snprintf(line, sizeof (line), "\t%s = %s(0);\n", name, varying->type);
+			SB_Puts(&vs, line);
+		}
+	}
+	SB_Puts(&vs, vertex_footer_end);
+
 	SB_Puts(&fs, fragment_footer_start);
 	if (t.fragment_output[0])
 		SB_Puts(&fs, t.fragment_output);
@@ -782,6 +895,24 @@ int GPU_TranslateGLSL(const char *vertex, const char *fragment,
 	else
 		SB_Puts(&fs, "srb2_FragColor");
 	SB_Puts(&fs, fragment_footer_end);
+	{
+		// Read every input in a branch that is never taken, but that the compiler can't know about.
+		int i;
+		char expression[200];
+		SB_Puts(&fs, "\tif (srb2_AlphaThreshold == -12345.0)\n"
+			"\t\tsrb2_Output.x += srb2_FrontColor.x + srb2_TexCoord[0].x + srb2_FragCoord.x");
+		for (i = 0; i < varyings.count; i++)
+		{
+			Varying_Read(&varyings.list[i], GPU_STAGE_FRAGMENT, expression, sizeof (expression));
+			if (expression[0])
+			{
+				SB_Puts(&fs, " + ");
+				SB_Puts(&fs, expression);
+			}
+		}
+		SB_Puts(&fs, ";\n");
+	}
+	SB_Puts(&fs, fragment_footer_test);
 
 	if (vs.failed || fs.failed || !vs.buf || !fs.buf || (error && error[0]))
 	{
@@ -891,6 +1022,86 @@ void *GPU_CompileGLSL(const char *source, gpu_stage_t stage, const char *name, s
 	(void)size;
 	if (log)
 		*log = NULL;
+	return NULL;
+#endif
+}
+
+// ==========================================================================
+//                                          TRANSLATION FOR METAL AND D3D12
+// ==========================================================================
+
+int GPU_CanTranslateSPIRV(void)
+{
+#ifdef HAVE_SPIRV_CROSS
+	return 1;
+#else
+	return 0;
+#endif
+}
+
+char *GPU_TranslateSPIRV(const void *spirv, size_t size, int format, char *error, size_t errorsize)
+{
+#ifdef HAVE_SPIRV_CROSS
+	spvc_context context = NULL;
+	spvc_parsed_ir ir;
+	spvc_compiler compiler;
+	spvc_compiler_options options;
+	const char *source = NULL;
+	char *result = NULL;
+	const int msl = (format == GPU_SHADERFORMAT_MSL);
+
+	if (error && errorsize)
+		error[0] = '\0';
+
+	if (spvc_context_create(&context) != SPVC_SUCCESS)
+	{
+		if (error)
+			snprintf(error, errorsize, "couldn't start SPIRV-Cross");
+		return NULL;
+	}
+
+	if (spvc_context_parse_spirv(context, spirv, size / sizeof (SpvId), &ir) != SPVC_SUCCESS
+		|| spvc_context_create_compiler(context, msl ? SPVC_BACKEND_MSL : SPVC_BACKEND_HLSL, ir, SPVC_CAPTURE_MODE_TAKE_OWNERSHIP, &compiler) != SPVC_SUCCESS
+		|| spvc_compiler_create_compiler_options(compiler, &options) != SPVC_SUCCESS)
+		goto fail;
+
+	if (msl)
+	{
+		// What SDL GPU's Metal backend expects: a uniform buffer at [[buffer(n)]] and
+		// a texture and its sampler at [[texture(n)]] and [[sampler(n)]], n being the
+		// binding in the shader. Vertex buffers are at 14 and up, out of the way.
+		spvc_compiler_options_set_uint(options, SPVC_COMPILER_OPTION_MSL_PLATFORM, SPVC_MSL_PLATFORM_MACOS);
+		spvc_compiler_options_set_uint(options, SPVC_COMPILER_OPTION_MSL_VERSION, SPVC_MAKE_MSL_VERSION(2, 1, 0));
+		spvc_compiler_options_set_bool(options, SPVC_COMPILER_OPTION_MSL_ENABLE_DECORATION_BINDING, SPVC_TRUE);
+	}
+	else
+	{
+		// What SDL GPU's Direct3D 12 backend expects: registers in the space of the
+		// descriptor set (which follow SDL's rules for SPIR-V), and TEXCOORD<location> semantics.
+		spvc_compiler_options_set_uint(options, SPVC_COMPILER_OPTION_HLSL_SHADER_MODEL, 60);
+	}
+
+	if (spvc_compiler_install_compiler_options(compiler, options) != SPVC_SUCCESS
+		|| spvc_compiler_compile(compiler, &source) != SPVC_SUCCESS)
+		goto fail;
+
+	result = malloc(strlen(source) + 1);
+	if (result)
+		strcpy(result, source);
+	spvc_context_destroy(context);
+	return result;
+
+fail:
+	if (error)
+		snprintf(error, errorsize, "%s", spvc_context_get_last_error_string(context));
+	spvc_context_destroy(context);
+	return NULL;
+#else
+	(void)spirv;
+	(void)size;
+	(void)format;
+	if (error && errorsize)
+		snprintf(error, errorsize, "this build has no SPIRV-Cross");
 	return NULL;
 #endif
 }

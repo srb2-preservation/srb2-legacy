@@ -29,6 +29,8 @@ set(SRB2_CONFIG_SDLGPU ON CACHE BOOL
 	"Enable the SDL GPU renderer (Vulkan, Direct3D 12, Metal). Needs hardware rendering.")
 set(SRB2_CONFIG_HAVE_SHADERC ON CACHE BOOL
 	"Use shaderc if found, so that the SDL GPU renderer can use the GLSL shaders of addons. The game's own shaders don't need it.")
+set(SRB2_CONFIG_HAVE_SPIRV_CROSS ON CACHE BOOL
+	"Use SPIRV-Cross if found, so that the SDL GPU renderer can use the shaders of addons with Metal. The game's own shaders don't need it.")
 set(SRB2_CONFIG_STATIC_OPENGL OFF CACHE BOOL
 	"Use statically linked OpenGL. NOT RECOMMENDED.")
 set(SRB2_CONFIG_DEDICATED OFF CACHE BOOL
@@ -236,9 +238,10 @@ if(${SRB2_CONFIG_HWRENDER})
 		target_sources(SRB2 PRIVATE
 			hardware/r_sdlgpu/r_sdlgpu.c
 			hardware/r_sdlgpu/gpu_glsl.c
-			hardware/r_sdlgpu/gpu_precompiled.c)
+			hardware/r_sdlgpu/gpu_precompiled.c
+			hardware/r_sdlgpu/gpu_precompiled_d3d12.c)
+		find_package(PkgConfig)
 		if(${SRB2_CONFIG_HAVE_SHADERC})
-			find_package(PkgConfig)
 			if(PKG_CONFIG_FOUND)
 				pkg_check_modules(SHADERC shaderc)
 			endif()
@@ -249,6 +252,19 @@ if(${SRB2_CONFIG_HWRENDER})
 				target_link_libraries(SRB2 PRIVATE ${SHADERC_LIBRARIES})
 			else()
 				message(STATUS "shaderc was not found: the SDL GPU renderer won't be able to use the GLSL shaders of addons.")
+			endif()
+		endif()
+		if(${SRB2_CONFIG_HAVE_SPIRV_CROSS})
+			if(PKG_CONFIG_FOUND)
+				pkg_check_modules(SPIRV_CROSS spirv-cross-c-shared)
+			endif()
+			if(SPIRV_CROSS_FOUND)
+				target_compile_definitions(SRB2 PRIVATE -DHAVE_SPIRV_CROSS)
+				target_include_directories(SRB2 PRIVATE ${SPIRV_CROSS_INCLUDE_DIRS})
+				target_link_directories(SRB2 PRIVATE ${SPIRV_CROSS_LIBRARY_DIRS})
+				target_link_libraries(SRB2 PRIVATE ${SPIRV_CROSS_LIBRARIES})
+			else()
+				message(STATUS "SPIRV-Cross was not found: the SDL GPU renderer won't be able to use the shaders of addons with Metal.")
 			endif()
 		endif()
 	endif()

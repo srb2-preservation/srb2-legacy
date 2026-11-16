@@ -52,6 +52,14 @@
 //
 // Clip space is OpenGL's: the vertex shader of a GLSL shader gets its depth
 // remapped from -w..w to 0..w after it runs. Other formats output 0..w.
+//
+// For Direct3D 12, the outputs of the vertex shader and the inputs of the
+// fragment shader must be the same, in the same order. GLSL shaders are made
+// so; the other formats have to do it themselves.
+//
+// GLSL shaders are compiled to SPIR-V, which Metal gets translated to MSL
+// (when the game is built with SPIRV-Cross). Direct3D 12 can't compile shaders
+// while the game runs, so only DXIL or DXBC given as is works there.
 
 typedef struct
 {
@@ -117,6 +125,25 @@ void *GPU_CompileGLSL(const char *source, gpu_stage_t stage, const char *name, s
 */
 unsigned long long GPU_HashShaderSources(const char *vertex, const char *fragment);
 
+/**	\brief Whether SPIR-V can be translated for Metal and Direct3D 12, see GPU_TranslateSPIRV
+*/
+int GPU_CanTranslateSPIRV(void);
+
+/**	\brief Translates a SPIR-V shader that follows the rules above to MSL or HLSL
+
+	MSL is for Metal; its entry point is called "main0".
+	HLSL (shader model 6.0) is for Direct3D 12 once compiled to DXIL; its entry point is "main".
+
+	\param	spirv	the SPIR-V
+	\param	size	its size, in bytes
+	\param	format	GPU_SHADERFORMAT_MSL, or GPU_SHADERFORMAT_DXIL for HLSL
+	\param	error	where to write what went wrong
+	\param	errorsize	the size of that
+
+	\return	the shader's source, to free(), or NULL
+*/
+char *GPU_TranslateSPIRV(const void *spirv, size_t size, int format, char *error, size_t errorsize);
+
 // ==========================================================================
 //                                                        PRECOMPILED SHADERS
 // ==========================================================================
@@ -145,9 +172,13 @@ typedef struct
 	size_t fragment_size;
 } gpu_precompiled_t;
 
-// gpu_precompiled.c, written by tools/sdlgpu-shaders
+// Written by tools/sdlgpu-shaders.
+// gpu_precompiled.c: SPIR-V for Vulkan, MSL for Metal
 extern const gpu_precompiled_t gpu_precompiled[];
-extern const size_t gpu_num_precompiled;
+extern const size_t gpu_precompiled_count;
+// gpu_precompiled_d3d12.c: DXIL for Direct3D 12
+extern const gpu_precompiled_t gpu_precompiled_d3d12[];
+extern const size_t gpu_precompiled_d3d12_count;
 
 // ==========================================================================
 //                                                 THE RENDERER'S OWN SHADERS

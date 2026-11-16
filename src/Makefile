@@ -49,6 +49,8 @@
 #              Metal).
 # HAVE_SHADERC=1 - With the SDL GPU renderer, link with shaderc, so that the
 #                  GLSL shaders of addons can be used.
+# HAVE_SPIRV_CROSS=1 - With the SDL GPU renderer, link with SPIRV-Cross, so
+#                      that the shaders of addons can be used with Metal.
 # ZDEBUG=1 - Enable more detailed memory debugging
 # HAVE_MINIUPNPC=1 - Enable automated port forwarding.
 #                    Already enabled by default for 32-bit
