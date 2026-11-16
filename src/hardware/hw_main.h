@@ -69,6 +69,7 @@ void HWR_DrawScreenFinalTexture(int width, int height);
 
 // This stuff is put here so MD2's can use them
 boolean HWR_UseShader(void);
+boolean HWR_UseCustomShaders(void);
 void HWR_Lighting(FSurfaceInfo *Surface, INT32 light_level, extracolormap_t *colormap);
 UINT8 HWR_FogBlockAlpha(INT32 light, extracolormap_t *colormap); // Let's see if this can work
 

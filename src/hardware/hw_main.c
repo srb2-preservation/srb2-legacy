@@ -266,7 +266,18 @@ boolean gl_shadersavailable = false;
 
 boolean HWR_UseShader(void)
 {
+	// The SDL GPU renderer draws everything with shaders: gr_shaders does nothing there.
+	if (rendermode == render_sdlgpu)
+		return gl_shadersavailable;
 	return (cv_glshaders.value && gl_shadersavailable);
+}
+
+// If shaders from addons can replace the game's. This is the "Ignore custom shaders" value of gr_shaders.
+boolean HWR_UseCustomShaders(void)
+{
+	if (!cv_glallowshaders.value)
+		return false;
+	return (rendermode == render_sdlgpu || cv_glshaders.value == 1);
 }
 
 // Whether the internal state is set to palette rendering or not.
@@ -5901,7 +5912,7 @@ void HWR_RenderPlayerView(INT32 viewnumber, player_t *player)
 	ClearColor.blue = 0.0f;
 	ClearColor.alpha = 1.0f;
 
-	if (cv_glshaders.value)
+	if (HWR_UseShader())
 		HWD.pfnSetShaderInfo(HWD_SHADERINFO_LEVELTIME, (INT32)leveltime); // The water surface shader needs the leveltime.
 
 	if (viewnumber == 0) // Only do it if it's the first screen being rendered
@@ -6178,15 +6189,17 @@ typedef struct
 {
 	boolean started;
 	boolean shadersavailable;
-	boolean palette_rendering_state;
 } hwr_driverstate_t;
 static hwr_driverstate_t hwr_driverstate[8];
 
 #define HWR_DRIVERSTATE(mode) (hwr_driverstate[(mode) & 7])
 
+static void HWR_ForgetDriverResources(void);
+
 void HWR_Startup(void)
 {
 	static boolean startupdone = false;
+	static hwr_driverstate_t *active_driver = NULL; // the one the state below is about
 	hwr_driverstate_t *driver = &HWR_DRIVERSTATE(rendermode);
 
 	// do this once, whatever the driver
@@ -6205,44 +6218,83 @@ void HWR_Startup(void)
 	}
 	startupdone = true;
 
-	// do this once for each driver, since it talks to it
-	if (!driver->started)
+	// The rest is about the driver, so it is only needed when the driver is not the same as last time.
+	if (driver != active_driver)
 	{
-		driver->started = true;
-		gl_palette_rendering_state = false; // a new driver doesn't know about this
-		gl_shadersavailable = HWR_InitShaders();
-		HWR_SetShaderState();
-		HWR_LoadAllCustomShaders();
-		HWR_TogglePaletteRendering();
-	}
-	else
-	{
-		gl_shadersavailable = driver->shadersavailable;
-		gl_palette_rendering_state = driver->palette_rendering_state;
+		const boolean had_driver = (active_driver != NULL);
+
+		// remember how the previous one was left
+		if (active_driver)
+			active_driver->shadersavailable = gl_shadersavailable;
+		active_driver = driver;
+
+		// This driver was not given what the previous one was: the palettes,
+		// the light tables, the models... Forget that they were given to a driver,
+		// so that they are given again.
+		gl_palette_rendering_state = false;
+		HWR_ForgetMapPalette();
+		if (had_driver)
+			HWR_ForgetDriverResources();
+		// and this one doesn't need what it was given the last time it was used
+		if (driver->started)
+			HWD.pfnClearLightTables();
+
+		if (!driver->started)
+		{
+			// do this once for each driver, since it talks to it
+			driver->started = true;
+			gl_shadersavailable = HWR_InitShaders();
+			HWR_SetShaderState();
+			HWR_LoadAllCustomShaders();
+			HWR_TogglePaletteRendering();
+		}
+		else
+		{
+			gl_shadersavailable = driver->shadersavailable;
+
+			// the settings may have changed while the other driver was in use
+			if (gl_shadersavailable)
+			{
+				HWR_SetShaderState();
+				HWR_CompileShaders();
+			}
+			HWR_TogglePaletteRendering();
+		}
 	}
 }
 
 // --------------------------------------------------------------------------
-// Called when leaving a hardware driver for another render mode, before the
-// driver gets replaced. Whatever was uploaded to it can't be used again.
+// Forgets everything the game remembers having given to a hardware driver,
+// because it is about to use another one. Doesn't talk to any driver.
+// --------------------------------------------------------------------------
+static void HWR_ForgetDriverResources(void)
+{
+	extracolormap_t *exc;
+
+	// The ids of the light tables the colormaps have
+	Z_FreeTag(PU_HWRLIGHTTABLEDATA);
+	for (exc = extra_colormaps; exc; exc = exc->next)
+	{
+		exc->gl_lighttable.id = 0;
+		exc->gl_lighttable.needs_update = false;
+	}
+
+	// The vertex buffers of the sky and of the models
+	gl_sky.vbo = 0;
+	gl_sky.rebuild = true;
+	HWR_ForgetModelVBOs();
+}
+
+// --------------------------------------------------------------------------
+// Called when going from a hardware driver straight to another one, while the
+// first one is still there to be told to let go of what it was given.
+// (Going to the software renderer frees the texture cache as well.)
 // --------------------------------------------------------------------------
 void HWR_DriverDeactivate(rendermode_t mode)
 {
-	hwr_driverstate_t *driver = &HWR_DRIVERSTATE(mode);
-
-	driver->shadersavailable = gl_shadersavailable;
-	driver->palette_rendering_state = gl_palette_rendering_state;
+	(void)mode;
 
 	HWR_ClearLightTables();
-	// The ids the colormaps kept belonged to the driver that's going away.
-	{
-		extracolormap_t *exc;
-		for (exc = extra_colormaps; exc; exc = exc->next)
-		{
-			exc->gl_lighttable.id = 0;
-			exc->gl_lighttable.needs_update = false;
-		}
-	}
 	HWR_FreeTextureCache();
 }
 
@@ -6255,6 +6307,9 @@ void HWR_Switch(void)
 	HWD.pfnSetSpecialState(HWD_SET_MODEL_LIGHTING, cv_glmodellighting.value);
 	HWD.pfnSetSpecialState(HWD_SET_TEXTUREFILTERMODE, cv_glfiltermode.value);
 	HWD.pfnSetSpecialState(HWD_SET_TEXTUREANISOTROPICMODE, cv_glanisotropicmode.value);
+
+	// The models loaded while another driver was in use
+	HWR_CreateMissingModelVBOs();
 }
 
 

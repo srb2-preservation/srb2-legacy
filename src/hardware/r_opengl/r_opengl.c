@@ -794,6 +794,16 @@ EXPORT void HWRAPI(LoadShader) (int slot, char *code, hwdshaderstage_t stage)
 #endif
 }
 
+EXPORT void HWRAPI(LoadShaderBinary) (int slot, hwdshaderformat_t format, hwdshaderstage_t stage, const void *code, size_t size)
+{
+	// OpenGL only takes GLSL
+	(void)slot;
+	(void)format;
+	(void)stage;
+	(void)code;
+	(void)size;
+}
+
 EXPORT boolean HWRAPI(CompileShader) (int slot)
 {
 #ifdef GL_SHADERS

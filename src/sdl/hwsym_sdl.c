@@ -89,6 +89,7 @@ void *hwSym(const char *funcName,void *handle)
 	GETFUNC(DrawScreenFinalTexture);
 	GETFUNC(InitShaders);
 	GETFUNC(LoadShader);
+	GETFUNC(LoadShaderBinary);
 	GETFUNC(CompileShader);
 	GETFUNC(SetShader);
 	GETFUNC(UnSetShader);

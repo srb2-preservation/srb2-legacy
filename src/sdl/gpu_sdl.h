@@ -1,6 +1,6 @@
-// SONIC ROBO BLAST 2
+// SRB2 LEGACY
 //-----------------------------------------------------------------------------
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 2026 by SRB2 Preservation.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -21,10 +21,5 @@ void GPUSdlReleaseWindow(SDL_Window *win);
 void GPUSdlDestroyContext(void);
 void GPUSdlSetMode(INT32 w, INT32 h);
 void GPUSdlFinishUpdate(boolean vidwait);
-
-/// The GPU device, created by the driver's Init through GPUSdlCreateDevice
-extern SDL_GPUDevice *sdlgpudevice;
-
-boolean GPUSdlCreateDevice(void);
 
 #endif

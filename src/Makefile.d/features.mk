@@ -20,6 +20,12 @@ sources+=$(call List,hardware/Sourcefile)
 ifdef SDLGPU
 opts+=-DHWRENDER_SDLGPU
 sources+=hardware/r_sdlgpu/r_sdlgpu.c
+sources+=hardware/r_sdlgpu/gpu_glsl.c
+sources+=hardware/r_sdlgpu/gpu_precompiled.c
+ifdef HAVE_SHADERC
+opts+=-DHAVE_SHADERC
+libs+=-lshaderc_shared
+endif
 endif
 endif
 

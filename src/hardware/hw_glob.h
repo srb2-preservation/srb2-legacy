@@ -101,6 +101,7 @@ void HWR_SetMapPalette(void);
 UINT32 HWR_CreateLightTable(UINT8 *lighttable, RGBA_t *hw_lighttable);
 void HWR_UpdateLightTable(UINT32 id, UINT8 *lighttable, RGBA_t *hw_lighttable);
 void HWR_ClearLightTables(void);
+void HWR_ForgetMapPalette(void);
 UINT32 HWR_GetLightTableID(extracolormap_t *colormap);
 GLPatch_t *HWR_GetCachedGLPatchPwad(UINT16 wad, UINT16 lump);
 GLPatch_t *HWR_GetCachedGLPatch(lumpnum_t lumpnum);

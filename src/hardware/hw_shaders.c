@@ -413,7 +413,7 @@ int HWR_GetShaderFromTarget(int shader_target)
 	// - custom shaders are enabled
 	// - custom shaders are allowed by the server
 	if (custom_shader != -1 && gl_shaders[custom_shader].compiled &&
-		cv_glshaders.value == 1 && cv_glallowshaders.value)
+		HWR_UseCustomShaders())
 		return custom_shader;
 	else
 		return gl_shadertargets[shader_target].base_shader;
@@ -550,6 +550,22 @@ static void HWR_TryToCompileShaderWithImplicitVersion(INT32 shader_index, INT32 
 	}
 }
 
+// The formats shaders can be in, as written in the SHADERS lump
+static const struct
+{
+	const char *name;
+	int format; // -1 for GLSL, or a hwdshaderformat_t
+} shaderformats[] =
+{
+	{"GLSL", -1},
+	{"SPIRV", HWD_SHADERFORMAT_SPIRV},
+	{"MSL", HWD_SHADERFORMAT_MSL},
+	{"METALLIB", HWD_SHADERFORMAT_METALLIB},
+	{"DXIL", HWD_SHADERFORMAT_DXIL},
+	{"DXBC", HWD_SHADERFORMAT_DXBC},
+	{NULL, 0},
+};
+
 void HWR_LoadCustomShadersFromFile(UINT16 wadnum, boolean PK3)
 {
 	UINT16 lump;
@@ -559,6 +575,7 @@ void HWR_LoadCustomShadersFromFile(UINT16 wadnum, boolean PK3)
 	size_t size;
 	int linenum = 1;
 	int shadertype = 0;
+	int shaderformat = -1; // GLSL, or a hwdshaderformat_t
 	int i;
 	boolean modified_shaders[NUMSHADERTARGETS] = {0};
 
@@ -586,8 +603,16 @@ void HWR_LoadCustomShadersFromFile(UINT16 wadnum, boolean PK3)
 			goto skip_field;
 		}
 
-		if (!stricmp(stoken, "GLSL"))
+		// "GLSL VERTEX" or "GLSL FRAGMENT" starts a list of shaders written in GLSL.
+		// The other formats are for the renderers that don't use OpenGL, which take
+		// them as they are: see src/hardware/r_sdlgpu/gpu_glsl.h for what they must follow.
+		for (i = 0; shaderformats[i].name; i++)
+			if (!stricmp(stoken, shaderformats[i].name))
+				break;
+
+		if (shaderformats[i].name)
 		{
+			shaderformat = shaderformats[i].format;
 			value = strtok(NULL, "\r\n ");
 			if (!value)
 			{
@@ -662,16 +687,30 @@ skip_lump:
 					shader_index = shaderxlat[i].id + NUMSHADERTARGETS;
 					if (!modified_shaders[shaderxlat[i].id])
 					{
+						int format;
 						// this will clear any old custom shaders from previously loaded files
 						// Z_Free checks if the pointer is NULL!
 						Z_Free(gl_shaders[shader_index].vertex);
 						gl_shaders[shader_index].vertex = NULL;
 						Z_Free(gl_shaders[shader_index].fragment);
 						gl_shaders[shader_index].fragment = NULL;
+						for (format = 0; format < HWD_NUMSHADERFORMATS; format++)
+						{
+							HWD.pfnLoadShaderBinary(shader_index, format, HWD_SHADERSTAGE_VERTEX, NULL, 0);
+							HWD.pfnLoadShaderBinary(shader_index, format, HWD_SHADERSTAGE_FRAGMENT, NULL, 0);
+						}
 					}
 					modified_shaders[shaderxlat[i].id] = true;
 
-					if (shadertype == 1)
+					if (shaderformat != -1)
+					{
+						// not GLSL: the renderer keeps it, if it has a use for it
+						HWD.pfnLoadShaderBinary(shader_index, shaderformat,
+							(shadertype == 1) ? HWD_SHADERSTAGE_VERTEX : HWD_SHADERSTAGE_FRAGMENT,
+							shader_source, shader_string_length - 1);
+						Z_Free(shader_source);
+					}
+					else if (shadertype == 1)
 					{
 						if (gl_shaders[shader_index].vertex)
 						{

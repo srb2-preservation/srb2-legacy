@@ -1,6 +1,6 @@
-// SONIC ROBO BLAST 2
+// SRB2 LEGACY
 //-----------------------------------------------------------------------------
-// Copyright (C) 1999-2018 by Sonic Team Junior.
+// Copyright (C) 2026 by SRB2 Preservation.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -54,6 +54,7 @@ static void HWD_FillOpenGL(struct hwdriver_s *driver)
 	driver->pfnDrawScreenFinalTexture=hwSym("DrawScreenFinalTexture",NULL);
 	driver->pfnInitShaders      = hwSym("InitShaders",NULL);
 	driver->pfnLoadShader       = hwSym("LoadShader",NULL);
+	driver->pfnLoadShaderBinary = hwSym("LoadShaderBinary",NULL);
 	driver->pfnCompileShader    = hwSym("CompileShader",NULL);
 	driver->pfnSetShader        = hwSym("SetShader",NULL);
 	driver->pfnUnSetShader      = hwSym("UnSetShader",NULL);

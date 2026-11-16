@@ -323,6 +323,20 @@ enum hwdshaderstage
 
 typedef enum hwdshaderstage hwdshaderstage_t;
 
+// The formats a shader can be given in, other than GLSL.
+// They are the ones SDL GPU takes; the OpenGL renderer only takes GLSL.
+enum hwdshaderformat
+{
+	HWD_SHADERFORMAT_SPIRV,
+	HWD_SHADERFORMAT_MSL,
+	HWD_SHADERFORMAT_METALLIB,
+	HWD_SHADERFORMAT_DXIL,
+	HWD_SHADERFORMAT_DXBC,
+	HWD_NUMSHADERFORMATS
+};
+
+typedef enum hwdshaderformat hwdshaderformat_t;
+
 
 // Lactozilla: Shader info
 // Generally set at the start of the frame.

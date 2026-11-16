@@ -45,7 +45,10 @@
 # ------------------
 # NO_IPV6=1 - Disable IPv6 address support.
 # NOHW=1 - Disable OpenGL renderer.
-# SDLGPU=1 - Enable the SDL GPU renderer (work in progress).
+# SDLGPU=1 - Enable the SDL GPU renderer (Vulkan, Direct3D 12,
+#            Metal).
+# HAVE_SHADERC=1 - With SDLGPU, link with shaderc, so that the
+#                  GLSL shaders of addons can be used.
 # ZDEBUG=1 - Enable more detailed memory debugging
 # HAVE_MINIUPNPC=1 - Enable automated port forwarding.
 #                    Already enabled by default for 32-bit

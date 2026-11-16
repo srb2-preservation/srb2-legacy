@@ -26,7 +26,9 @@ set(SRB2_CONFIG_HAVE_THREADS ON CACHE BOOL
 set(SRB2_CONFIG_HWRENDER ON CACHE BOOL
 	"Enable hardware rendering through OpenGL.")
 set(SRB2_CONFIG_SDLGPU OFF CACHE BOOL
-	"Enable the SDL GPU renderer. Work in progress: selecting it falls back to the previous renderer. Needs hardware rendering.")
+	"Enable the SDL GPU renderer (Vulkan, Direct3D 12, Metal). Needs hardware rendering.")
+set(SRB2_CONFIG_HAVE_SHADERC ON CACHE BOOL
+	"Use shaderc if found, so that the SDL GPU renderer can use the GLSL shaders of addons. The game's own shaders don't need it.")
 set(SRB2_CONFIG_STATIC_OPENGL OFF CACHE BOOL
 	"Use statically linked OpenGL. NOT RECOMMENDED.")
 set(SRB2_CONFIG_DEDICATED OFF CACHE BOOL
@@ -231,7 +233,24 @@ if(${SRB2_CONFIG_HWRENDER})
 	add_subdirectory(hardware)
 	if(${SRB2_CONFIG_SDLGPU})
 		target_compile_definitions(SRB2 PRIVATE -DHWRENDER_SDLGPU)
-		target_sources(SRB2 PRIVATE hardware/r_sdlgpu/r_sdlgpu.c)
+		target_sources(SRB2 PRIVATE
+			hardware/r_sdlgpu/r_sdlgpu.c
+			hardware/r_sdlgpu/gpu_glsl.c
+			hardware/r_sdlgpu/gpu_precompiled.c)
+		if(${SRB2_CONFIG_HAVE_SHADERC})
+			find_package(PkgConfig)
+			if(PKG_CONFIG_FOUND)
+				pkg_check_modules(SHADERC shaderc)
+			endif()
+			if(SHADERC_FOUND)
+				target_compile_definitions(SRB2 PRIVATE -DHAVE_SHADERC)
+				target_include_directories(SRB2 PRIVATE ${SHADERC_INCLUDE_DIRS})
+				target_link_directories(SRB2 PRIVATE ${SHADERC_LIBRARY_DIRS})
+				target_link_libraries(SRB2 PRIVATE ${SHADERC_LIBRARIES})
+			else()
+				message(STATUS "shaderc was not found: the SDL GPU renderer won't be able to use the GLSL shaders of addons.")
+			endif()
+		endif()
 	endif()
 endif()
 
