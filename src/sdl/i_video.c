@@ -722,6 +722,23 @@ static void Impl_HandleTextEvent(SDL_TextInputEvent evt)
 	D_PostEvent(&event);
 }
 
+#if defined (HWRENDER) && defined (__ANDROID__)
+// Android gives the window a new surface when the app comes back from the background.
+// A backend that holds on to the window (SDL GPU) can go on drawing to the old one,
+// which shows nothing, so it lets go of the window and claims it again.
+static void Impl_ReclaimWindow(void)
+{
+	sdlhwbackend_t *backend = SDLHW_Current();
+
+	if (!window || !HWRENDERING || !backend || !backend->ReleaseWindow)
+		return;
+
+	backend->ReleaseWindow(window);
+	if (!backend->CreateContext(window))
+		CONS_Alert(CONS_ERROR, "Couldn't claim the window again for %s: %s\n", backend->name, SDL_GetError());
+}
+#endif
+
 void I_GetEvent(void)
 {
 	SDL_Event evt;
@@ -748,6 +765,11 @@ void I_GetEvent(void)
 			case SDL_EVENT_WINDOW_MOVED:
 				Impl_HandleWindowEvent(evt.window);
 				break;
+#if defined (HWRENDER) && defined (__ANDROID__)
+			case SDL_EVENT_DID_ENTER_FOREGROUND:
+				Impl_ReclaimWindow();
+				break;
+#endif
 			case SDL_EVENT_KEY_UP:
 			case SDL_EVENT_KEY_DOWN:
 				Impl_HandleKeyboardEvent(evt.key, evt.type);
