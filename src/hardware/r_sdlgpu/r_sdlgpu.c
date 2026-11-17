@@ -2878,17 +2878,31 @@ static boolean SDLGPU_CALL SDLGPU_Init(void)
 
 	// SDL chooses between Vulkan, Direct3D 12 and Metal from the shader formats it can be given.
 	// The game's own shaders have to be available.
-	// Vulkan and Metal are tried first: the shaders of addons can only be made for them.
-	// (SDL_GPU_DRIVER=direct3d12 in the environment still picks Direct3D 12.)
+	// On Windows, Direct3D 12 is tried first: it's faster there, and every GPU driver has it.
+	// Vulkan comes next, and the shaders of addons can only be made for it, not for Direct3D 12
+	// (SDL_GPU_DRIVER=vulkan in the environment picks it).
+	// Elsewhere, Vulkan and Metal are tried first, for the shaders of addons,
+	// and SDL_GPU_DRIVER=direct3d12 still picks Direct3D 12.
 	// Each is tried with anisotropic filtering first, then without, for the GPUs that don't have it.
-	formats = PrecompiledFormats(false);
 	device_anisotropy = true;
+#ifdef _WIN32
+	formats = PrecompiledFormats(true);
+	if (formats)
+		device = CreateDevice(formats, true);
+	if (!device)
+	{
+		formats |= PrecompiledFormats(false);
+		device = CreateDevice(formats, true);
+	}
+#else
+	formats = PrecompiledFormats(false);
 	device = CreateDevice(formats, true);
 	if (!device && PrecompiledFormats(true))
 	{
 		formats |= PrecompiledFormats(true);
 		device = CreateDevice(formats, true);
 	}
+#endif
 	if (!device)
 	{
 		device = CreateDevice(formats, false);
