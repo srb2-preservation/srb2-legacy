@@ -95,6 +95,7 @@ typedef enum
 static SDL_GPUDevice *device = NULL;
 static SDL_GPUShaderFormat device_formats = 0;
 static boolean device_anisotropy = true; // whether samplers can use anisotropic filtering
+static boolean prefer_lowpower = false; // see SDLGPU_SetPreferLowPower
 
 // what the game is drawn to
 static SDL_GPUTexture *color_target = NULL;
@@ -965,6 +966,13 @@ static SDL_GPUShaderFormat PrecompiledFormats(boolean d3d12)
 	return formats;
 }
 
+// gpu_preferlowpower, or -gpulowpower, which also works with -sdlgpu:
+// that starts SDL GPU before the configuration is loaded.
+static boolean PreferLowPower(void)
+{
+	return prefer_lowpower || M_CheckParm("-gpulowpower");
+}
+
 // Creates the GPU device, for some shader formats
 static SDL_GPUDevice *CreateDevice(SDL_GPUShaderFormat formats, boolean anisotropy)
 {
@@ -976,6 +984,7 @@ static SDL_GPUDevice *CreateDevice(SDL_GPUShaderFormat formats, boolean anisotro
 
 	// -gpudebug makes SDL and the graphics API check what the renderer does, and say what it does wrong
 	SDL_SetBooleanProperty(props, SDL_PROP_GPU_DEVICE_CREATE_DEBUGMODE_BOOLEAN, M_CheckParm("-gpudebug") != 0);
+	SDL_SetBooleanProperty(props, SDL_PROP_GPU_DEVICE_CREATE_PREFERLOWPOWER_BOOLEAN, PreferLowPower());
 	SDL_SetBooleanProperty(props, SDL_PROP_GPU_DEVICE_CREATE_SHADERS_SPIRV_BOOLEAN, (formats & SDL_GPU_SHADERFORMAT_SPIRV) != 0);
 	SDL_SetBooleanProperty(props, SDL_PROP_GPU_DEVICE_CREATE_SHADERS_DXIL_BOOLEAN, (formats & SDL_GPU_SHADERFORMAT_DXIL) != 0);
 	SDL_SetBooleanProperty(props, SDL_PROP_GPU_DEVICE_CREATE_SHADERS_MSL_BOOLEAN, (formats & SDL_GPU_SHADERFORMAT_MSL) != 0);
@@ -2893,6 +2902,10 @@ static boolean SDLGPU_Init(void)
 
 	device_formats = SDL_GetGPUShaderFormats(device);
 	CONS_Printf("SDL GPU driver: %s\n", SDL_GetGPUDeviceDriver(device));
+	{
+		const char *name = SDL_GetStringProperty(SDL_GetGPUDeviceProperties(device), SDL_PROP_GPU_DEVICE_NAME_STRING, NULL);
+		CONS_Printf("SDL GPU device: %s%s\n", name ? name : "unknown", PreferLowPower() ? " (low power preferred)" : "");
+	}
 
 	depth_format = SDL_GPUTextureSupportsFormat(device, SDL_GPU_TEXTUREFORMAT_D32_FLOAT,
 		SDL_GPU_TEXTURETYPE_2D, SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET)
@@ -3008,6 +3021,11 @@ void SDLGPU_SetResolution(INT32 width, INT32 height)
 // the window whose swapchain was last set up, and how
 static SDL_Window *swapchain_window = NULL;
 static boolean swapchain_vsync = false;
+
+void SDLGPU_SetPreferLowPower(boolean lowpower)
+{
+	prefer_lowpower = lowpower;
+}
 
 void SDLGPU_WindowClaimed(SDL_Window *window)
 {

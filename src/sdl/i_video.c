@@ -1622,6 +1622,9 @@ void I_StartupGraphics(void)
 	COM_AddCommand ("vid_modelist", NULL, VID_Command_ModeList_f);
 	COM_AddCommand ("vid_mode", NULL, VID_Command_Mode_f);
 	CV_RegisterVar (&cv_vidwait);
+#ifdef HWRENDER_SDLGPU
+	CV_RegisterVar (&cv_gpupreferlowpower);
+#endif
 	CV_RegisterVar (&cv_stretch);
 	CV_RegisterVar (&cv_alwaysgrabmouse);
 	disable_mouse = M_CheckParm("-nomouse");

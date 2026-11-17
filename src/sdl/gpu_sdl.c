@@ -26,6 +26,21 @@
 // the window the GPU device draws to
 static SDL_Window *claimed_window = NULL;
 
+static void GPUSdl_PreferLowPowerChanged(void);
+
+consvar_t cv_gpupreferlowpower = CVAR_INIT ("gpu_preferlowpower", "Off",
+	"Use the GPU that uses less power (often integrated) instead of the fastest one (often discrete), on computers with both. Takes effect when the game is restarted",
+	CV_SAVE|CV_CALL, CV_OnOff, GPUSdl_PreferLowPowerChanged);
+
+static void GPUSdl_PreferLowPowerChanged(void)
+{
+	SDLGPU_SetPreferLowPower(cv_gpupreferlowpower.value != 0);
+
+	// a GPU device can't be moved to another GPU
+	if (SDLGPU_GetDevice() && !con_startup)
+		CONS_Printf(M_GetText("The GPU will change when the game is restarted.\n"));
+}
+
 void GPUSdlWindowFlags(SDL_WindowFlags *flags)
 {
 	// SDL GPU needs no special window flags, but the window can't have a GL context or a renderer.

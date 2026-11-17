@@ -1310,11 +1310,14 @@ static menuitem_t OP_VideoOptionsMenu[] =
 	{IT_STRING | IT_CVAR,             NULL, "Clear Before Redraw",  NULL,  &cv_homremoval,           85},
 	{IT_STRING | IT_CVAR,             NULL, "Vertical Sync",    NULL,      &cv_vidwait,              90},
 	{IT_STRING | IT_CVAR,             NULL, "FPS Cap",         NULL,       &cv_fpscap,               95},
+#ifdef HWRENDER_SDLGPU
+	{IT_STRING | IT_CVAR, NULL, "Prefer Low Power GPU", "SDL GPU: use the integrated GPU instead of the discrete one, after a restart", &cv_gpupreferlowpower, 100},
+#endif
 #ifdef HWRENDER
 #ifdef HWRENDER_OPENGL
-	{IT_CALL | IT_STRING, NULL, "OpenGL Options...",  "Change OpenGL-specific options",        M_OpenGLOptionsMenu, 105},
+	{IT_CALL | IT_STRING, NULL, "OpenGL Options...",  "Change OpenGL-specific options",        M_OpenGLOptionsMenu, 110},
 #else
-	{IT_CALL | IT_STRING, NULL, "Hardware Options...",  "Change options of the hardware renderer",        M_OpenGLOptionsMenu, 105},
+	{IT_CALL | IT_STRING, NULL, "Hardware Options...",  "Change options of the hardware renderer",        M_OpenGLOptionsMenu, 110},
 #endif
 #endif
 };

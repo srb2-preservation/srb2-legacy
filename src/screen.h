@@ -155,6 +155,9 @@ extern consvar_t cv_nativeresfov;
 
 // wait for page flipping to end or not
 extern consvar_t cv_vidwait;
+#ifdef HWRENDER_SDLGPU
+extern consvar_t cv_gpupreferlowpower; // defined by the SDL GPU renderer's platform code
+#endif
 extern consvar_t cv_timescale;
 
 // quick fix for tall/short skies, depending on bytesperpixel

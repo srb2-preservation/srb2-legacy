@@ -43,6 +43,13 @@ void SDLGPU_Present(SDL_Window *window, boolean vsync);
 */
 void SDLGPU_WindowClaimed(SDL_Window *window);
 
+/**	\brief Whether to prefer the GPU that uses less power (often integrated)
+	over the fastest one (often discrete), on computers with both
+
+	Used when the GPU device is created, so it does nothing to one that already is.
+*/
+void SDLGPU_SetPreferLowPower(boolean lowpower);
+
 /**	\brief Releases everything, and the GPU device
 */
 void SDLGPU_Shutdown(void);
