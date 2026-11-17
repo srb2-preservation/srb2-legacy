@@ -96,7 +96,17 @@ static CV_PossibleValue_t cv_renderer_t[] = {
 #endif
 	{0, NULL}
 };
-consvar_t cv_renderer = CVAR_INIT ("renderer", "Software", "The current renderer", CV_SAVE|CV_CALL, cv_renderer_t, SCR_ChangeRenderer);
+#if defined(HWRENDER) && defined(HWRENDER_OPENGL) && defined(HWRENDER_SDLGPU)
+#define RENDERER_DESC "Switch between the Software, OpenGL, and SDL GPU renderers"
+#elif defined(HWRENDER) && defined(HWRENDER_OPENGL)
+#define RENDERER_DESC "Switch between the Software and OpenGL renderers"
+#elif defined(HWRENDER) && defined(HWRENDER_SDLGPU)
+#define RENDERER_DESC "Switch between the Software and SDL GPU renderers"
+#else
+#define RENDERER_DESC "The current renderer"
+#endif
+consvar_t cv_renderer = CVAR_INIT ("renderer", "Software", RENDERER_DESC, CV_SAVE|CV_CALL, cv_renderer_t, SCR_ChangeRenderer);
+#undef RENDERER_DESC
 
 static void SCR_ChangeFullscreen(void);
 
