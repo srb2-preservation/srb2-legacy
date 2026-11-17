@@ -420,6 +420,12 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND NOT ${CMAKE_SYSTEM} MATCHES "Emscr
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-absolute-value")
 endif()
 
+# Apple's clang still defaults to -fcommon, and ld aligns large common symbols past the
+# 16 KB page ("reducing alignment of section __DATA,__common")
+if(APPLE)
+	target_compile_options(SRB2 PRIVATE -fno-common)
+endif()
+
 target_compile_definitions(SRB2 PRIVATE -DCMAKECONFIG)
 
 if(${SRB2_CONFIG_DEBUGMODE})

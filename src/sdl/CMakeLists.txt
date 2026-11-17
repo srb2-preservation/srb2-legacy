@@ -162,8 +162,6 @@ if(${SDL3_FOUND})
 			MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/ios/Info.plist.in"
 			# must be set here since Xcode overwrites the setting in Info.plist.in
 			XCODE_ATTRIBUTE_TARGETED_DEVICE_FAMILY "1,2"
-			# -fno-common: large tentative globals otherwise request 32K alignment, above arm64's 16K max
-			XCODE_ATTRIBUTE_GCC_NO_COMMON_BLOCKS YES
 			# Xcode enables -Wshorten-64-to-32; no other platform build does
 			XCODE_ATTRIBUTE_GCC_WARN_64_TO_32_BIT_CONVERSION NO
 		)

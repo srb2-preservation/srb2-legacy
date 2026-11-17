@@ -38,4 +38,7 @@ endif
 
 ifdef MACOS
 libs+=-framework CoreFoundation
+# Apple's clang still defaults to -fcommon, and ld aligns large common symbols past the
+# 16 KB page ("reducing alignment of section __DATA,__common")
+opts+=-fno-common
 endif
