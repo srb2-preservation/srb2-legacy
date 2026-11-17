@@ -24,7 +24,17 @@ set(SRB2_CONFIG_HAVE_OPENMPT ON CACHE BOOL
 set(SRB2_CONFIG_HAVE_THREADS ON CACHE BOOL
 	"Enable multithreading support.")
 set(SRB2_CONFIG_HWRENDER ON CACHE BOOL
-	"Enable hardware rendering through OpenGL.")
+	"Enable hardware rendering (OpenGL and SDL GPU).")
+set(SRB2_CONFIG_OPENGL ON CACHE BOOL
+	"Enable the OpenGL renderer. Needs hardware rendering.")
+set(SRB2_CONFIG_SDLGPU ON CACHE BOOL
+	"Enable the SDL GPU renderer (Vulkan, Direct3D 12, Metal). Needs hardware rendering.")
+set(SRB2_CONFIG_HAVE_SHADERC ON CACHE BOOL
+	"Use shaderc if found, so that the SDL GPU renderer can use the GLSL shaders of addons. The game's own shaders don't need it.")
+set(SRB2_CONFIG_HAVE_SPIRV_CROSS ON CACHE BOOL
+	"Use SPIRV-Cross if found, so that the SDL GPU renderer can use the shaders of addons with Metal. The game's own shaders don't need it.")
+set(SRB2_CONFIG_SDLGPU_BUILD_SHADERS OFF CACHE BOOL
+	"Compile the SDL GPU renderer's Vulkan and Metal shaders during the build, with shaderc and SPIRV-Cross, instead of using the precompiled ones. Direct3D 12's stay precompiled. Not when cross compiling.")
 set(SRB2_CONFIG_STATIC_OPENGL OFF CACHE BOOL
 	"Use statically linked OpenGL. NOT RECOMMENDED.")
 set(SRB2_CONFIG_DEDICATED OFF CACHE BOOL
@@ -55,16 +65,26 @@ if(${CMAKE_SYSTEM} MATCHES "Windows" OR ${CMAKE_SYSTEM} MATCHES "Android" OR ${C
 		"Use SRB2's internal copies of required dependencies (SDL3, PNG, zlib, GME, OpenMPT).")
 endif()
 
+# Android and iOS have no desktop OpenGL: they only get the SDL GPU renderer (Vulkan on Android, Metal on iOS).
+# shaderc and SPIRV-Cross are left out, since pkg-config would find the ones of the computer building the game.
 if(${CMAKE_SYSTEM} MATCHES "Android")
 	set(SRB2_CONFIG_USE_INTERNAL_LIBRARIES ON)
-	set(SRB2_CONFIG_HWRENDER OFF)
+	set(SRB2_CONFIG_HWRENDER ON)
+	set(SRB2_CONFIG_SDLGPU ON)
+	set(SRB2_CONFIG_OPENGL OFF)
+	set(SRB2_CONFIG_HAVE_SHADERC OFF)
+	set(SRB2_CONFIG_HAVE_SPIRV_CROSS OFF)
 	set(SRB2_CONFIG_LTO OFF)
 	set(SRB2_CONFIG_NATIVESCREENRES ON)
 endif()
 
 if(${CMAKE_SYSTEM} MATCHES "iOS")
 	set(SRB2_CONFIG_USE_INTERNAL_LIBRARIES ON)
-	set(SRB2_CONFIG_HWRENDER OFF)
+	set(SRB2_CONFIG_HWRENDER ON)
+	set(SRB2_CONFIG_SDLGPU ON)
+	set(SRB2_CONFIG_OPENGL OFF)
+	set(SRB2_CONFIG_HAVE_SHADERC OFF)
+	set(SRB2_CONFIG_HAVE_SPIRV_CROSS OFF)
 	set(SRB2_CONFIG_NATIVESCREENRES ON)
 endif()
 
@@ -224,12 +244,94 @@ if(${SRB2_CONFIG_HAVE_CURL})
 	endif()
 endif()
 
+if(${SRB2_CONFIG_HWRENDER} AND NOT ${SRB2_CONFIG_OPENGL} AND NOT ${SRB2_CONFIG_SDLGPU})
+	message(WARNING "Hardware rendering is enabled, but neither OpenGL nor SDL GPU is. Not setting HWRENDER.")
+	set(SRB2_CONFIG_HWRENDER OFF)
+endif()
+
 if(${SRB2_CONFIG_HWRENDER})
 	target_compile_definitions(SRB2 PRIVATE -DHWRENDER)
 	add_subdirectory(hardware)
+	if(${SRB2_CONFIG_OPENGL})
+		target_compile_definitions(SRB2 PRIVATE -DHWRENDER_OPENGL)
+		target_sources(SRB2 PRIVATE hardware/r_opengl/r_opengl.c)
+	endif()
+	if(${SRB2_CONFIG_SDLGPU})
+		target_compile_definitions(SRB2 PRIVATE -DHWRENDER_SDLGPU)
+		target_sources(SRB2 PRIVATE
+			hardware/r_sdlgpu/r_sdlgpu.c
+			hardware/r_sdlgpu/gpu_glsl.c
+			hardware/r_sdlgpu/gpu_precompiled_d3d12.c)
+		find_package(PkgConfig)
+
+		# The game's Vulkan and Metal shaders: compiled now, or the precompiled ones
+		set(SRB2_SDLGPU_PRECOMPILED "${CMAKE_CURRENT_SOURCE_DIR}/hardware/r_sdlgpu/gpu_precompiled.c")
+		if(${SRB2_CONFIG_SDLGPU_BUILD_SHADERS})
+			if(CMAKE_CROSSCOMPILING)
+				message(WARNING "The SDL GPU shaders can't be compiled when cross compiling: using the precompiled ones.")
+			else()
+				if(PKG_CONFIG_FOUND)
+					pkg_check_modules(SRB2_SHADER_TOOLS shaderc spirv-cross-c-shared)
+				endif()
+				if(SRB2_SHADER_TOOLS_FOUND)
+					add_executable(srb2-sdlgpu-shaders
+						"${CMAKE_SOURCE_DIR}/tools/sdlgpu-shaders/gen.c"
+						hardware/r_sdlgpu/gpu_glsl.c)
+					target_compile_definitions(srb2-sdlgpu-shaders PRIVATE -DHAVE_SHADERC -DHAVE_SPIRV_CROSS)
+					# not in bin/, next to the game
+					set_target_properties(srb2-sdlgpu-shaders PROPERTIES
+						RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/sdlgpu-shaders")
+					target_include_directories(srb2-sdlgpu-shaders PRIVATE ${SRB2_SHADER_TOOLS_INCLUDE_DIRS})
+					# full paths, so that the tool finds them when it runs, wherever they are
+					target_link_libraries(srb2-sdlgpu-shaders PRIVATE ${SRB2_SHADER_TOOLS_LINK_LIBRARIES})
+
+					set(SRB2_SDLGPU_PRECOMPILED "${CMAKE_CURRENT_BINARY_DIR}/sdlgpu-shaders/gpu_precompiled.c")
+					add_custom_command(
+						OUTPUT "${SRB2_SDLGPU_PRECOMPILED}"
+						COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/sdlgpu-shaders"
+						COMMAND srb2-sdlgpu-shaders "${SRB2_SDLGPU_PRECOMPILED}"
+						DEPENDS srb2-sdlgpu-shaders
+						COMMENT "Compiling the SDL GPU shaders"
+						VERBATIM)
+					set_source_files_properties("${SRB2_SDLGPU_PRECOMPILED}" PROPERTIES
+						GENERATED TRUE
+						INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/hardware/r_sdlgpu")
+				else()
+					message(WARNING "shaderc and SPIRV-Cross were not both found: using the precompiled SDL GPU shaders.")
+				endif()
+			endif()
+		endif()
+		target_sources(SRB2 PRIVATE "${SRB2_SDLGPU_PRECOMPILED}")
+		if(${SRB2_CONFIG_HAVE_SHADERC})
+			if(PKG_CONFIG_FOUND)
+				pkg_check_modules(SHADERC shaderc)
+			endif()
+			if(SHADERC_FOUND)
+				target_compile_definitions(SRB2 PRIVATE -DHAVE_SHADERC)
+				target_include_directories(SRB2 PRIVATE ${SHADERC_INCLUDE_DIRS})
+				target_link_directories(SRB2 PRIVATE ${SHADERC_LIBRARY_DIRS})
+				target_link_libraries(SRB2 PRIVATE ${SHADERC_LIBRARIES})
+			else()
+				message(STATUS "shaderc was not found: the SDL GPU renderer won't be able to use the GLSL shaders of addons.")
+			endif()
+		endif()
+		if(${SRB2_CONFIG_HAVE_SPIRV_CROSS})
+			if(PKG_CONFIG_FOUND)
+				pkg_check_modules(SPIRV_CROSS spirv-cross-c-shared)
+			endif()
+			if(SPIRV_CROSS_FOUND)
+				target_compile_definitions(SRB2 PRIVATE -DHAVE_SPIRV_CROSS)
+				target_include_directories(SRB2 PRIVATE ${SPIRV_CROSS_INCLUDE_DIRS})
+				target_link_directories(SRB2 PRIVATE ${SPIRV_CROSS_LIBRARY_DIRS})
+				target_link_libraries(SRB2 PRIVATE ${SPIRV_CROSS_LIBRARIES})
+			else()
+				message(STATUS "SPIRV-Cross was not found: the SDL GPU renderer won't be able to use the shaders of addons with Metal.")
+			endif()
+		endif()
+	endif()
 endif()
 
-if(${SRB2_CONFIG_HWRENDER} AND ${SRB2_CONFIG_STATIC_OPENGL})
+if(${SRB2_CONFIG_HWRENDER} AND ${SRB2_CONFIG_OPENGL} AND ${SRB2_CONFIG_STATIC_OPENGL})
 	find_package(OpenGL)
 	if(${OPENGL_FOUND})
 		target_compile_definitions(SRB2 PRIVATE -DHWRENDER)

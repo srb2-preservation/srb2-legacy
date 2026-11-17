@@ -1310,8 +1310,15 @@ static menuitem_t OP_VideoOptionsMenu[] =
 	{IT_STRING | IT_CVAR,             NULL, "Clear Before Redraw",  NULL,  &cv_homremoval,           85},
 	{IT_STRING | IT_CVAR,             NULL, "Vertical Sync",    NULL,      &cv_vidwait,              90},
 	{IT_STRING | IT_CVAR,             NULL, "FPS Cap",         NULL,       &cv_fpscap,               95},
+#ifdef HWRENDER_SDLGPU
+	{IT_STRING | IT_CVAR, NULL, "Prefer Low Power GPU", "SDL GPU: use the integrated GPU instead of the discrete one, after a restart", &cv_gpupreferlowpower, 100},
+#endif
 #ifdef HWRENDER
-	{IT_CALL | IT_STRING, NULL, "OpenGL Options...",  "Change OpenGL-specific options",        M_OpenGLOptionsMenu, 105},
+#ifdef HWRENDER_OPENGL
+	{IT_CALL | IT_STRING, NULL, "OpenGL Options...",  "Change OpenGL-specific options",        M_OpenGLOptionsMenu, 110},
+#else
+	{IT_CALL | IT_STRING, NULL, "Hardware Options...",  "Change options of the hardware renderer",        M_OpenGLOptionsMenu, 110},
+#endif
 #endif
 };
 
@@ -1378,7 +1385,8 @@ static void M_VideoOptions(INT32 choice)
 	OP_VideoOptionsMenu[op_video_renderer].text = "Software";
 
 #ifdef HWRENDER
-	if (vid.glstate != VID_GL_LIBRARY_ERROR)
+	if (VID_HardwareState(render_opengl) != VID_GL_LIBRARY_ERROR
+	|| VID_HardwareState(render_sdlgpu) != VID_GL_LIBRARY_ERROR)
 	{
 		OP_VideoOptionsMenu[op_video_renderer].status = (IT_STRING | IT_CVAR);
 		OP_VideoOptionsMenu[op_video_renderer].patch = NULL;
@@ -2136,10 +2144,11 @@ menu_t OP_MonitorToggleDef =
 #ifdef HWRENDER
 static void M_OpenGLOptionsMenu(void)
 {
-	if (rendermode == render_opengl)
+	// these are the options of every hardware renderer, not only OpenGL
+	if (HWRENDERING)
 		M_SetupNextMenu(&OP_OpenGLOptionsDef);
 	else
-		M_StartMessage(M_GetText("You must be in OpenGL mode\nto access this menu.\n\n(Press a key)\n"), NULL, MM_NOTHING);
+		M_StartMessage(M_GetText("You must be in a hardware renderer\nto access this menu.\n\n(Press a key)\n"), NULL, MM_NOTHING);
 }
 
 menu_t OP_OpenGLOptionsDef = DEFAULTMENUSTYLE("M_VIDEO", OP_OpenGLOptionsMenu, &OP_VideoOptionsDef, 30, 30);

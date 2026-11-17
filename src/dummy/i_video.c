@@ -13,7 +13,9 @@ consvar_t cv_vidwait = CVAR_INIT ("vid_wait", "On", "Does nothing on this build"
 void I_StartupGraphics(void){}
 void I_ShutdownGraphics(void){}
 
-void VID_StartupOpenGL(void){}
+void VID_StartupHardware(rendermode_t mode) {(void)mode;}
+INT32 VID_HardwareState(rendermode_t mode) {(void)mode; return -1;}
+const char *VID_HardwareName(rendermode_t mode) {(void)mode; return "None";}
 
 void I_SetPalette(RGBA_t *palette)
 {
@@ -41,7 +43,7 @@ INT32 VID_SetMode(INT32 modenum)
 }
 
 void VID_CheckRenderer(void) {}
-void VID_CheckGLLoaded(rendermode_t oldrender) {}
+void VID_CheckHardwareLoaded(rendermode_t oldrender) {(void)oldrender;}
 
 UINT32 I_GetRefreshRate(void) { return 35; }
 

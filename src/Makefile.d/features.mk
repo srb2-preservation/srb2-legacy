@@ -15,8 +15,32 @@ opts+=-DPARANOIA -DRANGECHECK
 endif
 
 ifndef NOHW
+ifdef NOOPENGL
+ifdef NOSDLGPU
+$(error NOOPENGL=1 and NOSDLGPU=1 leave no hardware renderer: use NOHW=1 instead)
+endif
+endif
 opts+=-DHWRENDER
 sources+=$(call List,hardware/Sourcefile)
+ifndef NOOPENGL
+opts+=-DHWRENDER_OPENGL
+sources+=hardware/r_opengl/r_opengl.c
+endif
+ifndef NOSDLGPU
+opts+=-DHWRENDER_SDLGPU
+sources+=hardware/r_sdlgpu/r_sdlgpu.c
+sources+=hardware/r_sdlgpu/gpu_glsl.c
+sources+=hardware/r_sdlgpu/gpu_precompiled.c
+sources+=hardware/r_sdlgpu/gpu_precompiled_d3d12.c
+ifdef HAVE_SHADERC
+opts+=-DHAVE_SHADERC
+libs+=-lshaderc_shared
+endif
+ifdef HAVE_SPIRV_CROSS
+opts+=-DHAVE_SPIRV_CROSS $(shell $(PKG_CONFIG) --cflags spirv-cross-c-shared)
+libs+=$(shell $(PKG_CONFIG) --libs spirv-cross-c-shared)
+endif
+endif
 endif
 
 ifndef NOMD5

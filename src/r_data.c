@@ -526,7 +526,7 @@ void R_LoadTextures(void)
 		}
 	}
 #ifdef HWRENDER
-	if (rendermode == render_opengl)
+	if (HWRENDERING)
 		HWR_LoadTextures(numtextures);
 #endif
 }

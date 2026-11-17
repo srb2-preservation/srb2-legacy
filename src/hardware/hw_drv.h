@@ -73,6 +73,8 @@ EXPORT void HWRAPI(PostImgRedraw) (float points[SCREENVERTS][SCREENVERTS][2]);
 // jimita
 EXPORT boolean HWRAPI(InitShaders) (void);
 EXPORT void HWRAPI(LoadShader) (int slot, char *code, hwdshaderstage_t stage);
+// A shader in another format than GLSL. The data is copied. NULL forgets what was given for the format and stage.
+EXPORT void HWRAPI(LoadShaderBinary) (int slot, hwdshaderformat_t format, hwdshaderstage_t stage, const void *code, size_t size);
 EXPORT boolean HWRAPI(CompileShader) (int slot);
 EXPORT void HWRAPI(SetShader) (int slot);
 EXPORT void HWRAPI(UnSetShader) (void);
@@ -127,6 +129,7 @@ struct hwdriver_s
 
 	InitShaders         pfnInitShaders;
 	LoadShader          pfnLoadShader;
+	LoadShaderBinary    pfnLoadShaderBinary;
 	CompileShader       pfnCompileShader;
 	SetShader           pfnSetShader;
 	UnSetShader         pfnUnSetShader;

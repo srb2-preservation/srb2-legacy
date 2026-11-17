@@ -235,7 +235,7 @@ static boolean PS_IsRowValid(perfstatrow_t *row)
 {
 	return !((row->flags & PS_LEVEL && !PS_IsLevelActive())
 		|| (row->flags & PS_SW && rendermode != render_soft)
-		|| (row->flags & PS_HW && rendermode != render_opengl)
+		|| (row->flags & PS_HW && !HWRENDERING)
 #ifdef HWRENDER
 		|| (row->flags & PS_BATCHING && !cv_glbatching.value)
 #endif
@@ -445,7 +445,7 @@ static void PS_UpdateFrameStats(void)
 		ps_otherrendertime.value.p = ps_rendercalltime.value.p - ps_bsptime.value.p;
 
 #ifdef HWRENDER
-		if (rendermode == render_opengl)
+		if (HWRENDERING)
 		{
 			ps_otherrendertime.value.p -=
 				ps_skyboxtime.value.p +
@@ -483,7 +483,7 @@ static void PS_UpdateFrameStats(void)
 			PS_UpdateRowHistories(interpolation_rows, true);
 
 #ifdef HWRENDER
-		if (rendermode == render_opengl && cv_glbatching.value)
+		if (HWRENDERING && cv_glbatching.value)
 		{
 			PS_UpdateRowHistories(batchcount_rows, true);
 			PS_UpdateRowHistories(batchcalls_rows, true);
@@ -688,7 +688,7 @@ static void PS_DrawRenderStats(void)
 		cy = PS_DrawPerfRows(x, 10, V_SKYMAP, commoncounter_rows) + half_row;
 
 #ifdef HWRENDER
-		if (rendermode == render_opengl && cv_glbatching.value)
+		if (HWRENDERING && cv_glbatching.value)
 		{
 			x = hires ? 200 : 155;
 			y = PS_DrawPerfRows(x, 10, V_PURPLEMAP, batchcount_rows);

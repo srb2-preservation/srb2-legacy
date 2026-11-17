@@ -544,6 +544,72 @@ md2found:
 	fclose(f);
 }
 
+// The vertex buffers of the models belong to the hardware driver that made them.
+// When it is replaced by another one, they are forgotten, and made again by the new one.
+
+static boolean HWR_ModelHasVBOs(model_t *model)
+{
+	int i;
+
+	for (i = 0; i < model->numMeshes; i++)
+	{
+		mesh_t *mesh = &model->meshes[i];
+		if (mesh->numFrames <= 0)
+			continue;
+		if (mesh->frames)
+			return mesh->frames[0].vboID != 0;
+		if (mesh->tinyframes)
+			return mesh->tinyframes[0].vboID != 0;
+	}
+
+	return true; // nothing to make any for
+}
+
+static void HWR_ForgetVBOsOfModel(model_t *model)
+{
+	int i, j;
+
+	for (i = 0; i < model->numMeshes; i++)
+	{
+		mesh_t *mesh = &model->meshes[i];
+		for (j = 0; j < mesh->numFrames; j++)
+		{
+			if (mesh->frames)
+				mesh->frames[j].vboID = 0;
+			else if (mesh->tinyframes)
+				mesh->tinyframes[j].vboID = 0;
+		}
+	}
+}
+
+void HWR_ForgetModelVBOs(void)
+{
+	size_t i;
+	INT32 s;
+
+	for (s = 0; s < MAXSKINS; s++)
+		if (md2_playermodels[s].model)
+			HWR_ForgetVBOsOfModel(md2_playermodels[s].model);
+
+	for (i = 0; i < NUMSPRITES; i++)
+		if (md2_models[i].model)
+			HWR_ForgetVBOsOfModel(md2_models[i].model);
+}
+
+void HWR_CreateMissingModelVBOs(void)
+{
+	size_t i;
+	INT32 s;
+
+	for (s = 0; s < MAXSKINS; s++)
+		if (md2_playermodels[s].model && !HWR_ModelHasVBOs(md2_playermodels[s].model))
+			HWD.pfnCreateModelVBOs(md2_playermodels[s].model);
+
+	for (i = 0; i < NUMSPRITES; i++)
+		if (md2_models[i].model && !HWR_ModelHasVBOs(md2_models[i].model))
+			HWD.pfnCreateModelVBOs(md2_models[i].model);
+}
+
 void HWR_AddPlayerMD2(int skin) // For MD2's that were added after startup
 {
 	FILE *f;

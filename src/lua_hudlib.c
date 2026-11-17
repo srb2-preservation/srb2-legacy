@@ -963,6 +963,7 @@ static int libd_renderer(lua_State *L)
 	HUDONLY
 	switch (rendermode) {
 		case render_opengl: lua_pushliteral(L, "opengl");   break; // OpenGL renderer
+		case render_sdlgpu: lua_pushliteral(L, "sdlgpu");   break; // SDL GPU renderer
 		case render_soft:   lua_pushliteral(L, "software"); break; // Software renderer
 		default:            lua_pushliteral(L, "none");     break; // render_none (for dedicated), in case there's any reason this should be run
 	}

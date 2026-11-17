@@ -87,7 +87,12 @@ static void SCR_ActuallyChangeRenderer(void);
 static CV_PossibleValue_t cv_renderer_t[] = {
 	{1, "Software"},
 #ifdef HWRENDER
+#ifdef HWRENDER_OPENGL
 	{2, "OpenGL"},
+#endif
+#ifdef HWRENDER_SDLGPU
+	{4, "SDL GPU"}, // render_sdlgpu
+#endif
 #endif
 	{0, NULL}
 };
@@ -223,7 +228,7 @@ void SCR_Startup(void)
 	SCR_SetScale();
 
 #ifdef HWRENDER
-	if (rendermode != render_opengl && rendermode != render_none) // This was just placing it incorrectly at non aspect correct resolutions in opengl
+	if (!HWRENDERING && rendermode != render_none) // This was just placing it incorrectly at non aspect correct resolutions in opengl
 #endif
 		vid.fdupx = vid.fdupy = (vid.fdupx < vid.fdupy ? vid.fdupx : vid.fdupy);
 
@@ -265,7 +270,7 @@ void SCR_Recalc(void)
 	SCR_SetScale();
 
 #ifdef HWRENDER
-	//if (rendermode != render_opengl && rendermode != render_none) // This was just placing it incorrectly at non aspect correct resolutions in opengl
+	//if (!HWRENDERING && rendermode != render_none) // This was just placing it incorrectly at non aspect correct resolutions in opengl
 	// 13/11/18:
 	// The above is no longer necessary, since we want OpenGL to be just like software now
 	// -- Monster Iestyn
@@ -395,12 +400,12 @@ void SCR_ActuallyChangeRenderer(void)
 
 #ifdef HWRENDER
 	// Well, it didn't even load anyway.
-	if ((vid.glstate == VID_GL_LIBRARY_ERROR) && (setrenderneeded == render_opengl))
+	if (RENDERMODE_IS_HARDWARE(setrenderneeded) && (VID_HardwareState(setrenderneeded) == VID_GL_LIBRARY_ERROR))
 	{
 		if (M_CheckParm("-nogl"))
-			CONS_Alert(CONS_ERROR, "OpenGL rendering was disabled!\n");
+			CONS_Alert(CONS_ERROR, "%s rendering was disabled!\n", VID_HardwareName(setrenderneeded));
 		else
-			CONS_Alert(CONS_ERROR, "OpenGL never loaded\n");
+			CONS_Alert(CONS_ERROR, "%s never loaded\n", VID_HardwareName(setrenderneeded));
 		setrenderneeded = 0;
 		return;
 	}
@@ -420,8 +425,10 @@ void SCR_ChangeRenderer(void)
 	{
 		target_renderer = cv_renderer.value;
 #ifdef HWRENDER
-		if (M_CheckParm("-opengl") && (vid.glstate == VID_GL_LIBRARY_LOADED))
+		if (M_CheckParm("-opengl") && (VID_HardwareState(render_opengl) == VID_GL_LIBRARY_LOADED))
 			target_renderer = rendermode = render_opengl;
+		else if (M_CheckParm("-sdlgpu") && (VID_HardwareState(render_sdlgpu) == VID_GL_LIBRARY_LOADED))
+			target_renderer = rendermode = render_sdlgpu;
 		else
 #endif
 		if (M_CheckParm("-software"))
@@ -431,20 +438,17 @@ void SCR_ChangeRenderer(void)
 		return;
 	}
 
-	if (cv_renderer.value == 1)
-		target_renderer = render_soft;
-	else if (cv_renderer.value == 2)
-		target_renderer = render_opengl;
+	// cv_renderer's values are rendermode_t values
+	if (cv_renderer.value == render_soft || RENDERMODE_IS_HARDWARE(cv_renderer.value))
+		target_renderer = cv_renderer.value;
 	SCR_ActuallyChangeRenderer();
 }
 
 void SCR_ChangeRendererCVars(INT32 mode)
 {
 	// set cv_renderer back
-	if (mode == render_soft)
-		CV_StealthSetValue(&cv_renderer, 1);
-	else if (mode == render_opengl)
-		CV_StealthSetValue(&cv_renderer, 2);
+	if (mode == render_soft || RENDERMODE_IS_HARDWARE(mode))
+		CV_StealthSetValue(&cv_renderer, mode);
 }
 
 boolean SCR_IsAspectCorrect(INT32 width, INT32 height)

@@ -364,7 +364,7 @@ void F_RunWipe(UINT8 wipetype, boolean drawMenu)
 		lastwipetic = nowtime;
 
 #ifdef HWRENDER
-		if (rendermode == render_opengl)
+		if (HWRENDERING)
 			HWR_DoWipe(wipetype, wipeframe-1); // send in the wipe type and wipeframe because we need to cache the graphic
 		else
 #endif

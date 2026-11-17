@@ -1,0 +1,77 @@
+name: SDL GPU shaders
+
+# Compiles the game's shaders for the SDL GPU renderer, and checks that the
+# ones kept in the repository are up to date:
+#  - gpu_precompiled.c (SPIR-V for Vulkan, MSL for Metal) can be made anywhere,
+#    with tools/sdlgpu-shaders. This fails if it doesn't match the shaders.
+#  - gpu_precompiled_d3d12.c (DXIL for Direct3D 12) needs Microsoft's DXC, which
+#    only runs on x86-64. It is made here and uploaded as an artifact, to be
+#    committed. This warns if the committed one doesn't match the shaders.
+
+on:
+  push:
+    branches: [ "next", "master", "ci" ]
+  pull_request:
+    branches: [ "next", "master" ]
+
+env:
+  DXC_VERSION: v1.9.2609
+  DXC_FILE: linux_dxc_2026_09_28.x86_x64.tar.gz
+  DXC_SHA256: 96faadc7f5c282d2ffda49804beb4c3ee38127bc252b723234e3c5cdf7aa39a1
+
+jobs:
+  shaders:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v7.0.1
+
+    - name: Install dependencies
+      run: |
+       sudo apt-get update
+       sudo apt install -y pkg-config libshaderc-dev libspirv-cross-c-shared-dev
+
+    - name: Get DXC
+      run: |
+       curl -fsSL -o "$DXC_FILE" "https://github.com/microsoft/DirectXShaderCompiler/releases/download/$DXC_VERSION/$DXC_FILE"
+       echo "$DXC_SHA256  $DXC_FILE" | sha256sum -c -
+       mkdir dxc
+       tar xzf "$DXC_FILE" -C dxc
+       echo "LD_LIBRARY_PATH=$PWD/dxc/lib" >> "$GITHUB_ENV"
+
+    - name: Build the shader tool
+      run: make -C tools/sdlgpu-shaders gen
+
+    - name: Compile the shaders
+      run: |
+       GPUDIR=src/hardware/r_sdlgpu
+       cp $GPUDIR/gpu_precompiled.c committed.c
+       cp $GPUDIR/gpu_precompiled_d3d12.c committed_d3d12.c
+       make -C tools/sdlgpu-shaders all
+       make -C tools/sdlgpu-shaders d3d12 DXC="$PWD/dxc/bin/dxc"
+
+    # The shader programs are found by the hash of their GLSL, so comparing
+    # hashes doesn't depend on the versions of the tools that compiled them.
+    - name: Check the shaders in the repository
+      run: |
+       GPUDIR=src/hardware/r_sdlgpu
+       hashes() { grep -o '0x[0-9a-f]\{16\}ULL' "$1" | sort -u; }
+       hashes $GPUDIR/gpu_precompiled.c > needed.txt
+       if ! diff <(hashes committed.c) needed.txt > /dev/null; then
+           echo "::error::gpu_precompiled.c is out of date: run make in tools/sdlgpu-shaders and commit it."
+           exit 1
+       fi
+       if ! diff <(hashes $GPUDIR/gpu_precompiled_d3d12.c) needed.txt > /dev/null; then
+           echo "::error::DXC didn't compile every shader program."
+           exit 1
+       fi
+       if ! diff <(hashes committed_d3d12.c) needed.txt > /dev/null; then
+           echo "::warning::gpu_precompiled_d3d12.c is out of date: Direct3D 12 won't work. Commit the one in the sdlgpu-shaders-d3d12 artifact."
+           echo "gpu_precompiled_d3d12.c is out of date. Download the **sdlgpu-shaders-d3d12** artifact of this run and commit its gpu_precompiled_d3d12.c in src/hardware/r_sdlgpu." >> "$GITHUB_STEP_SUMMARY"
+       fi
+
+    - name: Upload the Direct3D 12 shaders
+      uses: actions/upload-artifact@v7.0.1
+      with:
+        name: sdlgpu-shaders-d3d12
+        path: src/hardware/r_sdlgpu/gpu_precompiled_d3d12.c

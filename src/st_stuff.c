@@ -220,7 +220,7 @@ void ST_doPaletteStuff(void)
 		palette = 0;
 
 #ifdef HWRENDER
-if (rendermode == render_opengl && !HWR_ShouldUsePaletteRendering())
+if (HWRENDERING && !HWR_ShouldUsePaletteRendering())
 	palette = 0; // Don't set the palette to a flashpal in OpenGL's truecolor mode
 #endif
 

@@ -893,6 +893,13 @@ static void HWR_SetPaletteLookup(RGBA_t *palette)
 	Z_Free(lut);
 }
 
+// Makes the next call to HWR_SetMapPalette give the palette to the hardware driver,
+// even if it is the same as before. For when the driver is not the same as before.
+void HWR_ForgetMapPalette(void)
+{
+	memset(mapPalette, 0, sizeof(mapPalette));
+}
+
 // Updates mapPalette to reflect the loaded level or other game state.
 // Textures are flushed if needed.
 // Call this function only in palette rendering mode.

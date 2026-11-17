@@ -238,7 +238,7 @@ void HWR_RenderBatches(void)
 
 	// set state for first batch
 
-	if (cv_glshaders.value && gl_shadersavailable)
+	if (HWR_UseShader())
 	{
 		HWD.pfnSetShader(currentShader);
 	}
@@ -322,7 +322,7 @@ void HWR_RenderBatches(void)
 				nextSurfaceInfo = polygonArray[nextIndex].surf;
 				if (nextPolyFlags & PF_NoTexture)
 					nextTexture = 0;
-				if (currentShader != nextShader && cv_glshaders.value && gl_shadersavailable)
+				if (currentShader != nextShader && HWR_UseShader())
 				{
 					changeState = true;
 					changeShader = true;
@@ -337,7 +337,7 @@ void HWR_RenderBatches(void)
 					changeState = true;
 					changePolyFlags = true;
 				}
-				if (cv_glshaders.value && gl_shadersavailable)
+				if (HWR_UseShader())
 				{
 					if (currentSurfaceInfo.PolyColor.rgba != nextSurfaceInfo.PolyColor.rgba ||
 						currentSurfaceInfo.TintColor.rgba != nextSurfaceInfo.TintColor.rgba ||

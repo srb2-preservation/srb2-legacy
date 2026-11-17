@@ -450,7 +450,7 @@ static void P_LoadRawSegs(UINT8 *data, size_t i)
 
 		li->length = P_SegLength(li);
 #ifdef HWRENDER
-		if (rendermode == render_opengl)
+		if (HWRENDERING)
 		{
 			li->flength = P_SegLengthFloat(li);
 			//Hurdler: 04/12/2000: for now, only used in hardware mode
@@ -2912,7 +2912,7 @@ boolean P_SetupLevel(boolean skipprecip, boolean reloadinggamestate)
 		free(extrasubsectors);
 	extrasubsectors = NULL;
 	// stuff like HWR_CreatePlanePolygons is called there
-	if (rendermode == render_opengl)
+	if (HWRENDERING)
 		HWR_SetupLevel();
 #endif
 
@@ -3262,7 +3262,7 @@ boolean P_AddWadFile(const char *wadfilename)
 		ST_Start();
 
 #ifdef HWRENDER
-	if (rendermode == render_opengl)
+	if (HWRENDERING)
 		HWR_FreeMipmapCache();
 #endif
 

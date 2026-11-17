@@ -367,7 +367,7 @@ static void AM_LevelInit(void)
 
 	AM_drawFline = AM_drawFline_soft;
 #ifdef HWRENDER
-	if (rendermode == render_opengl)
+	if (HWRENDERING)
 		AM_drawFline = HWR_drawAMline;
 #endif
 

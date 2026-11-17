@@ -744,6 +744,9 @@ static void M_PNGText(png_structp png_ptr, png_infop png_info_ptr, PNG_CONST png
 		case render_opengl:
 			strcpy(rendermodetxt, "OpenGL");
 			break;
+		case render_sdlgpu:
+			strcpy(rendermodetxt, "SDL GPU");
+			break;
 		default: // Just in case
 			strcpy(rendermodetxt, "None");
 			break;
@@ -1534,7 +1537,7 @@ void M_DoScreenShot(void)
 #else
 	if (rendermode == render_soft)
 		freename = Newsnapshotfile(pathname,"pcx");
-	else if (rendermode == render_opengl)
+	else if (HWRENDERING)
 		freename = Newsnapshotfile(pathname,"tga");
 #endif
 
@@ -1550,7 +1553,7 @@ void M_DoScreenShot(void)
 
 	// save the pcx file
 #ifdef HWRENDER
-	if (rendermode == render_opengl)
+	if (HWRENDERING)
 		ret = HWR_Screenshot(va(pandf,pathname,freename));
 	else
 #endif

@@ -75,7 +75,6 @@
 #include "../r_main.h"
 #include "../r_state.h"
 #include "../tables.h"
-#include "r_opengl/r_opengl.h"
 
 typedef struct clipnode_s
 	{
@@ -314,10 +313,11 @@ void gld_clipper_Clear(void)
 
 #define RMUL (1.6f/1.333333f)
 
-angle_t gld_FrustumAngle(angle_t tiltangle, void *player)
+angle_t gld_FrustumAngle(angle_t tiltangle, float fov, boolean splitscreen)
 {
 	angle_t a1;
 	double clipfov;
+	double halftan = tan(fov * M_PI / 360.0);
 	double floatangle;
 
 	float tilt = (float)fabs(((double)(int)tiltangle) / ANG1);
@@ -333,7 +333,11 @@ angle_t gld_FrustumAngle(angle_t tiltangle, void *player)
 
 	// ok, this is a gross hack that barely works...
 	// but at least it doesn't overestimate too much...
-	clipfov = atan(1 / projMatrix[0]) * 360 / M_PI; // use the actual view of the scene
+	// use the actual view of the scene: the horizontal field of view the hardware
+	// drivers' projection gives (see SetTransform in r_opengl.c and r_sdlgpu.c)
+	if (splitscreen)
+		halftan *= 0.8 * 2.0; // narrower, on a view twice as wide as it is high
+	clipfov = atan(halftan) * 360 / M_PI;
 	floatangle = 2.0f + (45.0f + (tilt / 1.9f)) * clipfov / 90.0f;
 	if (floatangle >= 180.0)
 		return 0xffffffff;

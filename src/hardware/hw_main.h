@@ -13,6 +13,7 @@
 #ifndef __HWR_MAIN_H__
 #define __HWR_MAIN_H__
 
+#include "../i_video.h" // rendermode_t
 #include "hw_data.h"
 #include "hw_defs.h"
 
@@ -23,6 +24,7 @@
 
 // Startup & Shutdown the hardware mode renderer
 void HWR_Startup(void);
+void HWR_DriverDeactivate(rendermode_t mode);
 void HWR_Switch(void);
 void HWR_Shutdown(void);
 
@@ -67,6 +69,7 @@ void HWR_DrawScreenFinalTexture(int width, int height);
 
 // This stuff is put here so MD2's can use them
 boolean HWR_UseShader(void);
+boolean HWR_UseCustomShaders(void);
 void HWR_Lighting(FSurfaceInfo *Surface, INT32 light_level, extracolormap_t *colormap);
 UINT8 HWR_FogBlockAlpha(INT32 light, extracolormap_t *colormap); // Let's see if this can work
 

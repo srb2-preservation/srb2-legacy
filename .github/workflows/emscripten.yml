@@ -34,9 +34,6 @@ jobs:
           # so make sure it doesn't conflict with anything!
           actions-cache-folder: "emsdk-cache"
 
-      - name: Get CMake
-        uses: symbitic/install-cmake@master
-
       - name: Build
         run: |
           git clone https://codeberg.org/srb2-preservation/assets.git -b legacy assets/installer
