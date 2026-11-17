@@ -494,6 +494,8 @@ static const char *Translate_Interface(translator_t *t, const char *p)
 		}
 
 		name = SkipSpace(decl);
+		if (name > declend) // an empty declaration, like after a trailing comma
+			name = declend;
 		nameend = name;
 		while (nameend < declend && IsIdentChar(*nameend))
 			nameend++;
@@ -502,7 +504,7 @@ static const char *Translate_Interface(translator_t *t, const char *p)
 			const char *reststart = rest, *restend = declend;
 			const char *bracket;
 			TrimSpan(&reststart, &restend);
-			bracket = memchr(reststart, '[', restend - reststart);
+			bracket = (restend > reststart) ? memchr(reststart, '[', restend - reststart) : NULL;
 			if (bracket)
 			{
 				int size = atoi(bracket + 1);
