@@ -18,7 +18,9 @@ sources+=$(call List,sdl/macosx/Sourcefile)
 endif
 
 ifndef NOHW
+ifndef NOOPENGL
 sources+=sdl/ogl_sdl.c
+endif
 ifndef NOSDLGPU
 sources+=sdl/gpu_sdl.c
 endif

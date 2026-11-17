@@ -1609,14 +1609,18 @@ void I_StartupGraphics(void)
 			framebuffer = true;
 	}
 
-#ifdef HWRENDER
+#ifdef HWRENDER_OPENGL
 	if (M_CheckParm("-opengl"))
 		chosenrendermode = rendermode = render_opengl;
-#ifdef HWRENDER_SDLGPU
-	else if (M_CheckParm("-sdlgpu"))
-		chosenrendermode = rendermode = render_sdlgpu;
+	else
 #endif
-	else if (M_CheckParm("-software"))
+#ifdef HWRENDER_SDLGPU
+	if (M_CheckParm("-sdlgpu"))
+		chosenrendermode = rendermode = render_sdlgpu;
+	else
+#endif
+#ifdef HWRENDER
+	if (M_CheckParm("-software"))
 #endif
 		chosenrendermode = rendermode = render_soft;
 

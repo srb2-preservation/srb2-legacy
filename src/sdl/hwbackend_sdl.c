@@ -13,13 +13,16 @@
 
 #ifdef HWRENDER
 
+#ifdef HWRENDER_OPENGL
 #include "ogl_sdl.h"
 #include "hwsym_sdl.h"
+#endif
 
 #ifdef HWRENDER_SDLGPU
 #include "gpu_sdl.h"
 #endif
 
+#ifdef HWRENDER_OPENGL
 /**	\brief	Fills a hardware driver with the OpenGL one
 
 	\param	driver	the driver to fill
@@ -65,8 +68,12 @@ static void HWD_FillOpenGL(struct hwdriver_s *driver)
 	driver->pfnClearLightTables = hwSym("ClearLightTables",NULL);
 	driver->pfnSetScreenPalette = hwSym("SetScreenPalette",NULL);
 }
+#endif
+
+// Builds without OpenGL (Android and iOS) only have SDL GPU.
 static sdlhwbackend_t sdlhw_backends[] =
 {
+#ifdef HWRENDER_OPENGL
 	{
 		"OpenGL", render_opengl, VID_GL_LIBRARY_NOTLOADED,
 		HWD_FillOpenGL,
@@ -78,6 +85,7 @@ static sdlhwbackend_t sdlhw_backends[] =
 		OglSdlFinishUpdate,
 		false, // the GL context survives window changes
 	},
+#endif
 #ifdef HWRENDER_SDLGPU
 	{
 		"SDL GPU", render_sdlgpu, VID_GL_LIBRARY_NOTLOADED,

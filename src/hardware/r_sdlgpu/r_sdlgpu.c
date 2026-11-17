@@ -94,6 +94,7 @@ typedef enum
 
 static SDL_GPUDevice *device = NULL;
 static SDL_GPUShaderFormat device_formats = 0;
+static boolean device_anisotropy = true; // whether samplers can use anisotropic filtering
 
 // what the game is drawn to
 static SDL_GPUTexture *color_target = NULL;
@@ -783,7 +784,7 @@ static SDL_GPUSampler *GetSampler(unsigned key)
 		info.address_mode_v = (key & SAMPLER_WRAP_V) ? SDL_GPU_SAMPLERADDRESSMODE_REPEAT : SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
 		info.address_mode_w = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
 		info.max_lod = (key & SAMPLER_MIPMAP) ? 1000.0f : 0.0f;
-		if (anisotropy > 1)
+		if (anisotropy > 1 && device_anisotropy)
 		{
 			info.enable_anisotropy = true;
 			info.max_anisotropy = (float)anisotropy;
@@ -962,6 +963,43 @@ static SDL_GPUShaderFormat PrecompiledFormats(boolean d3d12)
 	}
 
 	return formats;
+}
+
+// Creates the GPU device, for some shader formats
+static SDL_GPUDevice *CreateDevice(SDL_GPUShaderFormat formats, boolean anisotropy)
+{
+	SDL_PropertiesID props = SDL_CreateProperties();
+	SDL_GPUDevice *created;
+
+	if (!props)
+		return NULL;
+
+	// -gpudebug makes SDL and the graphics API check what the renderer does, and say what it does wrong
+	SDL_SetBooleanProperty(props, SDL_PROP_GPU_DEVICE_CREATE_DEBUGMODE_BOOLEAN, M_CheckParm("-gpudebug") != 0);
+	SDL_SetBooleanProperty(props, SDL_PROP_GPU_DEVICE_CREATE_SHADERS_SPIRV_BOOLEAN, (formats & SDL_GPU_SHADERFORMAT_SPIRV) != 0);
+	SDL_SetBooleanProperty(props, SDL_PROP_GPU_DEVICE_CREATE_SHADERS_DXIL_BOOLEAN, (formats & SDL_GPU_SHADERFORMAT_DXIL) != 0);
+	SDL_SetBooleanProperty(props, SDL_PROP_GPU_DEVICE_CREATE_SHADERS_MSL_BOOLEAN, (formats & SDL_GPU_SHADERFORMAT_MSL) != 0);
+
+	// Direct3D 12: Resource Binding Tier 1 only falls short with more than 8 storage buffers and textures,
+	// and the renderer has none, so Intel Haswell and Broadwell GPUs can be used too.
+	SDL_SetBooleanProperty(props, SDL_PROP_GPU_DEVICE_CREATE_D3D12_ALLOW_FEWER_RESOURCE_SLOTS_BOOLEAN, true);
+
+	// Vulkan: the renderer doesn't need some of the device features SDL asks for by default,
+	// and many Android devices don't have them:
+	//  - clip distances (no shader writes gl_ClipDistance)
+	//  - depth clamping (depth clipping is always on)
+	//  - the first instance of indirect draws (nothing is drawn indirectly)
+	// Anisotropic filtering is used, but can be done without (see GetSampler).
+#ifdef __ANDROID__
+	SDL_SetBooleanProperty(props, SDL_PROP_GPU_DEVICE_CREATE_FEATURE_CLIP_DISTANCE_BOOLEAN, false);
+	SDL_SetBooleanProperty(props, SDL_PROP_GPU_DEVICE_CREATE_FEATURE_DEPTH_CLAMPING_BOOLEAN, false);
+	SDL_SetBooleanProperty(props, SDL_PROP_GPU_DEVICE_CREATE_FEATURE_INDIRECT_DRAW_FIRST_INSTANCE_BOOLEAN, false);
+#endif
+	SDL_SetBooleanProperty(props, SDL_PROP_GPU_DEVICE_CREATE_FEATURE_ANISOTROPY_BOOLEAN, anisotropy);
+
+	created = SDL_CreateGPUDeviceWithProperties(props);
+	SDL_DestroyProperties(props);
+	return created;
 }
 
 // Makes a SPIR-V shader pair usable by a GPU device that doesn't take SPIR-V
@@ -2825,13 +2863,23 @@ static boolean SDLGPU_Init(void)
 	// The game's own shaders have to be available.
 	// Vulkan and Metal are tried first: the shaders of addons can only be made for them.
 	// (SDL_GPU_DRIVER=direct3d12 in the environment still picks Direct3D 12.)
-	// -gpudebug makes SDL and the graphics API check what the renderer does, and say what it does wrong
+	// Each is tried with anisotropic filtering first, then without, for the GPUs that don't have it.
 	formats = PrecompiledFormats(false);
-	device = SDL_CreateGPUDevice(formats, M_CheckParm("-gpudebug") != 0, NULL);
+	device_anisotropy = true;
+	device = CreateDevice(formats, true);
 	if (!device && PrecompiledFormats(true))
 	{
 		formats |= PrecompiledFormats(true);
-		device = SDL_CreateGPUDevice(formats, M_CheckParm("-gpudebug") != 0, NULL);
+		device = CreateDevice(formats, true);
+	}
+	if (!device)
+	{
+		device = CreateDevice(formats, false);
+		if (device)
+		{
+			device_anisotropy = false;
+			CONS_Printf("SDL GPU: this GPU can't do anisotropic filtering\n");
+		}
 	}
 	if (!device)
 	{

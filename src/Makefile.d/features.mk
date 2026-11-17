@@ -15,8 +15,17 @@ opts+=-DPARANOIA -DRANGECHECK
 endif
 
 ifndef NOHW
+ifdef NOOPENGL
+ifdef NOSDLGPU
+$(error NOOPENGL=1 and NOSDLGPU=1 leave no hardware renderer: use NOHW=1 instead)
+endif
+endif
 opts+=-DHWRENDER
 sources+=$(call List,hardware/Sourcefile)
+ifndef NOOPENGL
+opts+=-DHWRENDER_OPENGL
+sources+=hardware/r_opengl/r_opengl.c
+endif
 ifndef NOSDLGPU
 opts+=-DHWRENDER_SDLGPU
 sources+=hardware/r_sdlgpu/r_sdlgpu.c

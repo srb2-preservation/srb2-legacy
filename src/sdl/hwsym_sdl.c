@@ -31,7 +31,7 @@
 
 #define  _CREATE_DLL_  // necessary for Unix AND Windows
 
-#ifdef HWRENDER
+#ifdef HWRENDER_OPENGL
 #include "../hardware/hw_drv.h"
 #include "ogl_sdl.h"
 #ifdef STATIC_OPENGL
@@ -61,7 +61,7 @@
 void *hwSym(const char *funcName,void *handle)
 {
 	void *funcPointer = NULL;
-#ifdef HWRENDER
+#ifdef HWRENDER_OPENGL // the OpenGL driver is the only one looked up by name
 	if (0 == strcmp("SetTexturePalette", funcName))
                 funcPointer = &OglSdlSetPalette;
 	GETFUNC(Init);
@@ -100,10 +100,10 @@ void *hwSym(const char *funcName,void *handle)
 	GETFUNC(UpdateLightTable);
 	GETFUNC(ClearLightTables);
 	GETFUNC(SetScreenPalette);
-#else //HWRENDER
+#else //HWRENDER_OPENGL
 	if (0 == strcmp("FinishUpdate", funcName))
 		return funcPointer; //&FinishUpdate;
-#endif //!HWRENDER
+#endif //!HWRENDER_OPENGL
 #ifdef STATIC3DS
 	GETFUNC(Startup);
 	GETFUNC(AddSfx);

@@ -24,7 +24,9 @@ set(SRB2_CONFIG_HAVE_OPENMPT ON CACHE BOOL
 set(SRB2_CONFIG_HAVE_THREADS ON CACHE BOOL
 	"Enable multithreading support.")
 set(SRB2_CONFIG_HWRENDER ON CACHE BOOL
-	"Enable hardware rendering through OpenGL.")
+	"Enable hardware rendering (OpenGL and SDL GPU).")
+set(SRB2_CONFIG_OPENGL ON CACHE BOOL
+	"Enable the OpenGL renderer. Needs hardware rendering.")
 set(SRB2_CONFIG_SDLGPU ON CACHE BOOL
 	"Enable the SDL GPU renderer (Vulkan, Direct3D 12, Metal). Needs hardware rendering.")
 set(SRB2_CONFIG_HAVE_SHADERC ON CACHE BOOL
@@ -61,16 +63,26 @@ if(${CMAKE_SYSTEM} MATCHES "Windows" OR ${CMAKE_SYSTEM} MATCHES "Android" OR ${C
 		"Use SRB2's internal copies of required dependencies (SDL3, PNG, zlib, GME, OpenMPT).")
 endif()
 
+# Android and iOS have no desktop OpenGL: they only get the SDL GPU renderer (Vulkan on Android, Metal on iOS).
+# shaderc and SPIRV-Cross are left out, since pkg-config would find the ones of the computer building the game.
 if(${CMAKE_SYSTEM} MATCHES "Android")
 	set(SRB2_CONFIG_USE_INTERNAL_LIBRARIES ON)
-	set(SRB2_CONFIG_HWRENDER OFF)
+	set(SRB2_CONFIG_HWRENDER ON)
+	set(SRB2_CONFIG_SDLGPU ON)
+	set(SRB2_CONFIG_OPENGL OFF)
+	set(SRB2_CONFIG_HAVE_SHADERC OFF)
+	set(SRB2_CONFIG_HAVE_SPIRV_CROSS OFF)
 	set(SRB2_CONFIG_LTO OFF)
 	set(SRB2_CONFIG_NATIVESCREENRES ON)
 endif()
 
 if(${CMAKE_SYSTEM} MATCHES "iOS")
 	set(SRB2_CONFIG_USE_INTERNAL_LIBRARIES ON)
-	set(SRB2_CONFIG_HWRENDER OFF)
+	set(SRB2_CONFIG_HWRENDER ON)
+	set(SRB2_CONFIG_SDLGPU ON)
+	set(SRB2_CONFIG_OPENGL OFF)
+	set(SRB2_CONFIG_HAVE_SHADERC OFF)
+	set(SRB2_CONFIG_HAVE_SPIRV_CROSS OFF)
 	set(SRB2_CONFIG_NATIVESCREENRES ON)
 endif()
 
@@ -230,9 +242,18 @@ if(${SRB2_CONFIG_HAVE_CURL})
 	endif()
 endif()
 
+if(${SRB2_CONFIG_HWRENDER} AND NOT ${SRB2_CONFIG_OPENGL} AND NOT ${SRB2_CONFIG_SDLGPU})
+	message(WARNING "Hardware rendering is enabled, but neither OpenGL nor SDL GPU is. Not setting HWRENDER.")
+	set(SRB2_CONFIG_HWRENDER OFF)
+endif()
+
 if(${SRB2_CONFIG_HWRENDER})
 	target_compile_definitions(SRB2 PRIVATE -DHWRENDER)
 	add_subdirectory(hardware)
+	if(${SRB2_CONFIG_OPENGL})
+		target_compile_definitions(SRB2 PRIVATE -DHWRENDER_OPENGL)
+		target_sources(SRB2 PRIVATE hardware/r_opengl/r_opengl.c)
+	endif()
 	if(${SRB2_CONFIG_SDLGPU})
 		target_compile_definitions(SRB2 PRIVATE -DHWRENDER_SDLGPU)
 		target_sources(SRB2 PRIVATE
@@ -270,7 +291,7 @@ if(${SRB2_CONFIG_HWRENDER})
 	endif()
 endif()
 
-if(${SRB2_CONFIG_HWRENDER} AND ${SRB2_CONFIG_STATIC_OPENGL})
+if(${SRB2_CONFIG_HWRENDER} AND ${SRB2_CONFIG_OPENGL} AND ${SRB2_CONFIG_STATIC_OPENGL})
 	find_package(OpenGL)
 	if(${OPENGL_FOUND})
 		target_compile_definitions(SRB2 PRIVATE -DHWRENDER)

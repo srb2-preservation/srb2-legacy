@@ -87,7 +87,9 @@ static void SCR_ActuallyChangeRenderer(void);
 static CV_PossibleValue_t cv_renderer_t[] = {
 	{1, "Software"},
 #ifdef HWRENDER
+#ifdef HWRENDER_OPENGL
 	{2, "OpenGL"},
+#endif
 #ifdef HWRENDER_SDLGPU
 	{4, "SDL GPU"}, // render_sdlgpu
 #endif

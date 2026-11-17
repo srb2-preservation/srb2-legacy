@@ -44,7 +44,8 @@
 # Safe to use online
 # ------------------
 # NO_IPV6=1 - Disable IPv6 address support.
-# NOHW=1 - Disable OpenGL renderer.
+# NOHW=1 - Disable the hardware renderers (OpenGL and SDL GPU).
+# NOOPENGL=1 - Disable the OpenGL renderer, but keep the SDL GPU renderer.
 # NOSDLGPU=1 - Disable the SDL GPU renderer (Vulkan, Direct3D 12,
 #              Metal).
 # HAVE_SHADERC=1 - With the SDL GPU renderer, link with shaderc, so that the

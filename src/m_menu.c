@@ -1311,7 +1311,11 @@ static menuitem_t OP_VideoOptionsMenu[] =
 	{IT_STRING | IT_CVAR,             NULL, "Vertical Sync",    NULL,      &cv_vidwait,              90},
 	{IT_STRING | IT_CVAR,             NULL, "FPS Cap",         NULL,       &cv_fpscap,               95},
 #ifdef HWRENDER
+#ifdef HWRENDER_OPENGL
 	{IT_CALL | IT_STRING, NULL, "OpenGL Options...",  "Change OpenGL-specific options",        M_OpenGLOptionsMenu, 105},
+#else
+	{IT_CALL | IT_STRING, NULL, "Hardware Options...",  "Change options of the hardware renderer",        M_OpenGLOptionsMenu, 105},
+#endif
 #endif
 };
 
@@ -2137,10 +2141,11 @@ menu_t OP_MonitorToggleDef =
 #ifdef HWRENDER
 static void M_OpenGLOptionsMenu(void)
 {
-	if (rendermode == render_opengl)
+	// these are the options of every hardware renderer, not only OpenGL
+	if (HWRENDERING)
 		M_SetupNextMenu(&OP_OpenGLOptionsDef);
 	else
-		M_StartMessage(M_GetText("You must be in OpenGL mode\nto access this menu.\n\n(Press a key)\n"), NULL, MM_NOTHING);
+		M_StartMessage(M_GetText("You must be in a hardware renderer\nto access this menu.\n\n(Press a key)\n"), NULL, MM_NOTHING);
 }
 
 menu_t OP_OpenGLOptionsDef = DEFAULTMENUSTYLE("M_VIDEO", OP_OpenGLOptionsMenu, &OP_VideoOptionsDef, 30, 30);
