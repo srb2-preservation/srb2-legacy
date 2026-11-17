@@ -3005,17 +3005,25 @@ void SDLGPU_SetResolution(INT32 width, INT32 height)
 	current_texture = &white_texture;
 }
 
+// the window whose swapchain was last set up, and how
+static SDL_Window *swapchain_window = NULL;
+static boolean swapchain_vsync = false;
+
+void SDLGPU_WindowClaimed(SDL_Window *window)
+{
+	(void)window;
+	swapchain_window = NULL;
+}
+
 void SDLGPU_Present(SDL_Window *window, boolean vsync)
 {
-	static SDL_Window *last_window = NULL;
-	static boolean last_vsync = false;
 	SDL_GPUTexture *swapchain = NULL;
 	Uint32 width = 0, height = 0;
 
 	if (!device || !color_target || !window)
 		return;
 
-	if (window != last_window || vsync != last_vsync)
+	if (window != swapchain_window || vsync != swapchain_vsync)
 	{
 		SDL_GPUPresentMode mode = SDL_GPU_PRESENTMODE_VSYNC;
 
@@ -3030,8 +3038,8 @@ void SDLGPU_Present(SDL_Window *window, boolean vsync)
 		if (!SDL_SetGPUSwapchainParameters(device, window, SDL_GPU_SWAPCHAINCOMPOSITION_SDR, mode))
 			GPU_Error("couldn't set the swapchain up");
 
-		last_window = window;
-		last_vsync = vsync;
+		swapchain_window = window;
+		swapchain_vsync = vsync;
 	}
 
 	EndRenderPass();

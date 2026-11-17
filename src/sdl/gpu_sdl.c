@@ -50,6 +50,7 @@ boolean GPUSdlCreateContext(SDL_Window *win)
 		return false;
 
 	claimed_window = win;
+	SDLGPU_WindowClaimed(win);
 	return true;
 }
 

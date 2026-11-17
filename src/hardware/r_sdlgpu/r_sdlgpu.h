@@ -36,6 +36,13 @@ void SDLGPU_SetResolution(INT32 width, INT32 height);
 */
 void SDLGPU_Present(SDL_Window *window, boolean vsync);
 
+/**	\brief Tells the driver a window was just claimed for the GPU device
+
+	Its swapchain then has SDL's default settings (with vertical sync),
+	so they have to be set again on the next SDLGPU_Present.
+*/
+void SDLGPU_WindowClaimed(SDL_Window *window);
+
 /**	\brief Releases everything, and the GPU device
 */
 void SDLGPU_Shutdown(void);
