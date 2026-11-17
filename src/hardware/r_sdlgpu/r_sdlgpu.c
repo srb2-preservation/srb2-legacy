@@ -47,6 +47,14 @@
 //                                                                  CONSTANTS
 // ==========================================================================
 
+// The driver functions are called through hwdriver_s, whose pointers are
+// WINAPI (stdcall) on Windows, like the OpenGL renderer's exports.
+#ifdef _WIN32
+#define SDLGPU_CALL WINAPI
+#else
+#define SDLGPU_CALL
+#endif
+
 #define FAR_CLIPPING_PLANE 32768.0f
 #define ASPECT_RATIO 1.0f
 
@@ -1172,13 +1180,13 @@ static gpuprogram_t *ActiveProgram(void)
 	return current_program;
 }
 
-static boolean SDLGPU_InitShaders(void)
+static boolean SDLGPU_CALL SDLGPU_InitShaders(void)
 {
 	// the renderer's own were compiled by Init
 	return true;
 }
 
-static void SDLGPU_LoadShader(int slot, char *code, hwdshaderstage_t stage)
+static void SDLGPU_CALL SDLGPU_LoadShader(int slot, char *code, hwdshaderstage_t stage)
 {
 	gpuprogram_t *program;
 
@@ -1201,7 +1209,7 @@ static void SDLGPU_LoadShader(int slot, char *code, hwdshaderstage_t stage)
 		I_Error("LoadShader: invalid shader stage");
 }
 
-static void SDLGPU_LoadShaderBinary(int slot, hwdshaderformat_t format, hwdshaderstage_t stage, const void *code, size_t size)
+static void SDLGPU_CALL SDLGPU_LoadShaderBinary(int slot, hwdshaderformat_t format, hwdshaderstage_t stage, const void *code, size_t size)
 {
 	gpuprogram_t *program;
 	gpu_shaderformat_t gpuformat;
@@ -1239,7 +1247,7 @@ static void SDLGPU_LoadShaderBinary(int slot, hwdshaderformat_t format, hwdshade
 	}
 }
 
-static boolean SDLGPU_CompileShader(int slot)
+static boolean SDLGPU_CALL SDLGPU_CompileShader(int slot)
 {
 	if (slot < 0 || slot >= HWR_MAXSHADERS)
 		I_Error("CompileShader: Invalid slot %d", slot);
@@ -1247,7 +1255,7 @@ static boolean SDLGPU_CompileShader(int slot)
 	return Program_Compile(&programs[slot], HWR_GetShaderName(slot % NUMSHADERTARGETS));
 }
 
-static void SDLGPU_SetShaderInfo(hwdshaderinfo_t info, INT32 value)
+static void SDLGPU_CALL SDLGPU_SetShaderInfo(hwdshaderinfo_t info, INT32 value)
 {
 	switch (info)
 	{
@@ -1259,12 +1267,12 @@ static void SDLGPU_SetShaderInfo(hwdshaderinfo_t info, INT32 value)
 	}
 }
 
-static void SDLGPU_UnSetShader(void)
+static void SDLGPU_CALL SDLGPU_UnSetShader(void)
 {
 	current_program = NULL;
 }
 
-static void SDLGPU_SetShader(int slot)
+static void SDLGPU_CALL SDLGPU_SetShader(int slot)
 {
 	if (slot < 0 || slot >= HWR_MAXSHADERS) // SHADER_NONE
 		SDLGPU_UnSetShader();
@@ -1711,7 +1719,7 @@ static void DrawScreenQuad(drawcall_t *draw)
 // -----------------+
 // SetBlend         : Set render mode
 // -----------------+
-static void SDLGPU_SetBlend(FBITFIELD PolyFlags)
+static void SDLGPU_CALL SDLGPU_SetBlend(FBITFIELD PolyFlags)
 {
 	// what the flags mean is worked out when drawing
 	CurrentPolyFlags = PolyFlags;
@@ -1722,7 +1730,7 @@ static void SDLGPU_SetBlend(FBITFIELD PolyFlags)
 // -----------------+
 // GClipRect        : Defines the 2D hardware clipping window
 // -----------------+
-static void SDLGPU_GClipRect(INT32 minx, INT32 miny, INT32 maxx, INT32 maxy, float nearclip)
+static void SDLGPU_CALL SDLGPU_GClipRect(INT32 minx, INT32 miny, INT32 maxx, INT32 maxy, float nearclip)
 {
 	viewport.x = (float)minx;
 	viewport.y = (float)miny;
@@ -1742,7 +1750,7 @@ static void SDLGPU_GClipRect(INT32 minx, INT32 miny, INT32 maxx, INT32 maxy, flo
 // -----------------+
 // ClearBuffer      : Clear the color/alpha/depth buffer(s)
 // -----------------+
-static void SDLGPU_ClearBuffer(FBOOLEAN ColorMask, FBOOLEAN DepthMask, FRGBAFloat *ClearColor)
+static void SDLGPU_CALL SDLGPU_ClearBuffer(FBOOLEAN ColorMask, FBOOLEAN DepthMask, FRGBAFloat *ClearColor)
 {
 	if (ColorMask || DepthMask)
 	{
@@ -1773,7 +1781,7 @@ static void SDLGPU_ClearBuffer(FBOOLEAN ColorMask, FBOOLEAN DepthMask, FRGBAFloa
 // -----------------+
 // Draw2DLine       : Render a 2D line
 // -----------------+
-static void SDLGPU_Draw2DLine(F2DCoord *v1, F2DCoord *v2, RGBA_t Color)
+static void SDLGPU_CALL SDLGPU_Draw2DLine(F2DCoord *v1, F2DCoord *v2, RGBA_t Color)
 {
 	drawcall_t draw;
 	gpuvertex_t *v;
@@ -1812,7 +1820,7 @@ static void SDLGPU_Draw2DLine(F2DCoord *v1, F2DCoord *v2, RGBA_t Color)
 // -----------------+
 // UpdateTexture    : Updates the texture data.
 // -----------------+
-static void SDLGPU_UpdateTexture(FTextureInfo *pTexInfo)
+static void SDLGPU_CALL SDLGPU_UpdateTexture(FTextureInfo *pTexInfo)
 {
 	static RGBA_t *converted = NULL;
 	static size_t converted_size = 0;
@@ -1911,7 +1919,7 @@ static void SDLGPU_UpdateTexture(FTextureInfo *pTexInfo)
 // -----------------+
 // SetTexture       : The mipmap becomes the current texture source
 // -----------------+
-static void SDLGPU_SetTexture(FTextureInfo *pTexInfo)
+static void SDLGPU_CALL SDLGPU_SetTexture(FTextureInfo *pTexInfo)
 {
 	if (!pTexInfo)
 	{
@@ -1940,7 +1948,7 @@ static void SDLGPU_SetTexture(FTextureInfo *pTexInfo)
 	}
 }
 
-static void SDLGPU_SetTexturePalette(RGBA_t *palette)
+static void SDLGPU_CALL SDLGPU_SetTexturePalette(RGBA_t *palette)
 {
 	// on a palette change, you have to reload all of the textures
 	if (memcmp(texture_palette, palette, sizeof (texture_palette)))
@@ -1950,12 +1958,12 @@ static void SDLGPU_SetTexturePalette(RGBA_t *palette)
 	}
 }
 
-static void SDLGPU_ClearMipMapCache(void)
+static void SDLGPU_CALL SDLGPU_ClearMipMapCache(void)
 {
 	FlushTextures();
 }
 
-static INT32 SDLGPU_GetTextureUsed(void)
+static INT32 SDLGPU_CALL SDLGPU_GetTextureUsed(void)
 {
 	FTextureInfo *tmp = cache_head;
 	INT32 res = 0;
@@ -2043,7 +2051,7 @@ static void PreparePolygon(drawcall_t *draw, FSurfaceInfo *pSurf, FBITFIELD Poly
 // -----------------+
 // DrawPolygon      : Render a polygon, set the texture, set render mode
 // -----------------+
-static void SDLGPU_DrawPolygon(FSurfaceInfo *pSurf, FOutVector *pOutVerts, FUINT iNumPts, FBITFIELD PolyFlags)
+static void SDLGPU_CALL SDLGPU_DrawPolygon(FSurfaceInfo *pSurf, FOutVector *pOutVerts, FUINT iNumPts, FBITFIELD PolyFlags)
 {
 	drawcall_t draw;
 	gpuvertex_t *v;
@@ -2069,7 +2077,7 @@ static void SDLGPU_DrawPolygon(FSurfaceInfo *pSurf, FOutVector *pOutVerts, FUINT
 	Draw(&draw);
 }
 
-static void SDLGPU_DrawIndexedTriangles(FSurfaceInfo *pSurf, FOutVector *pOutVerts, FUINT iNumPts, FBITFIELD PolyFlags, unsigned int *IndexArray)
+static void SDLGPU_CALL SDLGPU_DrawIndexedTriangles(FSurfaceInfo *pSurf, FOutVector *pOutVerts, FUINT iNumPts, FBITFIELD PolyFlags, unsigned int *IndexArray)
 {
 	drawcall_t draw;
 	gpuvertex_t *v;
@@ -2159,7 +2167,7 @@ static void Mesh_Free(unsigned int id)
 
 static unsigned int sky_mesh = 0;
 
-static void SDLGPU_RenderSkyDome(gl_sky_t *sky)
+static void SDLGPU_CALL SDLGPU_RenderSkyDome(gl_sky_t *sky)
 {
 	gpumesh_t *mesh;
 	drawcall_t draw;
@@ -2318,7 +2326,7 @@ static void CreateModelVBOTiny(mesh_t *mesh, tinyframe_t *frame)
 	Staging_ToBuffer(transfer, gpumesh->vertices, size);
 }
 
-static void SDLGPU_CreateModelVBOs(model_t *model)
+static void SDLGPU_CALL SDLGPU_CreateModelVBOs(model_t *model)
 {
 	int i, j;
 
@@ -2352,7 +2360,7 @@ static void SDLGPU_CreateModelVBOs(model_t *model)
 // -----------------+
 // DrawModel        : Draw a model.
 // -----------------+
-static void SDLGPU_DrawModel(model_t *model, INT32 frameIndex, float duration, float tics, INT32 nextFrameIndex, FTransform *pos, float scale, UINT8 flipped, FSurfaceInfo *Surface)
+static void SDLGPU_CALL SDLGPU_DrawModel(model_t *model, INT32 frameIndex, float duration, float tics, INT32 nextFrameIndex, FTransform *pos, float scale, UINT8 flipped, FSurfaceInfo *Surface)
 {
 	float poly[4], tint[4], fade[4];
 	float modelview[16];
@@ -2450,7 +2458,7 @@ static void SDLGPU_DrawModel(model_t *model, INT32 frameIndex, float duration, f
 // -----------------+
 // SetTransform     :
 // -----------------+
-static void SDLGPU_SetTransform(FTransform *stransform)
+static void SDLGPU_CALL SDLGPU_SetTransform(FTransform *stransform)
 {
 	static boolean special_splitscreen;
 	boolean shearing = false;
@@ -2501,7 +2509,7 @@ static void SDLGPU_SetTransform(FTransform *stransform)
 		Mat_Perspective(uniforms.projection, used_fov, ASPECT_RATIO);
 }
 
-static void SDLGPU_SetSpecialState(hwdspecialstate_t IdState, INT32 Value)
+static void SDLGPU_CALL SDLGPU_SetSpecialState(hwdspecialstate_t IdState, INT32 Value)
 {
 	switch (IdState)
 	{
@@ -2573,7 +2581,7 @@ static void SDLGPU_SetSpecialState(hwdspecialstate_t IdState, INT32 Value)
 //                                                            SCREEN TEXTURES
 // ==========================================================================
 
-static void SDLGPU_FlushScreenTextures(void)
+static void SDLGPU_CALL SDLGPU_FlushScreenTextures(void)
 {
 	int i;
 	for (i = 0; i < NUMSCREENTEXTURES; i++)
@@ -2581,7 +2589,7 @@ static void SDLGPU_FlushScreenTextures(void)
 }
 
 // Create a texture from the screen.
-static void SDLGPU_MakeScreenTexture(int tex)
+static void SDLGPU_CALL SDLGPU_MakeScreenTexture(int tex)
 {
 	gputexture_t *texture = &screen_textures[tex];
 	SDL_GPUTextureLocation source, destination;
@@ -2616,7 +2624,7 @@ static void SDLGPU_MakeScreenTexture(int tex)
 	current_texture = texture;
 }
 
-static void SDLGPU_DrawScreenTexture(int tex, FSurfaceInfo *surf, FBITFIELD polyflags)
+static void SDLGPU_CALL SDLGPU_DrawScreenTexture(int tex, FSurfaceInfo *surf, FBITFIELD polyflags)
 {
 	drawcall_t draw;
 	FRGBAFloat black = {0.0f, 0.0f, 0.0f, 1.0f};
@@ -2631,7 +2639,7 @@ static void SDLGPU_DrawScreenTexture(int tex, FSurfaceInfo *surf, FBITFIELD poly
 }
 
 // Do screen fades!
-static void SDLGPU_DoScreenWipe(int wipeStart, int wipeEnd)
+static void SDLGPU_CALL SDLGPU_DoScreenWipe(int wipeStart, int wipeEnd)
 {
 	gputexture_t *fademask = current_texture; // the fade mask that has been set
 	drawcall_t draw;
@@ -2657,7 +2665,7 @@ static void SDLGPU_DoScreenWipe(int wipeStart, int wipeEnd)
 	current_texture = &screen_textures[wipeEnd];
 }
 
-static void SDLGPU_DrawScreenFinalTexture(int tex, int width, int height)
+static void SDLGPU_CALL SDLGPU_DrawScreenFinalTexture(int tex, int width, int height)
 {
 	// Showing the picture in the window is SDLGPU_Present's job.
 	(void)tex;
@@ -2665,7 +2673,7 @@ static void SDLGPU_DrawScreenFinalTexture(int tex, int width, int height)
 	(void)height;
 }
 
-static void SDLGPU_PostImgRedraw(float points[SCREENVERTS][SCREENVERTS][2])
+static void SDLGPU_CALL SDLGPU_PostImgRedraw(float points[SCREENVERTS][SCREENVERTS][2])
 {
 	static const float black[4] = {0.0f, 0.0f, 0.0f, 1.0f};
 	const FBITFIELD flags = PF_NoDepthTest|PF_NoAlphaTest;
@@ -2718,7 +2726,7 @@ static void SDLGPU_PostImgRedraw(float points[SCREENVERTS][SCREENVERTS][2])
 // Writes screen texture tex into dst_data.
 // Pixel format is 24-bit RGB. Row order is top to bottom.
 // Dimensions are screen_width * screen_height.
-static void SDLGPU_ReadScreenTexture(int tex, UINT8 *dst_data)
+static void SDLGPU_CALL SDLGPU_ReadScreenTexture(int tex, UINT8 *dst_data)
 {
 	SDL_GPUTexture *texture = screen_textures[tex].texture ? screen_textures[tex].texture : color_target;
 	const Uint32 size = (Uint32)(screen_width * screen_height * 4);
@@ -2793,7 +2801,7 @@ static void SDLGPU_ReadScreenTexture(int tex, UINT8 *dst_data)
 //                                                          PALETTE RENDERING
 // ==========================================================================
 
-static void SDLGPU_SetPaletteLookup(UINT8 *lut)
+static void SDLGPU_CALL SDLGPU_SetPaletteLookup(UINT8 *lut)
 {
 	const Uint32 size = HWR_PALETTE_LUT_SIZE * HWR_PALETTE_LUT_SIZE * HWR_PALETTE_LUT_SIZE;
 	SDL_GPUTransferBuffer *transfer;
@@ -2803,7 +2811,7 @@ static void SDLGPU_SetPaletteLookup(UINT8 *lut)
 	Staging_ToTexture(transfer, palette_lookup_texture.texture, HWR_PALETTE_LUT_SIZE, HWR_PALETTE_LUT_SIZE, HWR_PALETTE_LUT_SIZE);
 }
 
-static UINT32 SDLGPU_CreateLightTable(RGBA_t *hw_lighttable)
+static UINT32 SDLGPU_CALL SDLGPU_CreateLightTable(RGBA_t *hw_lighttable)
 {
 	gputexture_t *texture;
 	UINT32 id = Texture_NewId(&texture);
@@ -2814,7 +2822,7 @@ static UINT32 SDLGPU_CreateLightTable(RGBA_t *hw_lighttable)
 	return id;
 }
 
-static void SDLGPU_UpdateLightTable(UINT32 id, RGBA_t *hw_lighttable)
+static void SDLGPU_CALL SDLGPU_UpdateLightTable(UINT32 id, RGBA_t *hw_lighttable)
 {
 	gputexture_t *texture = Texture_FromId(id);
 	if (texture && texture->lighttable)
@@ -2822,7 +2830,7 @@ static void SDLGPU_UpdateLightTable(UINT32 id, RGBA_t *hw_lighttable)
 }
 
 // Delete light table textures, ids given before become invalid and must not be used.
-static void SDLGPU_ClearLightTables(void)
+static void SDLGPU_CALL SDLGPU_ClearLightTables(void)
 {
 	size_t i;
 
@@ -2832,7 +2840,7 @@ static void SDLGPU_ClearLightTables(void)
 }
 
 // This palette is used for the palette rendering postprocessing step.
-static void SDLGPU_SetScreenPalette(RGBA_t *palette)
+static void SDLGPU_CALL SDLGPU_SetScreenPalette(RGBA_t *palette)
 {
 	if (memcmp(screen_palette, palette, sizeof (screen_palette)))
 	{
@@ -2845,13 +2853,13 @@ static void SDLGPU_SetScreenPalette(RGBA_t *palette)
 //                                                        STARTUP AND SHUTDOWN
 // ==========================================================================
 
-static void SDLGPU_FinishUpdate(INT32 waitvbl)
+static void SDLGPU_CALL SDLGPU_FinishUpdate(INT32 waitvbl)
 {
 	// see SDLGPU_Present
 	(void)waitvbl;
 }
 
-static boolean SDLGPU_Init(void)
+static boolean SDLGPU_CALL SDLGPU_Init(void)
 {
 	static const struct
 	{
