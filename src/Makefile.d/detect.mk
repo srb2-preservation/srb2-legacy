@@ -98,7 +98,7 @@ v:=$(word 1,$(v))$(word 2,$(v))
 # If this version is not in the list,
 # default to the latest supported
 ifeq (,$(filter $(v),$(gcc_versions)))
-define line =
+define line
 Your compiler version, GCC $(version), \
 is not supported by the Makefile.
 The Makefile will assume GCC $(latest_gcc_version).

@@ -304,7 +304,7 @@ ifndef SILENT
 ifndef MAKE_RESTARTS
 ifndef destructive
 $(shell $(CC) -v)
-define flags =
+define flags
 
 CC ........ $(cc)
 
@@ -331,8 +331,11 @@ endif
 windres=$(WINDRES) $(WINDRESFLAGS)\
 	$(debug_opts) --include-dir=win32 -O coff
 
-%/ :
-	$(.)$(mkdir) $(call Windows_path,$@)
+# "dir/." rather than "dir/", whose slash make 3.81 drops;
+# precious, or make deletes them as intermediate files
+.PRECIOUS : %/.
+%/. :
+	$(.)$(mkdir) $(call Windows_path,$(@D))
 
 # this is needed so the target can be referenced in the
 # prerequisites
@@ -342,7 +345,7 @@ windres=$(WINDRES) $(WINDRESFLAGS)\
 unexport UPX
 
 # executable stripped of debugging symbols
-$(exe) : $(dbg) | $$(@D)/
+$(exe) : $(dbg) | $$(@D)/.
 ifndef MACOS
 	$(.)$(OBJCOPY) --strip-debug $< $@
 	$(.)-$(OBJCOPY) --add-gnu-debuglink=$< $@
@@ -353,7 +356,7 @@ ifdef UPX
 endif
 
 # original executable with debugging symbols
-$(dbg) : $(objects) | $$(@D)/
+$(dbg) : $(objects) | $$(@D)/.
 	$(call Echo,Linking $(@F)...)
 	$(.)$(LD) -o $@ $^ $(libs)
 
@@ -379,8 +382,8 @@ $(objdir)/win32/Srb2win.res : \
 # dependency recipe template
 # 1: source file suffix
 # 2: extra flags to gcc
-define _recipe =
-$(depdir)/%.d : %.$(1) | $$$$(@D)/
+define _recipe
+$(depdir)/%.d : %.$(1) | $$$$(@D)/.
 ifndef WINDOWSHELL
 ifdef Echo_name
 	@printf '%-20.20s\r' $$<
@@ -396,8 +399,8 @@ $(eval $(call _recipe,s,$(asflags)))
 # 1: target file suffix
 # 2: source file suffix
 # 3: compile command
-define _recipe =
-$(objdir)/%.$(1) : %.$(2) | $$$$(@D)/
+define _recipe
+$(objdir)/%.$(1) : %.$(2) | $$$$(@D)/.
 	$(call Echo_name,$$<)
 	$(.)$(3)
 endef
@@ -423,7 +426,7 @@ sdlgpu_shaders_dir:=$(makedir)/sdlgpu-shaders
 sdlgpu_shaders_gen:=$(sdlgpu_shaders_dir)/gen$(if $(WINDOWSHELL),.exe)
 
 $(sdlgpu_shaders_gen) : ../tools/sdlgpu-shaders/gen.c hardware/r_sdlgpu/gpu_glsl.c \
-		hardware/r_sdlgpu/gpu_glsl.h hardware/hw_shaders.h | $(sdlgpu_shaders_dir)/
+		hardware/r_sdlgpu/gpu_glsl.h hardware/hw_shaders.h | $$(@D)/.
 	$(call Echo_name,$@)
 	$(.)$(HOSTCC) -O1 -DHAVE_SHADERC -DHAVE_SPIRV_CROSS \
 		$(shell $(HOST_PKG_CONFIG) --cflags shaderc) $(call Spirv_cross_cflags,$(HOST_PKG_CONFIG)) \
@@ -441,7 +444,7 @@ $(addprefix $(sdlgpu_shaders_dir)/,$(addsuffix .c,$(sdlgpu_generated))) : \
 
 # -I for their #include "../gpu_glsl.h"
 $(addprefix $(objdir)/hardware/r_sdlgpu/precompiled/,$(addsuffix .o,$(sdlgpu_generated))) : \
-		$(objdir)/hardware/r_sdlgpu/precompiled/%.o : $(sdlgpu_shaders_dir)/%.c | $$(@D)/
+		$(objdir)/hardware/r_sdlgpu/precompiled/%.o : $(sdlgpu_shaders_dir)/%.c | $$(@D)/.
 	$(call Echo_name,$<)
 	$(.)$(cc) -Ihardware/r_sdlgpu/precompiled -c -o $@ $<
 endif

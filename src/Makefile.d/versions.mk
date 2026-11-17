@@ -5,7 +5,7 @@
 # See the versions list in detect.mk
 # This will define all version flags going backward.
 # Yes, it's magic.
-define _predecessor =
+define _predecessor
 ifdef GCC$(firstword $(1))
 GCC$(lastword $(1)):=1
 endif

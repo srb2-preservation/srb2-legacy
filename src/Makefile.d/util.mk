@@ -16,7 +16,7 @@ List=$(addprefix $(dir $(1)),$(call _cat,$(1)))
 # Convert path separators to backslash on Windows.
 Windows_path=$(if $(WINDOWSHELL),$(subst /,\,$(1)),$(1))
 
-define Propogate_flags =
+define Propogate_flags
 opts+=$$($(1)_CFLAGS)
 libs+=$$($(1)_LDFLAGS)
 endef
@@ -29,7 +29,7 @@ endef
 # 3: CFLAGS command arguments, default '--cflags'
 # 4: LDFLAGS command arguments, default '--libs'
 # 5: common command arguments at the end of command
-define Configure =
+define Configure
 $(1)_CFLAGS?=$$(shell $(2) $(or $(3),--cflags) $(5))
 $(1)_LDFLAGS?=$$(shell $(2) $(or $(4),--libs) $(5))
 $(call Propogate_flags,$(1))
@@ -51,7 +51,7 @@ $(if $(filter spirv-cross-c,$(call Spirv_cross_pc,$(1))),\
 #
 #     LIBGME_PKGCONFIG=libgme
 #     $(eval $(call Use_pkg_config,LIBGME))
-define Use_pkg_config =
+define Use_pkg_config
 $(call Configure,$(1),$(PKG_CONFIG),,,$($(1)_PKGCONFIG))
 endef
 
@@ -68,7 +68,7 @@ endef
 # LIBGME_LDFLAGS as with Use_pkg_config.
 #
 #     $(eval $(call Check_pkg_config,GME/libgme/LIBGME))
-define Check_pkg_config =
+define Check_pkg_config
 _p:=$(subst /, ,$(1))
 _v1:=$$(word 1,$$(_p))
 _v2:=$$(or $$(word 3,$$(_p)),$$(_v1))

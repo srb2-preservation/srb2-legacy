@@ -49,7 +49,7 @@ endif
 
 mingw:=$(i686)-w64-mingw32
 
-define _set =
+define _set
 $(1)_CFLAGS?=$($(1)_opts)
 $(1)_LDFLAGS?=$($(1)_libs)
 endef
