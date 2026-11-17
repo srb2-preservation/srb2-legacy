@@ -48,6 +48,11 @@
 # NOOPENGL=1 - Disable the OpenGL renderer, but keep the SDL GPU renderer.
 # NOSDLGPU=1 - Disable the SDL GPU renderer (Vulkan, Direct3D 12,
 #              Metal).
+# BUILD_SHADERS=1 - Compile the SDL GPU renderer's Vulkan and Metal shaders
+#                   during the build, with shaderc and SPIRV-Cross, instead of
+#                   using the precompiled ones. Direct3D 12's stay precompiled.
+#                   HOSTCC and HOST_PKG_CONFIG set what builds the shader
+#                   tool when cross compiling.
 # HAVE_SHADERC=1 - With the SDL GPU renderer, link with shaderc, so that the
 #                  GLSL shaders of addons can be used.
 # HAVE_SPIRV_CROSS=1 - With the SDL GPU renderer, link with SPIRV-Cross, so
@@ -400,6 +405,41 @@ endef
 $(eval $(call _recipe,o,c,$(cc) -c -o $$@ $$<))
 $(eval $(call _recipe,o,s,$(cc) $(asflags) -c -o $$@ $$<))
 $(eval $(call _recipe,res,rc,$(windres) -i $$< -o $$@))
+
+# BUILD_SHADERS=1: the SDL GPU renderer's Vulkan and Metal shaders are
+# compiled during the build, instead of using the precompiled
+# gpu_precompiled.c. The generator runs on the building machine, so it is
+# built with HOSTCC and the HOST_PKG_CONFIG's shaderc and SPIRV-Cross.
+ifdef BUILD_SHADERS
+ifndef NOHW
+ifndef NOSDLGPU
+ifdef PREFIX
+HOSTCC?=cc
+else
+HOSTCC?=$(CC)
+endif
+HOST_PKG_CONFIG?=pkg-config
+sdlgpu_shaders_dir:=$(makedir)/sdlgpu-shaders
+sdlgpu_shaders_gen:=$(sdlgpu_shaders_dir)/gen$(if $(WINDOWSHELL),.exe)
+
+$(sdlgpu_shaders_gen) : ../tools/sdlgpu-shaders/gen.c hardware/r_sdlgpu/gpu_glsl.c \
+		hardware/r_sdlgpu/gpu_glsl.h hardware/hw_shaders.h | $(sdlgpu_shaders_dir)/
+	$(call Echo_name,$@)
+	$(.)$(HOSTCC) -O1 -DHAVE_SHADERC -DHAVE_SPIRV_CROSS \
+		$(shell $(HOST_PKG_CONFIG) --cflags shaderc spirv-cross-c-shared) \
+		-o $@ ../tools/sdlgpu-shaders/gen.c hardware/r_sdlgpu/gpu_glsl.c \
+		$(shell $(HOST_PKG_CONFIG) --libs shaderc spirv-cross-c-shared)
+
+$(sdlgpu_shaders_dir)/gpu_precompiled.c : $(sdlgpu_shaders_gen)
+	$(call Echo_name,$@)
+	$(.)$(sdlgpu_shaders_gen) $@
+
+$(objdir)/hardware/r_sdlgpu/gpu_precompiled.o : $(sdlgpu_shaders_dir)/gpu_precompiled.c | $$(@D)/
+	$(call Echo_name,$<)
+	$(.)$(cc) -Ihardware/r_sdlgpu -c -o $@ $<
+endif
+endif
+endif
 
 _rm=$(.)$(rmrf) $(call Windows_path,$(1))
 
