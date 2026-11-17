@@ -47,8 +47,8 @@ opts+=-DHAVE_SHADERC
 libs+=-lshaderc_shared
 endif
 ifdef HAVE_SPIRV_CROSS
-opts+=-DHAVE_SPIRV_CROSS $(shell $(PKG_CONFIG) --cflags spirv-cross-c-shared)
-libs+=$(shell $(PKG_CONFIG) --libs spirv-cross-c-shared)
+opts+=-DHAVE_SPIRV_CROSS $(call Spirv_cross_cflags,$(PKG_CONFIG))
+libs+=$(call Spirv_cross_libs,$(PKG_CONFIG),$(if $(MACOS),-lc++,-lstdc++))
 endif
 endif
 endif

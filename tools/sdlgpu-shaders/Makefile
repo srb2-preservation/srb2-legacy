@@ -1,6 +1,6 @@
 # Precompiles the game's shaders for the SDL GPU renderer.
 #
-# Needs shaderc and SPIRV-Cross (its C API, spirv-cross-c-shared).
+# Needs shaderc and SPIRV-Cross (its C API, spirv-cross-c-shared or spirv-cross-c).
 #
 #   make        rewrites precompiled/spirv.c (Vulkan) and precompiled/msl.c (Metal)
 #   make dxil DXC=/path/to/dxc
@@ -15,11 +15,18 @@
 GPUDIR=../../src/hardware/r_sdlgpu
 
 PKG_CONFIG?=pkg-config
-SHADER_CFLAGS:=$(shell $(PKG_CONFIG) --cflags shaderc spirv-cross-c-shared)
-SHADER_LIBS:=$(shell $(PKG_CONFIG) --libs shaderc spirv-cross-c-shared)
+# SPIRV-Cross's shared library, or else the static one (like Homebrew's),
+# whose .pc leaves out the other SPIRV-Cross libraries and the C++ runtime
+SPIRV_CROSS:=$(shell $(PKG_CONFIG) --exists spirv-cross-c-shared && echo spirv-cross-c-shared || echo spirv-cross-c)
+SHADER_CFLAGS:=$(shell $(PKG_CONFIG) --cflags shaderc $(SPIRV_CROSS))
+SHADER_LIBS:=$(shell $(PKG_CONFIG) --libs shaderc $(SPIRV_CROSS))
+ifeq ($(SPIRV_CROSS),spirv-cross-c)
+SHADER_LIBS+=-lspirv-cross-msl -lspirv-cross-hlsl -lspirv-cross-cpp -lspirv-cross-reflect \
+	-lspirv-cross-glsl -lspirv-cross-core $(if $(filter Darwin,$(shell uname -s)),-lc++,-lstdc++)
+endif
 
 all: gen
-	./gen $(GPUDIR)/precompiled/spirv.c $(GPUDIR)/precompiled/msl.c
+	./gen --spirv $(GPUDIR)/precompiled/spirv.c --msl $(GPUDIR)/precompiled/msl.c
 
 dxil: gen
 	@test -n "$(DXC)" || { echo "give the path to DXC: make dxil DXC=..."; exit 1; }

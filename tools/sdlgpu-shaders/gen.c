@@ -25,6 +25,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h> // mkdtemp on macOS
 
 #include "../../src/hardware/hw_shaders.h"
 #include "../../src/hardware/r_sdlgpu/gpu_glsl.h"
@@ -137,6 +138,8 @@ static size_t numprograms;
 
 // what DXC to use to make DXIL, if any
 static const char *dxc = NULL;
+// whether MSL is made
+static int msl = 0;
 static const char *workdir = NULL;
 
 static void *ReadFile(const char *path, size_t *size)
@@ -288,7 +291,7 @@ static int AddProgram(const char *name, unsigned mask, const char *vertex, const
 			if (program->blob[GPU_SHADERFORMAT_DXIL][stage] == NOBLOB)
 				return 0;
 		}
-		else
+		if (msl)
 		{
 			program->blob[GPU_SHADERFORMAT_MSL][stage] = AddTranslation(name, stage, program->blob[GPU_SHADERFORMAT_SPIRV][stage], GPU_SHADERFORMAT_MSL);
 			if (program->blob[GPU_SHADERFORMAT_MSL][stage] == NOBLOB)
@@ -389,22 +392,23 @@ static void Usage(const char *self)
 {
 	fprintf(stderr,
 		"usage:\n"
-		"  %s <spirv.c> <msl.c>\n"
-		"      compiles the game's shaders to SPIR-V (Vulkan) and MSL (Metal)\n"
-		"  %s --dxil <dxc> <dxil.c>\n"
-		"      compiles them to DXIL (Direct3D 12) with DXC; \"--dxil none\" writes an empty file\n"
+		"  %s [--spirv <spirv.c>] [--msl <msl.c>] [--dxil <dxc> <dxil.c>]\n"
+		"      compiles the game's shaders to SPIR-V (Vulkan), MSL (Metal) and DXIL (Direct3D 12),\n"
+		"      the last with DXC; \"--dxil none\" writes an empty file\n"
 		"  %s --translate <vertex shader> <fragment shader>\n"
 		"      prints a GLSL shader pair as it is given to the compiler\n"
 		"  %s --cross <msl|hlsl> <vertex shader> <fragment shader>\n"
 		"      prints a GLSL shader pair translated for Metal or Direct3D 12\n"
 		"  %s --compile <vertex shader> <fragment shader> <vertex SPIR-V> <fragment SPIR-V>\n"
 		"      compiles a GLSL shader pair to SPIR-V, for the SPIRV sections of an addon's SHADERS lump\n",
-		self, self, self, self, self);
+		self, self, self, self);
 }
 
 int main(int argc, char **argv)
 {
+	const char *outputs[GPU_NUMSHADERFORMATS] = {NULL};
 	size_t i;
+	int arg;
 	unsigned mask;
 
 	if ((argc == 4 && !strcmp(argv[1], "--translate"))
@@ -457,26 +461,42 @@ int main(int argc, char **argv)
 		return 0;
 	}
 
-	if (argc == 4 && !strcmp(argv[1], "--dxil"))
+	for (arg = 1; arg < argc; arg++)
 	{
-		if (strcmp(argv[2], "none"))
+		if (!strcmp(argv[arg], "--spirv") && arg + 1 < argc)
+			outputs[GPU_SHADERFORMAT_SPIRV] = argv[++arg];
+		else if (!strcmp(argv[arg], "--msl") && arg + 1 < argc)
+			outputs[GPU_SHADERFORMAT_MSL] = argv[++arg];
+		else if (!strcmp(argv[arg], "--dxil") && arg + 2 < argc)
 		{
-			static char dir[] = "/tmp/sdlgpu-shaders-XXXXXX";
-			dxc = argv[2];
-			workdir = getenv("SDLGPU_SHADERS_TMP");
-			if (!workdir)
-				workdir = mkdtemp(dir);
-			if (!workdir)
-			{
-				perror("mkdtemp");
-				return 1;
-			}
+			if (strcmp(argv[++arg], "none"))
+				dxc = argv[arg];
+			outputs[GPU_SHADERFORMAT_DXIL] = argv[++arg];
+		}
+		else
+		{
+			Usage(argv[0]);
+			return 1;
 		}
 	}
-	else if (argc != 3 || argv[1][0] == '-')
+	if (argc < 2)
 	{
 		Usage(argv[0]);
 		return 1;
+	}
+	msl = outputs[GPU_SHADERFORMAT_MSL] != NULL;
+
+	if (dxc)
+	{
+		static char dir[] = "/tmp/sdlgpu-shaders-XXXXXX";
+		workdir = getenv("SDLGPU_SHADERS_TMP");
+		if (!workdir)
+			workdir = mkdtemp(dir);
+		if (!workdir)
+		{
+			perror("mkdtemp");
+			return 1;
+		}
 	}
 
 	if (!GPU_CanCompileGLSL() || !GPU_CanTranslateSPIRV())
@@ -485,7 +505,8 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	if (!(argc == 4 && !dxc)) // "--dxil none" compiles nothing
+	// "--dxil none" alone compiles nothing
+	if (outputs[GPU_SHADERFORMAT_SPIRV] || msl || dxc)
 	{
 		for (i = 0; i < sizeof (game_shaders) / sizeof (*game_shaders); i++)
 			for (mask = 0; mask < (1u << NUMDEFINES); mask++)
@@ -503,15 +524,22 @@ int main(int argc, char **argv)
 				return 1;
 	}
 
-	if (argc == 4)
+	for (i = 0; i < GPU_NUMSHADERFORMATS; i++)
 	{
-		static const gpu_shaderformat_t dxil[] = {GPU_SHADERFORMAT_DXIL};
-		return !WriteFile(argv[3], "gpu_precompiled_dxil", dxil, 1, "DXIL, for Direct3D 12");
+		static const struct
+		{
+			const char *array, *what;
+		} files[GPU_NUMSHADERFORMATS] =
+		{
+			{"gpu_precompiled_spirv", "SPIR-V, for Vulkan"},
+			{"gpu_precompiled_msl", "MSL, for Metal"},
+			{NULL, NULL}, // METALLIB
+			{"gpu_precompiled_dxil", "DXIL, for Direct3D 12"},
+			{NULL, NULL}, // DXBC
+		};
+		const gpu_shaderformat_t format = (gpu_shaderformat_t)i;
+		if (outputs[i] && !WriteFile(outputs[i], files[i].array, &format, 1, files[i].what))
+			return 1;
 	}
-	else
-	{
-		static const gpu_shaderformat_t spirv[] = {GPU_SHADERFORMAT_SPIRV}, msl[] = {GPU_SHADERFORMAT_MSL};
-		return !WriteFile(argv[1], "gpu_precompiled_spirv", spirv, 1, "SPIR-V, for Vulkan")
-			|| !WriteFile(argv[2], "gpu_precompiled_msl", msl, 1, "MSL, for Metal");
-	}
+	return 0;
 }

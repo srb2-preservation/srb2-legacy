@@ -426,22 +426,22 @@ $(sdlgpu_shaders_gen) : ../tools/sdlgpu-shaders/gen.c hardware/r_sdlgpu/gpu_glsl
 		hardware/r_sdlgpu/gpu_glsl.h hardware/hw_shaders.h | $(sdlgpu_shaders_dir)/
 	$(call Echo_name,$@)
 	$(.)$(HOSTCC) -O1 -DHAVE_SHADERC -DHAVE_SPIRV_CROSS \
-		$(shell $(HOST_PKG_CONFIG) --cflags shaderc spirv-cross-c-shared) \
+		$(shell $(HOST_PKG_CONFIG) --cflags shaderc) $(call Spirv_cross_cflags,$(HOST_PKG_CONFIG)) \
 		-o $@ ../tools/sdlgpu-shaders/gen.c hardware/r_sdlgpu/gpu_glsl.c \
-		$(shell $(HOST_PKG_CONFIG) --libs shaderc spirv-cross-c-shared)
+		$(shell $(HOST_PKG_CONFIG) --libs shaderc) \
+		$(call Spirv_cross_libs,$(HOST_PKG_CONFIG),$(if $(filter Darwin,$(shell uname -s)),-lc++,-lstdc++))
 
-# both are written at once
-$(sdlgpu_shaders_dir)/msl.c : $(sdlgpu_shaders_dir)/spirv.c
-$(sdlgpu_shaders_dir)/spirv.c : $(sdlgpu_shaders_gen)
+# only the formats the game is built with, but DXIL, which needs DXC
+sdlgpu_generated:=$(filter-out dxil,$(sdlgpu_formats))
+
+$(addprefix $(sdlgpu_shaders_dir)/,$(addsuffix .c,$(sdlgpu_generated))) : \
+		$(sdlgpu_shaders_dir)/%.c : $(sdlgpu_shaders_gen)
 	$(call Echo_name,$@)
-	$(.)$(sdlgpu_shaders_gen) $@ $(sdlgpu_shaders_dir)/msl.c
+	$(.)$(sdlgpu_shaders_gen) --$* $@
 
 # -I for their #include "../gpu_glsl.h"
-$(objdir)/hardware/r_sdlgpu/precompiled/spirv.o : $(sdlgpu_shaders_dir)/spirv.c | $$(@D)/
-	$(call Echo_name,$<)
-	$(.)$(cc) -Ihardware/r_sdlgpu/precompiled -c -o $@ $<
-
-$(objdir)/hardware/r_sdlgpu/precompiled/msl.o : $(sdlgpu_shaders_dir)/msl.c | $$(@D)/
+$(addprefix $(objdir)/hardware/r_sdlgpu/precompiled/,$(addsuffix .o,$(sdlgpu_generated))) : \
+		$(objdir)/hardware/r_sdlgpu/precompiled/%.o : $(sdlgpu_shaders_dir)/%.c | $$(@D)/
 	$(call Echo_name,$<)
 	$(.)$(cc) -Ihardware/r_sdlgpu/precompiled -c -o $@ $<
 endif

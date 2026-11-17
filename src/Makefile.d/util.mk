@@ -35,6 +35,16 @@ $(1)_LDFLAGS?=$$(shell $(2) $(or $(4),--libs) $(5))
 $(call Propogate_flags,$(1))
 endef
 
+# SPIRV-Cross's C API: the shared library, or else the static one (like Homebrew's),
+# whose .pc leaves out the other SPIRV-Cross libraries and the C++ runtime it needs.
+# 1: pkg-config command
+# 2: C++ runtime (e.g. -lstdc++)
+Spirv_cross_pc=$(if $(shell $(1) --exists spirv-cross-c-shared && echo 1),spirv-cross-c-shared,spirv-cross-c)
+Spirv_cross_cflags=$(shell $(1) --cflags $(call Spirv_cross_pc,$(1)))
+Spirv_cross_libs=$(shell $(1) --libs $(call Spirv_cross_pc,$(1)))\
+$(if $(filter spirv-cross-c,$(call Spirv_cross_pc,$(1))),\
+ -lspirv-cross-msl -lspirv-cross-hlsl -lspirv-cross-cpp -lspirv-cross-reflect -lspirv-cross-glsl -lspirv-cross-core $(2))
+
 # Configure library with pkg-config. The package name is
 # taken from a _PKGCONFIG variable.
 # 1: variable prefix

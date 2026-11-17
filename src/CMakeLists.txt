@@ -263,6 +263,30 @@ if(${SRB2_CONFIG_HWRENDER})
 			hardware/r_sdlgpu/gpu_glsl.c)
 		find_package(PkgConfig)
 
+		# SPIRV-Cross's C API: the shared library, or else the static one (like Homebrew's),
+		# whose .pc leaves out the other SPIRV-Cross libraries and the C++ runtime it needs
+		macro(srb2_find_spirv_cross)
+			if(PKG_CONFIG_FOUND)
+				pkg_check_modules(SPIRV_CROSS spirv-cross-c-shared)
+				if(NOT SPIRV_CROSS_FOUND)
+					pkg_check_modules(SPIRV_CROSS spirv-cross-c)
+					if(SPIRV_CROSS_FOUND)
+						foreach(lib msl hlsl cpp reflect glsl core)
+							find_library(SRB2_SPIRV_CROSS_${lib} spirv-cross-${lib} HINTS ${SPIRV_CROSS_LIBRARY_DIRS} NO_DEFAULT_PATH)
+							if(SRB2_SPIRV_CROSS_${lib})
+								list(APPEND SPIRV_CROSS_LINK_LIBRARIES ${SRB2_SPIRV_CROSS_${lib}})
+							endif()
+						endforeach()
+						if(APPLE)
+							list(APPEND SPIRV_CROSS_LINK_LIBRARIES c++)
+						else()
+							list(APPEND SPIRV_CROSS_LINK_LIBRARIES stdc++)
+						endif()
+					endif()
+				endif()
+			endif()
+		endmacro()
+
 		# Only the shader formats of the platform's graphics APIs are built in
 		if(APPLE)
 			set(SRB2_SDLGPU_FORMATS msl) # Metal
@@ -279,9 +303,10 @@ if(${SRB2_CONFIG_HWRENDER})
 				message(WARNING "The SDL GPU shaders can't be compiled when cross compiling: using the precompiled ones.")
 			else()
 				if(PKG_CONFIG_FOUND)
-					pkg_check_modules(SRB2_SHADER_TOOLS shaderc spirv-cross-c-shared)
+					pkg_check_modules(SHADERC shaderc)
 				endif()
-				if(SRB2_SHADER_TOOLS_FOUND)
+				srb2_find_spirv_cross()
+				if(SHADERC_FOUND AND SPIRV_CROSS_FOUND)
 					add_executable(srb2-sdlgpu-shaders
 						"${CMAKE_SOURCE_DIR}/tools/sdlgpu-shaders/gen.c"
 						hardware/r_sdlgpu/gpu_glsl.c)
@@ -289,18 +314,24 @@ if(${SRB2_CONFIG_HWRENDER})
 					# not in bin/, next to the game
 					set_target_properties(srb2-sdlgpu-shaders PROPERTIES
 						RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/sdlgpu-shaders")
-					target_include_directories(srb2-sdlgpu-shaders PRIVATE ${SRB2_SHADER_TOOLS_INCLUDE_DIRS})
+					target_include_directories(srb2-sdlgpu-shaders PRIVATE ${SHADERC_INCLUDE_DIRS} ${SPIRV_CROSS_INCLUDE_DIRS})
 					# full paths, so that the tool finds them when it runs, wherever they are
-					target_link_libraries(srb2-sdlgpu-shaders PRIVATE ${SRB2_SHADER_TOOLS_LINK_LIBRARIES})
+					target_link_libraries(srb2-sdlgpu-shaders PRIVATE ${SHADERC_LINK_LIBRARIES} ${SPIRV_CROSS_LINK_LIBRARIES})
 
+					# only the formats the game is built with, but DXIL, which needs DXC
 					set(SRB2_SDLGPU_SHADERS_DIR "${CMAKE_CURRENT_BINARY_DIR}/sdlgpu-shaders")
-					set(SRB2_SDLGPU_GENERATED
-						"${SRB2_SDLGPU_SHADERS_DIR}/spirv.c"
-						"${SRB2_SDLGPU_SHADERS_DIR}/msl.c")
+					set(SRB2_SDLGPU_GENERATED)
+					set(SRB2_SDLGPU_GEN_ARGS)
+					foreach(format IN LISTS SRB2_SDLGPU_FORMATS)
+						if(NOT format STREQUAL "dxil")
+							list(APPEND SRB2_SDLGPU_GENERATED "${SRB2_SDLGPU_SHADERS_DIR}/${format}.c")
+							list(APPEND SRB2_SDLGPU_GEN_ARGS --${format} "${SRB2_SDLGPU_SHADERS_DIR}/${format}.c")
+						endif()
+					endforeach()
 					add_custom_command(
 						OUTPUT ${SRB2_SDLGPU_GENERATED}
 						COMMAND ${CMAKE_COMMAND} -E make_directory "${SRB2_SDLGPU_SHADERS_DIR}"
-						COMMAND srb2-sdlgpu-shaders ${SRB2_SDLGPU_GENERATED}
+						COMMAND srb2-sdlgpu-shaders ${SRB2_SDLGPU_GEN_ARGS}
 						DEPENDS srb2-sdlgpu-shaders
 						COMMENT "Compiling the SDL GPU shaders"
 						VERBATIM)
@@ -336,14 +367,11 @@ if(${SRB2_CONFIG_HWRENDER})
 			endif()
 		endif()
 		if(${SRB2_CONFIG_HAVE_SPIRV_CROSS})
-			if(PKG_CONFIG_FOUND)
-				pkg_check_modules(SPIRV_CROSS spirv-cross-c-shared)
-			endif()
+			srb2_find_spirv_cross()
 			if(SPIRV_CROSS_FOUND)
 				target_compile_definitions(SRB2 PRIVATE -DHAVE_SPIRV_CROSS)
 				target_include_directories(SRB2 PRIVATE ${SPIRV_CROSS_INCLUDE_DIRS})
-				target_link_directories(SRB2 PRIVATE ${SPIRV_CROSS_LIBRARY_DIRS})
-				target_link_libraries(SRB2 PRIVATE ${SPIRV_CROSS_LIBRARIES})
+				target_link_libraries(SRB2 PRIVATE ${SPIRV_CROSS_LINK_LIBRARIES})
 			else()
 				message(STATUS "SPIRV-Cross was not found: the SDL GPU renderer won't be able to use the shaders of addons with Metal.")
 			endif()
