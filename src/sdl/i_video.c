@@ -1354,7 +1354,9 @@ void VID_CheckRenderer(void)
 			// and VID_StartupHardware can change rendermode.
 			const rendermode_t hwmode = rendermode;
 			sdlhwbackend_t *oldbackend = SDLHW_GetBackend(oldrenderer);
+#if !defined(__APPLE__) && !defined(_WIN32)
 			sdlhwbackend_t *newbackend = SDLHW_GetBackend(hwmode);
+#endif
 			INT32 hwstate;
 
 			VID_CheckHardwareLoaded(oldrenderer);
