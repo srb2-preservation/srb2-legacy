@@ -9,6 +9,8 @@ Based off [bitten2up/Kart-Public/android](https://github.com/bitten2up/Kart-Publ
 - [x] Software renderer
 - [ ] OpenGL renderer
      - gl4es is not compatible with SRB2 in its current state.
+     - No longer needed.
+- [x] SDL GPU renderer
 - [x] Gamepad controls
      - Works, but remapping might be required. This is the recommended way to play this port.
 - [x] Keyboard controls
