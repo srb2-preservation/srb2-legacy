@@ -28,6 +28,8 @@ jobs:
           sudo apt update
           [ "${{ matrix.arch.name }}" = "x86" ] && PKGSUFFIX="i686" || PKGSUFFIX="x86-64"
           sudo apt install -y gcc-mingw-w64-$PKGSUFFIX binutils-mingw-w64-$PKGSUFFIX
+          # to compile the SDL GPU shaders during the build, with a shader tool built for this machine
+          sudo apt install -y pkg-config libshaderc-dev libspirv-cross-c-shared-dev
 
       - name: Build SRB2 Legacy
         run: |

@@ -32,6 +32,8 @@ jobs:
       run: |
        sudo apt-get update
        sudo apt install -y libpng-dev libcurl4-openssl-dev libgme-dev libminiupnpc-dev libopenmpt-dev libsdl3-dev
+       # to compile the SDL GPU shaders during the build
+       sudo apt install -y libshaderc-dev libspirv-cross-c-shared-dev
        # SDL3_mixer build dependencies; libvorbis is its only external decoder (see Build SDL3_mixer)
        sudo apt install -y cmake ninja-build pkg-config libvorbis-dev
 
