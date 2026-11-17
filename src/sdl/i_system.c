@@ -212,6 +212,7 @@ static INT32 mouse2_started = 0;
 #endif
 
 bool consolevent = false;
+volatile sig_atomic_t quitsignal = 0;
 bool framebuffer = false;
 
 UINT8 keyboard_started = false;
@@ -411,11 +412,12 @@ FUNCNORETURN static ATTRNORETURN void signal_handler(INT32 num)
 }
 #endif
 
-FUNCNORETURN static ATTRNORETURN void quit_handler(int num)
+// Quitting from here could deadlock with whatever the signal interrupted, so I_OsPolling does it.
+// A second signal gets the default action, for when the game is stuck.
+static void quit_handler(int num)
 {
-	signal(num, SIG_DFL); //default signal action
-	raise(num);
-	I_Quit();
+	signal(num, SIG_DFL);
+	quitsignal = 1;
 }
 
 #ifdef HAVE_TERMIOS

@@ -19,8 +19,11 @@
 #ifndef __sdlmain__
 #define __sdlmain__
 
+#include <signal.h>
+
 extern bool consolevent;
 extern bool framebuffer;
+extern volatile sig_atomic_t quitsignal;
 
 #include "../m_fixed.h"
 #include "../i_gamepad.h"

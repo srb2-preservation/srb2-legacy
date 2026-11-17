@@ -894,6 +894,13 @@ void I_OsPolling(void)
 
 	I_GetEvent();
 
+	if (quitsignal)
+	{
+		if (Playing())
+			LUAh_GameQuit();
+		I_Quit();
+	}
+
 	mod = SDL_GetModState();
 	/* Handle here so that our state is always synched with the system. */
 	shiftdown = ctrldown = altdown = 0;
@@ -1308,6 +1315,10 @@ static void Impl_DestroyWindow(void)
 	// Destroy the current window, if it exists.
 	if (window)
 	{
+#ifdef __APPLE__
+		// Let Metal's pending main-queue work run while the window's layer is still alive.
+		SDL_PumpEvents();
+#endif
 		SDLHW_ReleaseWindow(window);
 		SDL_DestroyWindow(window);
 		window = NULL;
