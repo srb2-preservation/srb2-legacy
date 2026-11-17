@@ -260,12 +260,20 @@ if(${SRB2_CONFIG_HWRENDER})
 		target_compile_definitions(SRB2 PRIVATE -DHWRENDER_SDLGPU)
 		target_sources(SRB2 PRIVATE
 			hardware/r_sdlgpu/r_sdlgpu.c
-			hardware/r_sdlgpu/gpu_glsl.c
-			hardware/r_sdlgpu/gpu_precompiled_d3d12.c)
+			hardware/r_sdlgpu/gpu_glsl.c)
 		find_package(PkgConfig)
 
+		# Only the shader formats of the platform's graphics APIs are built in
+		if(APPLE)
+			set(SRB2_SDLGPU_FORMATS msl) # Metal
+		elseif(WIN32)
+			set(SRB2_SDLGPU_FORMATS spirv dxil) # Vulkan, Direct3D 12
+		else()
+			set(SRB2_SDLGPU_FORMATS spirv) # Vulkan
+		endif()
+
 		# The game's Vulkan and Metal shaders: compiled now, or the precompiled ones
-		set(SRB2_SDLGPU_PRECOMPILED "${CMAKE_CURRENT_SOURCE_DIR}/hardware/r_sdlgpu/gpu_precompiled.c")
+		set(SRB2_SDLGPU_SHADERS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/hardware/r_sdlgpu/precompiled")
 		if(${SRB2_CONFIG_SDLGPU_BUILD_SHADERS})
 			if(CMAKE_CROSSCOMPILING)
 				message(WARNING "The SDL GPU shaders can't be compiled when cross compiling: using the precompiled ones.")
@@ -285,23 +293,35 @@ if(${SRB2_CONFIG_HWRENDER})
 					# full paths, so that the tool finds them when it runs, wherever they are
 					target_link_libraries(srb2-sdlgpu-shaders PRIVATE ${SRB2_SHADER_TOOLS_LINK_LIBRARIES})
 
-					set(SRB2_SDLGPU_PRECOMPILED "${CMAKE_CURRENT_BINARY_DIR}/sdlgpu-shaders/gpu_precompiled.c")
+					set(SRB2_SDLGPU_SHADERS_DIR "${CMAKE_CURRENT_BINARY_DIR}/sdlgpu-shaders")
+					set(SRB2_SDLGPU_GENERATED
+						"${SRB2_SDLGPU_SHADERS_DIR}/spirv.c"
+						"${SRB2_SDLGPU_SHADERS_DIR}/msl.c")
 					add_custom_command(
-						OUTPUT "${SRB2_SDLGPU_PRECOMPILED}"
-						COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/sdlgpu-shaders"
-						COMMAND srb2-sdlgpu-shaders "${SRB2_SDLGPU_PRECOMPILED}"
+						OUTPUT ${SRB2_SDLGPU_GENERATED}
+						COMMAND ${CMAKE_COMMAND} -E make_directory "${SRB2_SDLGPU_SHADERS_DIR}"
+						COMMAND srb2-sdlgpu-shaders ${SRB2_SDLGPU_GENERATED}
 						DEPENDS srb2-sdlgpu-shaders
 						COMMENT "Compiling the SDL GPU shaders"
 						VERBATIM)
-					set_source_files_properties("${SRB2_SDLGPU_PRECOMPILED}" PROPERTIES
+					# for their #include "../gpu_glsl.h"
+					set_source_files_properties(${SRB2_SDLGPU_GENERATED} PROPERTIES
 						GENERATED TRUE
-						INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/hardware/r_sdlgpu")
+						INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/hardware/r_sdlgpu/precompiled")
 				else()
 					message(WARNING "shaderc and SPIRV-Cross were not both found: using the precompiled SDL GPU shaders.")
 				endif()
 			endif()
 		endif()
-		target_sources(SRB2 PRIVATE "${SRB2_SDLGPU_PRECOMPILED}")
+		foreach(format IN LISTS SRB2_SDLGPU_FORMATS)
+			string(TOUPPER ${format} FORMAT)
+			target_compile_definitions(SRB2 PRIVATE -DSDLGPU_${FORMAT})
+			if(format STREQUAL "dxil") # always precompiled
+				target_sources(SRB2 PRIVATE hardware/r_sdlgpu/precompiled/dxil.c)
+			else()
+				target_sources(SRB2 PRIVATE "${SRB2_SDLGPU_SHADERS_DIR}/${format}.c")
+			endif()
+		endforeach()
 		if(${SRB2_CONFIG_HAVE_SHADERC})
 			if(PKG_CONFIG_FOUND)
 				pkg_check_modules(SHADERC shaderc)

@@ -30,8 +30,18 @@ ifndef NOSDLGPU
 opts+=-DHWRENDER_SDLGPU
 sources+=hardware/r_sdlgpu/r_sdlgpu.c
 sources+=hardware/r_sdlgpu/gpu_glsl.c
-sources+=hardware/r_sdlgpu/gpu_precompiled.c
-sources+=hardware/r_sdlgpu/gpu_precompiled_d3d12.c
+# only the shader formats of the platform's graphics APIs are built in
+ifdef MACOS
+sdlgpu_formats:=msl
+opts+=-DSDLGPU_MSL
+else ifdef MINGW
+sdlgpu_formats:=spirv dxil
+opts+=-DSDLGPU_SPIRV -DSDLGPU_DXIL
+else
+sdlgpu_formats:=spirv
+opts+=-DSDLGPU_SPIRV
+endif
+sources+=$(foreach format,$(sdlgpu_formats),hardware/r_sdlgpu/precompiled/$(format).c)
 ifdef HAVE_SHADERC
 opts+=-DHAVE_SHADERC
 libs+=-lshaderc_shared

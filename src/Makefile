@@ -407,8 +407,8 @@ $(eval $(call _recipe,o,s,$(cc) $(asflags) -c -o $$@ $$<))
 $(eval $(call _recipe,res,rc,$(windres) -i $$< -o $$@))
 
 # BUILD_SHADERS=1: the SDL GPU renderer's Vulkan and Metal shaders are
-# compiled during the build, instead of using the precompiled
-# gpu_precompiled.c. The generator runs on the building machine, so it is
+# compiled during the build, instead of using precompiled/spirv.c and
+# precompiled/msl.c. The generator runs on the building machine, so it is
 # built with HOSTCC and the HOST_PKG_CONFIG's shaderc and SPIRV-Cross.
 ifdef BUILD_SHADERS
 ifndef NOHW
@@ -430,13 +430,20 @@ $(sdlgpu_shaders_gen) : ../tools/sdlgpu-shaders/gen.c hardware/r_sdlgpu/gpu_glsl
 		-o $@ ../tools/sdlgpu-shaders/gen.c hardware/r_sdlgpu/gpu_glsl.c \
 		$(shell $(HOST_PKG_CONFIG) --libs shaderc spirv-cross-c-shared)
 
-$(sdlgpu_shaders_dir)/gpu_precompiled.c : $(sdlgpu_shaders_gen)
+# both are written at once
+$(sdlgpu_shaders_dir)/msl.c : $(sdlgpu_shaders_dir)/spirv.c
+$(sdlgpu_shaders_dir)/spirv.c : $(sdlgpu_shaders_gen)
 	$(call Echo_name,$@)
-	$(.)$(sdlgpu_shaders_gen) $@
+	$(.)$(sdlgpu_shaders_gen) $@ $(sdlgpu_shaders_dir)/msl.c
 
-$(objdir)/hardware/r_sdlgpu/gpu_precompiled.o : $(sdlgpu_shaders_dir)/gpu_precompiled.c | $$(@D)/
+# -I for their #include "../gpu_glsl.h"
+$(objdir)/hardware/r_sdlgpu/precompiled/spirv.o : $(sdlgpu_shaders_dir)/spirv.c | $$(@D)/
 	$(call Echo_name,$<)
-	$(.)$(cc) -Ihardware/r_sdlgpu -c -o $@ $<
+	$(.)$(cc) -Ihardware/r_sdlgpu/precompiled -c -o $@ $<
+
+$(objdir)/hardware/r_sdlgpu/precompiled/msl.o : $(sdlgpu_shaders_dir)/msl.c | $$(@D)/
+	$(call Echo_name,$<)
+	$(.)$(cc) -Ihardware/r_sdlgpu/precompiled -c -o $@ $<
 endif
 endif
 endif

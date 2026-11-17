@@ -9,9 +9,9 @@
 /// \file  gen.c
 /// \brief Precompiles the game's shaders for the SDL GPU renderer
 ///
-/// Writes src/hardware/r_sdlgpu/gpu_precompiled.c (Vulkan and Metal) and
-/// gpu_precompiled_d3d12.c (Direct3D 12), which are kept in the repository so
-/// that building the game doesn't need any shader tools. The Direct3D 12 file
+/// Writes spirv.c (Vulkan), msl.c (Metal) and dxil.c (Direct3D 12) in
+/// src/hardware/r_sdlgpu/precompiled, which are kept in the repository so that
+/// building the game doesn't need any shader tools. The Direct3D 12 file
 /// needs Microsoft's DXC, so it is made separately (see the Makefile).
 /// Run this again (see the Makefile next to this file) whenever the shaders in
 /// src/hardware/hw_shaders.h or the translation in gpu_glsl.c change.
@@ -338,7 +338,7 @@ static int WriteFile(const char *path, const char *array, const gpu_shaderformat
 		"///\n"
 		"/// Written by tools/sdlgpu-shaders. Don't edit this, run the tool again.\n"
 		"\n"
-		"#include \"gpu_glsl.h\"\n"
+		"#include \"../gpu_glsl.h\"\n"
 		"\n", strrchr(path, '/') ? strrchr(path, '/') + 1 : path, what);
 
 	for (i = 0; i < numblobs; i++)
@@ -389,10 +389,10 @@ static void Usage(const char *self)
 {
 	fprintf(stderr,
 		"usage:\n"
-		"  %s <gpu_precompiled.c>\n"
+		"  %s <spirv.c> <msl.c>\n"
 		"      compiles the game's shaders to SPIR-V (Vulkan) and MSL (Metal)\n"
-		"  %s --d3d12 <dxc> <gpu_precompiled_d3d12.c>\n"
-		"      compiles them to DXIL (Direct3D 12) with DXC; \"--d3d12 none\" writes an empty file\n"
+		"  %s --dxil <dxc> <dxil.c>\n"
+		"      compiles them to DXIL (Direct3D 12) with DXC; \"--dxil none\" writes an empty file\n"
 		"  %s --translate <vertex shader> <fragment shader>\n"
 		"      prints a GLSL shader pair as it is given to the compiler\n"
 		"  %s --cross <msl|hlsl> <vertex shader> <fragment shader>\n"
@@ -457,7 +457,7 @@ int main(int argc, char **argv)
 		return 0;
 	}
 
-	if (argc == 4 && !strcmp(argv[1], "--d3d12"))
+	if (argc == 4 && !strcmp(argv[1], "--dxil"))
 	{
 		if (strcmp(argv[2], "none"))
 		{
@@ -473,7 +473,7 @@ int main(int argc, char **argv)
 			}
 		}
 	}
-	else if (argc != 2 || argv[1][0] == '-')
+	else if (argc != 3 || argv[1][0] == '-')
 	{
 		Usage(argv[0]);
 		return 1;
@@ -485,7 +485,7 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	if (!(argc == 4 && !dxc)) // "--d3d12 none" compiles nothing
+	if (!(argc == 4 && !dxc)) // "--dxil none" compiles nothing
 	{
 		for (i = 0; i < sizeof (game_shaders) / sizeof (*game_shaders); i++)
 			for (mask = 0; mask < (1u << NUMDEFINES); mask++)
@@ -505,12 +505,13 @@ int main(int argc, char **argv)
 
 	if (argc == 4)
 	{
-		static const gpu_shaderformat_t d3d12[] = {GPU_SHADERFORMAT_DXIL};
-		return !WriteFile(argv[3], "gpu_precompiled_d3d12", d3d12, 1, "DXIL, for Direct3D 12");
+		static const gpu_shaderformat_t dxil[] = {GPU_SHADERFORMAT_DXIL};
+		return !WriteFile(argv[3], "gpu_precompiled_dxil", dxil, 1, "DXIL, for Direct3D 12");
 	}
 	else
 	{
-		static const gpu_shaderformat_t formats[] = {GPU_SHADERFORMAT_SPIRV, GPU_SHADERFORMAT_MSL};
-		return !WriteFile(argv[1], "gpu_precompiled", formats, 2, "SPIR-V for Vulkan, MSL for Metal");
+		static const gpu_shaderformat_t spirv[] = {GPU_SHADERFORMAT_SPIRV}, msl[] = {GPU_SHADERFORMAT_MSL};
+		return !WriteFile(argv[1], "gpu_precompiled_spirv", spirv, 1, "SPIR-V, for Vulkan")
+			|| !WriteFile(argv[2], "gpu_precompiled_msl", msl, 1, "MSL, for Metal");
 	}
 }

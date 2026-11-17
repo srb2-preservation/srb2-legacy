@@ -927,15 +927,27 @@ static boolean Program_Create(gpuprogram_t *program, gpu_shaderformat_t format,
 	return true;
 }
 
-// The tables of the game's shaders, compiled ahead of time
+#if !defined(SDLGPU_SPIRV) && !defined(SDLGPU_MSL) && !defined(SDLGPU_DXIL)
+#error The SDL GPU renderer needs the shaders in at least one format
+#endif
+
+// The tables of the game's shaders, compiled ahead of time, for this platform's graphics APIs
 static const struct
 {
 	const gpu_precompiled_t *list;
 	const size_t *count;
+	boolean d3d12;
 } precompiled_tables[] =
 {
-	{gpu_precompiled, &gpu_precompiled_count},             // Vulkan, Metal
-	{gpu_precompiled_d3d12, &gpu_precompiled_d3d12_count}, // Direct3D 12
+#ifdef SDLGPU_SPIRV
+	{gpu_precompiled_spirv, &gpu_precompiled_spirv_count, false}, // Vulkan
+#endif
+#ifdef SDLGPU_MSL
+	{gpu_precompiled_msl, &gpu_precompiled_msl_count, false}, // Metal
+#endif
+#ifdef SDLGPU_DXIL
+	{gpu_precompiled_dxil, &gpu_precompiled_dxil_count, true}, // Direct3D 12
+#endif
 };
 
 // Finds a shader program of the game, in a format the GPU device takes
@@ -958,18 +970,12 @@ static const gpu_precompiled_t *FindPrecompiled(unsigned long long hash)
 static SDL_GPUShaderFormat PrecompiledFormats(boolean d3d12)
 {
 	SDL_GPUShaderFormat formats = 0;
-	size_t i;
+	size_t t, i;
 
-	if (d3d12)
-	{
-		for (i = 0; i < gpu_precompiled_d3d12_count; i++)
-			formats |= shaderformats[gpu_precompiled_d3d12[i].format].sdl;
-	}
-	else
-	{
-		for (i = 0; i < gpu_precompiled_count; i++)
-			formats |= shaderformats[gpu_precompiled[i].format].sdl;
-	}
+	for (t = 0; t < SDL_arraysize(precompiled_tables); t++)
+		if (precompiled_tables[t].d3d12 == d3d12)
+			for (i = 0; i < *precompiled_tables[t].count; i++)
+				formats |= shaderformats[precompiled_tables[t].list[i].format].sdl;
 
 	return formats;
 }
@@ -2881,8 +2887,8 @@ static boolean SDLGPU_CALL SDLGPU_Init(void)
 	// On Windows, Direct3D 12 is tried first: it's faster there, and every GPU driver has it.
 	// Vulkan comes next, and the shaders of addons can only be made for it, not for Direct3D 12
 	// (SDL_GPU_DRIVER=vulkan in the environment picks it).
-	// Elsewhere, Vulkan and Metal are tried first, for the shaders of addons,
-	// and SDL_GPU_DRIVER=direct3d12 still picks Direct3D 12.
+	// Elsewhere, Vulkan or Metal is tried first, for the shaders of addons.
+	// Only the platform's graphics APIs have shaders in the build (see the build systems).
 	// Each is tried with anisotropic filtering first, then without, for the GPUs that don't have it.
 	device_anisotropy = true;
 #ifdef _WIN32

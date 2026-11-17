@@ -6,12 +6,12 @@
 // terms of the GNU General Public License, version 2.
 // See the 'LICENSE' file for more details.
 //-----------------------------------------------------------------------------
-/// \file  gpu_precompiled_d3d12.c
+/// \file  dxil.c
 /// \brief The game's shaders, compiled for the SDL GPU renderer: DXIL, for Direct3D 12
 ///
 /// Written by tools/sdlgpu-shaders. Don't edit this, run the tool again.
 
-#include "gpu_glsl.h"
+#include "../gpu_glsl.h"
 
 static const unsigned char shader_1[5836] =
 {
@@ -5772,7 +5772,7 @@ static const unsigned char shader_60[5044] =
 	196,32,1,64,16,12,144,61,248,234,160,14,212,96,65,0,0,0,0,0,
 };
 
-const gpu_precompiled_t gpu_precompiled_d3d12[] =
+const gpu_precompiled_t gpu_precompiled_dxil[] =
 {
 	{0xbb5b7bd8c3fd68b9ULL, GPU_SHADERFORMAT_DXIL, shader_1, sizeof (shader_1), shader_3, sizeof (shader_3)}, // Flat
 	{0x8c68f67ab55e4439ULL, GPU_SHADERFORMAT_DXIL, shader_1, sizeof (shader_1), shader_3, sizeof (shader_3)}, // Flat, model lighting
@@ -5907,4 +5907,4 @@ const gpu_precompiled_t gpu_precompiled_d3d12[] =
 	{0x95095175eca347a5ULL, GPU_SHADERFORMAT_DXIL, shader_1, sizeof (shader_1), shader_60, sizeof (shader_60)}, // wipe
 };
 
-const size_t gpu_precompiled_d3d12_count = 131;
+const size_t gpu_precompiled_dxil_count = 131;

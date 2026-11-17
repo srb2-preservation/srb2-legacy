@@ -2,9 +2,9 @@
 #
 # Needs shaderc and SPIRV-Cross (its C API, spirv-cross-c-shared).
 #
-#   make        rewrites gpu_precompiled.c: SPIR-V (Vulkan) and MSL (Metal)
-#   make d3d12 DXC=/path/to/dxc
-#               rewrites gpu_precompiled_d3d12.c: DXIL (Direct3D 12), with
+#   make        rewrites precompiled/spirv.c (Vulkan) and precompiled/msl.c (Metal)
+#   make dxil DXC=/path/to/dxc
+#               rewrites precompiled/dxil.c (Direct3D 12), with
 #               Microsoft's DXC, whose DXIL validator (libdxil.so or dxil.dll)
 #               must be next to it. The GitHub Actions workflow
 #               sdlgpu-shaders.yml does this and uploads the result.
@@ -19,11 +19,11 @@ SHADER_CFLAGS:=$(shell $(PKG_CONFIG) --cflags shaderc spirv-cross-c-shared)
 SHADER_LIBS:=$(shell $(PKG_CONFIG) --libs shaderc spirv-cross-c-shared)
 
 all: gen
-	./gen $(GPUDIR)/gpu_precompiled.c
+	./gen $(GPUDIR)/precompiled/spirv.c $(GPUDIR)/precompiled/msl.c
 
-d3d12: gen
-	@test -n "$(DXC)" || { echo "give the path to DXC: make d3d12 DXC=..."; exit 1; }
-	./gen --d3d12 "$(DXC)" $(GPUDIR)/gpu_precompiled_d3d12.c
+dxil: gen
+	@test -n "$(DXC)" || { echo "give the path to DXC: make dxil DXC=..."; exit 1; }
+	./gen --dxil "$(DXC)" $(GPUDIR)/precompiled/dxil.c
 
 gen: gen.c $(GPUDIR)/gpu_glsl.c $(GPUDIR)/gpu_glsl.h ../../src/hardware/hw_shaders.h
 	$(CC) -O1 -Wall -DHAVE_SHADERC -DHAVE_SPIRV_CROSS $(SHADER_CFLAGS) -o $@ gen.c $(GPUDIR)/gpu_glsl.c $(SHADER_LIBS)
@@ -31,4 +31,4 @@ gen: gen.c $(GPUDIR)/gpu_glsl.c $(GPUDIR)/gpu_glsl.h ../../src/hardware/hw_shade
 clean:
 	rm -f gen
 
-.PHONY: all d3d12 clean
+.PHONY: all dxil clean

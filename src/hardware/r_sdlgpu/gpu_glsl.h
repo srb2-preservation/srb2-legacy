@@ -172,13 +172,14 @@ typedef struct
 	size_t fragment_size;
 } gpu_precompiled_t;
 
-// Written by tools/sdlgpu-shaders.
-// gpu_precompiled.c: SPIR-V for Vulkan, MSL for Metal
-extern const gpu_precompiled_t gpu_precompiled[];
-extern const size_t gpu_precompiled_count;
-// gpu_precompiled_d3d12.c: DXIL for Direct3D 12
-extern const gpu_precompiled_t gpu_precompiled_d3d12[];
-extern const size_t gpu_precompiled_d3d12_count;
+// In precompiled/, written by tools/sdlgpu-shaders. The build only has the formats of its
+// platform's graphics APIs, which it says with SDLGPU_SPIRV, SDLGPU_MSL and SDLGPU_DXIL.
+extern const gpu_precompiled_t gpu_precompiled_spirv[];
+extern const size_t gpu_precompiled_spirv_count;
+extern const gpu_precompiled_t gpu_precompiled_msl[];
+extern const size_t gpu_precompiled_msl_count;
+extern const gpu_precompiled_t gpu_precompiled_dxil[];
+extern const size_t gpu_precompiled_dxil_count;
 
 // ==========================================================================
 //                                                 THE RENDERER'S OWN SHADERS
