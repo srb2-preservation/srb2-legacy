@@ -3015,6 +3015,20 @@ void SDLGPU_WindowClaimed(SDL_Window *window)
 	swapchain_window = NULL;
 }
 
+// Whether the window has something to be shown in.
+// Android takes the window's surface away while the app is in the background.
+// SDL 3.4's Vulkan backend can't make a new one then, and if asked for a swapchain
+// texture again it frees the old surface twice, which crashes.
+static boolean WindowHasSurface(SDL_Window *window)
+{
+#ifdef __ANDROID__
+	return SDL_GetPointerProperty(SDL_GetWindowProperties(window), SDL_PROP_WINDOW_ANDROID_WINDOW_POINTER, NULL) != NULL;
+#else
+	(void)window;
+	return true;
+#endif
+}
+
 void SDLGPU_Present(SDL_Window *window, boolean vsync)
 {
 	SDL_GPUTexture *swapchain = NULL;
@@ -3022,6 +3036,14 @@ void SDLGPU_Present(SDL_Window *window, boolean vsync)
 
 	if (!device || !color_target || !window)
 		return;
+
+	// The frame is still submitted, but not shown.
+	if (!WindowHasSurface(window))
+	{
+		EndRenderPass();
+		Flush();
+		return;
+	}
 
 	if (window != swapchain_window || vsync != swapchain_vsync)
 	{

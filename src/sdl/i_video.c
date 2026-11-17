@@ -725,14 +725,28 @@ static void Impl_HandleTextEvent(SDL_TextInputEvent evt)
 #if defined (HWRENDER) && defined (__ANDROID__)
 // Android gives the window a new surface when the app comes back from the background.
 // A backend that holds on to the window (SDL GPU) can go on drawing to the old one,
-// which shows nothing, so it lets go of the window and claims it again.
+// which shows nothing, so it lets go of the window and claims it again,
+// as soon as the new surface is there.
+static boolean reclaim_window = false;
+
 static void Impl_ReclaimWindow(void)
 {
 	sdlhwbackend_t *backend = SDLHW_Current();
 
-	if (!window || !HWRENDERING || !backend || !backend->ReleaseWindow)
+	if (!reclaim_window)
 		return;
 
+	if (!window || !HWRENDERING || !backend || !backend->ReleaseWindow)
+	{
+		reclaim_window = false;
+		return;
+	}
+
+	// the new surface isn't there yet
+	if (!SDL_GetPointerProperty(SDL_GetWindowProperties(window), SDL_PROP_WINDOW_ANDROID_WINDOW_POINTER, NULL))
+		return;
+
+	reclaim_window = false;
 	backend->ReleaseWindow(window);
 	if (!backend->CreateContext(window))
 		CONS_Alert(CONS_ERROR, "Couldn't claim the window again for %s: %s\n", backend->name, SDL_GetError());
@@ -767,7 +781,7 @@ void I_GetEvent(void)
 				break;
 #if defined (HWRENDER) && defined (__ANDROID__)
 			case SDL_EVENT_DID_ENTER_FOREGROUND:
-				Impl_ReclaimWindow();
+				reclaim_window = true;
 				break;
 #endif
 			case SDL_EVENT_KEY_UP:
@@ -838,6 +852,10 @@ void I_GetEvent(void)
 	// In order to make wheels act like buttons, we have to set their state to Up.
 	// This is because wheel messages don't have an up/down state.
 	gamekeydown[KEY_MOUSEWHEELDOWN] = gamekeydown[KEY_MOUSEWHEELUP] = 0;
+
+#if defined (HWRENDER) && defined (__ANDROID__)
+	Impl_ReclaimWindow();
+#endif
 }
 
 void I_StartupMouse(void)
