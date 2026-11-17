@@ -33,8 +33,8 @@ set(SRB2_CONFIG_HAVE_SHADERC ON CACHE BOOL
 	"Use shaderc if found, so that the SDL GPU renderer can use the GLSL shaders of addons. The game's own shaders don't need it.")
 set(SRB2_CONFIG_HAVE_SPIRV_CROSS ON CACHE BOOL
 	"Use SPIRV-Cross if found, so that the SDL GPU renderer can use the shaders of addons with Metal. The game's own shaders don't need it.")
-set(SRB2_CONFIG_SDLGPU_BUILD_SHADERS OFF CACHE BOOL
-	"Compile the SDL GPU renderer's Vulkan and Metal shaders during the build, with shaderc and SPIRV-Cross, instead of using the precompiled ones. Direct3D 12's stay precompiled. Not when cross compiling.")
+set(SRB2_CONFIG_SDLGPU_PRECOMPILED_SHADERS OFF CACHE BOOL
+	"Use the SDL GPU renderer's precompiled Vulkan and Metal shaders. Otherwise they are compiled during the build, with shaderc and SPIRV-Cross, and the precompiled ones are only used without them or when cross compiling. Direct3D 12's are always precompiled.")
 set(SRB2_CONFIG_STATIC_OPENGL OFF CACHE BOOL
 	"Use statically linked OpenGL. NOT RECOMMENDED.")
 set(SRB2_CONFIG_DEDICATED OFF CACHE BOOL
@@ -296,11 +296,11 @@ if(${SRB2_CONFIG_HWRENDER})
 			set(SRB2_SDLGPU_FORMATS spirv) # Vulkan
 		endif()
 
-		# The game's Vulkan and Metal shaders: compiled now, or the precompiled ones
+		# The game's Vulkan and Metal shaders: compiled now, or else the precompiled ones
 		set(SRB2_SDLGPU_SHADERS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/hardware/r_sdlgpu/precompiled")
-		if(${SRB2_CONFIG_SDLGPU_BUILD_SHADERS})
+		if(NOT ${SRB2_CONFIG_SDLGPU_PRECOMPILED_SHADERS})
 			if(CMAKE_CROSSCOMPILING)
-				message(WARNING "The SDL GPU shaders can't be compiled when cross compiling: using the precompiled ones.")
+				message(STATUS "The SDL GPU shaders can't be compiled when cross compiling: using the precompiled ones.")
 			else()
 				if(PKG_CONFIG_FOUND)
 					pkg_check_modules(SHADERC shaderc)
@@ -340,7 +340,7 @@ if(${SRB2_CONFIG_HWRENDER})
 						GENERATED TRUE
 						INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/hardware/r_sdlgpu/precompiled")
 				else()
-					message(WARNING "shaderc and SPIRV-Cross were not both found: using the precompiled SDL GPU shaders.")
+					message(STATUS "shaderc and SPIRV-Cross were not both found: using the precompiled SDL GPU shaders.")
 				endif()
 			endif()
 		endif()

@@ -48,11 +48,13 @@
 # NOOPENGL=1 - Disable the OpenGL renderer, but keep the SDL GPU renderer.
 # NOSDLGPU=1 - Disable the SDL GPU renderer (Vulkan, Direct3D 12,
 #              Metal).
-# BUILD_SHADERS=1 - Compile the SDL GPU renderer's Vulkan and Metal shaders
-#                   during the build, with shaderc and SPIRV-Cross, instead of
-#                   using the precompiled ones. Direct3D 12's stay precompiled.
-#                   HOSTCC and HOST_PKG_CONFIG set what builds the shader
-#                   tool when cross compiling.
+# PRECOMPILED_SHADERS=1 - Use the SDL GPU renderer's precompiled Vulkan and
+#                         Metal shaders. Otherwise they are compiled during the
+#                         build, with shaderc and SPIRV-Cross, and the
+#                         precompiled ones are only used without them.
+#                         Direct3D 12's are always precompiled. HOSTCC and
+#                         HOST_PKG_CONFIG set what builds the shader tool when
+#                         cross compiling.
 # HAVE_SHADERC=1 - With the SDL GPU renderer, link with shaderc, so that the
 #                  GLSL shaders of addons can be used.
 # HAVE_SPIRV_CROSS=1 - With the SDL GPU renderer, link with SPIRV-Cross, so
@@ -409,11 +411,11 @@ $(eval $(call _recipe,o,c,$(cc) -c -o $$@ $$<))
 $(eval $(call _recipe,o,s,$(cc) $(asflags) -c -o $$@ $$<))
 $(eval $(call _recipe,res,rc,$(windres) -i $$< -o $$@))
 
-# BUILD_SHADERS=1: the SDL GPU renderer's Vulkan and Metal shaders are
-# compiled during the build, instead of using precompiled/spirv.c and
-# precompiled/msl.c. The generator runs on the building machine, so it is
-# built with HOSTCC and the HOST_PKG_CONFIG's shaderc and SPIRV-Cross.
-ifdef BUILD_SHADERS
+# The SDL GPU renderer's Vulkan and Metal shaders are compiled during the
+# build, unless PRECOMPILED_SHADERS=1, or else precompiled/spirv.c and
+# precompiled/msl.c are used. The generator runs on the building machine, so
+# it is built with HOSTCC and the HOST_PKG_CONFIG's shaderc and SPIRV-Cross.
+ifndef PRECOMPILED_SHADERS
 ifndef NOHW
 ifndef NOSDLGPU
 ifdef PREFIX
@@ -422,6 +424,11 @@ else
 HOSTCC?=$(CC)
 endif
 HOST_PKG_CONFIG?=pkg-config
+ifeq (,$(shell $(HOST_PKG_CONFIG) --exists shaderc $(call Spirv_cross_pc,$(HOST_PKG_CONFIG)) && echo 1))
+ifndef MAKE_RESTARTS
+$(info shaderc and SPIRV-Cross were not both found: using the precompiled SDL GPU shaders.)
+endif
+else
 sdlgpu_shaders_dir:=$(makedir)/sdlgpu-shaders
 sdlgpu_shaders_gen:=$(sdlgpu_shaders_dir)/gen$(if $(WINDOWSHELL),.exe)
 
@@ -447,6 +454,7 @@ $(addprefix $(objdir)/hardware/r_sdlgpu/precompiled/,$(addsuffix .o,$(sdlgpu_gen
 		$(objdir)/hardware/r_sdlgpu/precompiled/%.o : $(sdlgpu_shaders_dir)/%.c | $$(@D)/.
 	$(call Echo_name,$<)
 	$(.)$(cc) -Ihardware/r_sdlgpu/precompiled -c -o $@ $<
+endif
 endif
 endif
 endif
