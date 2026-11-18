@@ -1314,7 +1314,7 @@ static menuitem_t OP_VideoOptionsMenu[] =
 	{IT_STRING | IT_CVAR, NULL, "Prefer Low Power GPU", "SDL GPU: use the integrated GPU instead of the discrete one, after a restart", &cv_gpupreferlowpower, 100},
 #endif
 #ifdef HWRENDER
-	{IT_CALL | IT_STRING, NULL, "Hardware Options...",  "Change options of the hardware renderer",        M_OpenGLOptionsMenu, 110},
+	{IT_CALL | IT_STRING, NULL, "3D Card Options...",  "Change 3D Card-specific options",        M_OpenGLOptionsMenu, 110},
 #endif
 };
 
