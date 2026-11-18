@@ -607,7 +607,7 @@ static void loading_status(void)
 	{
 		// this certainly isn't necessary
 		V_DrawCenteredString(BASEVIDWIDTH/2, 40, V_YELLOWMAP, "SDL GPU MODE WAS VIBECODED AND MAY");
-		V_DrawCenteredString(BASEVIDWIDTH/2, 50, V_YELLOWMAP, "BE CONSIDERED CRINGE.");
+		V_DrawCenteredString(BASEVIDWIDTH/2, 50, V_YELLOWMAP, "LEAD TO HYSTERIA.");
 	}
 	V_DrawCenteredString(BASEVIDWIDTH/2, 70, V_YELLOWMAP, "USE AT SONIC'S RISK.");
 
