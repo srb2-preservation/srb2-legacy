@@ -591,15 +591,24 @@ static void loading_status(void)
 	y = BASEVIDHEIGHT/2;
 	V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31); // Black background to match fade in effect
 	if (cv_glloadingscreen.value == 2)
-		V_DrawPatchFill(W_CachePatchName("SRB2BACK",PU_PATCH)); // SRB2 background, ehhh too bright. 
+		V_DrawPatchFill(W_CachePatchName("SRB2BACK",PU_PATCH)); // SRB2 background, ehhh too bright.
 															// Who gives a shit about brightness
 	M_DrawTextBox(x-58, y-8, 13, 1);
 	V_DrawString(x-50, y, V_YELLOWMAP, "Loading...");
 	V_DrawRightAlignedString(x+50, y, V_YELLOWMAP, s);
 
 	// Is this really necessary at this point..?
-	V_DrawCenteredString(BASEVIDWIDTH/2, 40, V_YELLOWMAP, "OPENGL MODE IS INCOMPLETE AND MAY");
-	V_DrawCenteredString(BASEVIDWIDTH/2, 50, V_YELLOWMAP, "NOT DISPLAY SOME SURFACES.");
+	if (rendermode == 2) // OpenGL
+	{
+		V_DrawCenteredString(BASEVIDWIDTH/2, 40, V_YELLOWMAP, "OPENGL MODE IS INCOMPLETE AND MAY");
+		V_DrawCenteredString(BASEVIDWIDTH/2, 50, V_YELLOWMAP, "NOT DISPLAY SOME SURFACES.");
+	}
+	else if (rendermode == 4) // SDL GPU
+	{
+		// this certainly isn't necessary
+		V_DrawCenteredString(BASEVIDWIDTH/2, 40, V_YELLOWMAP, "SDL GPU MODE WAS VIBECODED AND MAY");
+		V_DrawCenteredString(BASEVIDWIDTH/2, 50, V_YELLOWMAP, "BE CONSIDERED CRINGE.");
+	}
 	V_DrawCenteredString(BASEVIDWIDTH/2, 70, V_YELLOWMAP, "USE AT SONIC'S RISK.");
 
 	I_UpdateNoVsync();
